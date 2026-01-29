@@ -9,7 +9,7 @@ const ASPECT_RATIO_MAP: Record<ImageSize, string> = {
 
 export class GeminiProvider implements ImageProvider {
   name = 'gemini' as const;
-  defaultModel = 'imagen-3.0-generate-002';
+  defaultModel = 'gemini-2.5-flash-image';
   private client: GoogleGenerativeAI;
 
   constructor() {
