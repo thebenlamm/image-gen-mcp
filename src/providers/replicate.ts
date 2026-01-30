@@ -10,6 +10,7 @@ const ASPECT_RATIO_MAP: Record<ImageSize, string> = {
 export class ReplicateProvider implements ImageProvider {
   name = 'replicate' as const;
   defaultModel = 'black-forest-labs/flux-1.1-pro';
+  supportsSize = true;
   private client: Replicate;
 
   constructor() {

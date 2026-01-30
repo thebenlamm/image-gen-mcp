@@ -17,6 +17,7 @@ export interface GenerateResult {
 export interface ImageProvider {
   name: ProviderName;
   defaultModel: string;
+  supportsSize: boolean;  // Whether provider accepts size/aspect ratio parameter
   generate(params: GenerateParams): Promise<GenerateResult>;
 }
 
@@ -37,6 +38,12 @@ export class ProviderRegistry {
 
   has(name: ProviderName): boolean {
     return this.providers.has(name);
+  }
+
+  getSizeCapable(): ProviderName[] {
+    return Array.from(this.providers.entries())
+      .filter(([_, p]) => p.supportsSize)
+      .map(([name]) => name);
   }
 }
 

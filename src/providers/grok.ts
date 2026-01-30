@@ -3,6 +3,7 @@ import type { ImageProvider, GenerateParams, GenerateResult } from './index.js';
 export class GrokProvider implements ImageProvider {
   name = 'grok' as const;
   defaultModel = 'grok-2-image';
+  supportsSize = false;
   private apiKey: string;
 
   constructor() {

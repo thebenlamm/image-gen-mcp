@@ -9,6 +9,7 @@ const SIZE_MAP: Record<ImageSize, { width: number; height: number }> = {
 export class TogetherProvider implements ImageProvider {
   name = 'together' as const;
   defaultModel = 'black-forest-labs/FLUX.1-schnell';
+  supportsSize = true;
   private apiKey: string;
 
   constructor() {
