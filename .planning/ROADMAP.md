@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Core Enhancements** - Enhanced generation with output control, style modifiers, and size-aware provider selection
 - [x] **Phase 2: Post-Processing** - Image processing operations (resize, crop, aspect crop, circle mask)
-- [ ] **Phase 3: Asset Pipeline** - High-level asset generation with presets
+- [x] **Phase 3: Asset Pipeline** - High-level asset generation with presets
 - [ ] **Phase 4: Reference Images** - Character consistency through reference image support
 
 ## Phase Details
@@ -65,8 +65,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 03-01-PLAN.md -- Asset preset definitions and clean filename support
-- [ ] 03-02-PLAN.md -- generate_asset MCP tool registration
+- [x] 03-01-PLAN.md — Asset preset definitions and clean filename support
+- [x] 03-02-PLAN.md — generate_asset MCP tool registration
 
 ### Phase 4: Reference Images
 **Goal**: Users can generate consistent character images across multiple outputs using reference images
@@ -93,5 +93,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Core Enhancements | 2/2 | ✓ Complete | 2026-01-30 |
 | 2. Post-Processing | 2/2 | ✓ Complete | 2026-01-30 |
-| 3. Asset Pipeline | 0/TBD | Not started | - |
+| 3. Asset Pipeline | 2/2 | ✓ Complete | 2026-01-30 |
 | 4. Reference Images | 0/TBD | Not started | - |

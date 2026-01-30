@@ -27,13 +27,13 @@
 
 ### Asset Pipeline
 
-- [ ] **ASSET-01**: `generate_asset` tool combines generation + post-processing in one call
-- [ ] **ASSET-02**: `profile_pic` preset: square generation, 1:1 crop, circle mask, resize 200x200
-- [ ] **ASSET-03**: `post_image` preset: landscape generation, 16:9 crop, resize 1200x675
-- [ ] **ASSET-04**: `hero_photo` preset: portrait generation, 9:16 crop, resize 1080x1920
-- [ ] **ASSET-05**: `avatar` preset: square generation, 1:1 crop, circle mask, resize 80x80
-- [ ] **ASSET-06**: `scene` preset: landscape generation, 16:9 crop, resize 1200x675
-- [ ] **ASSET-07**: Asset ID-based output produces clean filenames (no date/hash prefix)
+- [x] **ASSET-01**: `generate_asset` tool combines generation + post-processing in one call
+- [x] **ASSET-02**: `profile_pic` preset: square generation, 1:1 crop, circle mask, resize 200x200
+- [x] **ASSET-03**: `post_image` preset: landscape generation, 16:9 crop, resize 1200x675
+- [x] **ASSET-04**: `hero_photo` preset: portrait generation, 9:16 crop, resize 1080x1920
+- [x] **ASSET-05**: `avatar` preset: square generation, 1:1 crop, circle mask, resize 80x80
+- [x] **ASSET-06**: `scene` preset: landscape generation, 16:9 crop, resize 1200x675
+- [x] **ASSET-07**: Asset ID-based output produces clean filenames (no date/hash prefix)
 
 ### Reference Images
 
@@ -86,13 +86,13 @@
 | PROC-04 | Phase 2 | Complete |
 | PROC-05 | Phase 2 | Complete |
 | PROC-06 | Phase 2 | Complete |
-| ASSET-01 | Phase 3 | Pending |
-| ASSET-02 | Phase 3 | Pending |
-| ASSET-03 | Phase 3 | Pending |
-| ASSET-04 | Phase 3 | Pending |
-| ASSET-05 | Phase 3 | Pending |
-| ASSET-06 | Phase 3 | Pending |
-| ASSET-07 | Phase 3 | Pending |
+| ASSET-01 | Phase 3 | Complete |
+| ASSET-02 | Phase 3 | Complete |
+| ASSET-03 | Phase 3 | Complete |
+| ASSET-04 | Phase 3 | Complete |
+| ASSET-05 | Phase 3 | Complete |
+| ASSET-06 | Phase 3 | Complete |
+| ASSET-07 | Phase 3 | Complete |
 | REF-01 | Phase 4 | Pending |
 | REF-02 | Phase 4 | Pending |
 | REF-03 | Phase 4 | Pending |
@@ -109,4 +109,4 @@
 
 ---
 *Requirements defined: 2026-01-29*
-*Last updated: 2026-01-30 after Phase 2 completion*
+*Last updated: 2026-01-30 after Phase 3 completion*
