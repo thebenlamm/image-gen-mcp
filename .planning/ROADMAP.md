@@ -12,7 +12,7 @@ Transform the existing image generation MCP server into a complete asset pipelin
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Core Enhancements** - Enhanced generation with output control and provider fallback
+- [ ] **Phase 1: Core Enhancements** - Enhanced generation with output control, style modifiers, and size-aware provider selection
 - [ ] **Phase 2: Post-Processing** - Image processing operations (resize, crop, aspect crop, circle mask)
 - [ ] **Phase 3: Asset Pipeline** - High-level asset generation with presets
 - [ ] **Phase 4: Reference Images** - Character consistency through reference image support
@@ -20,14 +20,14 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Phase Details
 
 ### Phase 1: Core Enhancements
-**Goal**: Users can control output paths, rely on automatic provider fallback, and apply style modifiers to generation
+**Goal**: Users can control output paths, apply style modifiers, and benefit from size-aware provider selection
 **Depends on**: Nothing (first phase)
-**Requirements**: CORE-01, CORE-02, CORE-03, CORE-04, CORE-05, CORE-06, CORE-07, CORE-08
+**Requirements**: CORE-01, CORE-02, CORE-03, CORE-07, CORE-08
 **Success Criteria** (what must be TRUE):
   1. User can specify exact output file path via `outputPath` parameter and image saves to that location
   2. User can specify output directory via `outputDir` parameter and filename auto-generates following date/provider/hash pattern
-  3. When Grok provider fails, image still generates via next provider in fallback chain without manual intervention
-  4. Response shows which provider was actually used (supports debugging when fallback occurs)
+  3. When user specifies size (landscape/portrait) and default provider doesn't support it, system selects a size-capable provider automatically
+  4. Response shows which provider was actually used (supports debugging when size-based selection changes the provider)
   5. User can pass `style` parameter and it modifies the generation prompt appropriately
 **Plans**: 2 plans
 

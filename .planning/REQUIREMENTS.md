@@ -10,11 +10,11 @@
 - [ ] **CORE-01**: User can specify exact output file path via `outputPath` parameter
 - [ ] **CORE-02**: User can specify output directory via `outputDir` parameter (auto-generates filename)
 - [ ] **CORE-03**: Default provider changes from openai to grok
-- [ ] **CORE-04**: Provider fallback chain tries next provider when current fails (rate limit, API error, content policy)
-- [ ] **CORE-05**: Fallback chain order is configurable via `IMAGE_GEN_PROVIDER_ORDER` env var
-- [ ] **CORE-06**: Response includes `fallbackUsed` and `originalProvider` fields
+- [ ] **CORE-04**: ~~Provider fallback chain tries next provider when current fails (rate limit, API error, content policy)~~ *Deferred from Phase 1*
+- [ ] **CORE-05**: ~~Fallback chain order is configurable via `IMAGE_GEN_PROVIDER_ORDER` env var~~ *Deferred from Phase 1*
+- [ ] **CORE-06**: ~~Response includes `fallbackUsed` and `originalProvider` fields~~ *Deferred from Phase 1*
 - [ ] **CORE-07**: User can pass `style` parameter that modifies generation prompt
-- [ ] **CORE-08**: Startup logs show effective provider chains
+- [ ] **CORE-08**: Startup logs show available providers, default provider, and size-capable providers
 
 ### Post-Processing
 
@@ -75,9 +75,9 @@
 | CORE-01 | Phase 1 | Pending |
 | CORE-02 | Phase 1 | Pending |
 | CORE-03 | Phase 1 | Pending |
-| CORE-04 | Phase 1 | Pending |
-| CORE-05 | Phase 1 | Pending |
-| CORE-06 | Phase 1 | Pending |
+| CORE-04 | Deferred | Deferred from Phase 1 |
+| CORE-05 | Deferred | Deferred from Phase 1 |
+| CORE-06 | Deferred | Deferred from Phase 1 |
 | CORE-07 | Phase 1 | Pending |
 | CORE-08 | Phase 1 | Pending |
 | PROC-01 | Phase 2 | Pending |
@@ -103,7 +103,8 @@
 
 **Coverage:**
 - v1 requirements: 28 total
-- Mapped to phases: 28
+- Mapped to phases: 25
+- Deferred: 3 (CORE-04, CORE-05, CORE-06)
 - Unmapped: 0 ✓
 
 ---
