@@ -78,11 +78,11 @@ Plans:
   3. OpenAI provider generates images using reference via edit API
   4. Gemini provider generates images using reference via multi-modal input
   5. Provider fallback chain is context-dependent: uses only reference-capable providers when reference provided, uses all providers when no reference
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
+- [ ] 04-01-PLAN.md — Provider interface + OpenAI edit API + Gemini multi-modal reference image support
+- [ ] 04-02-PLAN.md — Tool-level reference params, context-dependent provider selection, env var config
 
 ## Progress
 
@@ -94,4 +94,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Core Enhancements | 2/2 | ✓ Complete | 2026-01-30 |
 | 2. Post-Processing | 2/2 | ✓ Complete | 2026-01-30 |
 | 3. Asset Pipeline | 2/2 | ✓ Complete | 2026-01-30 |
-| 4. Reference Images | 0/TBD | Not started | - |
+| 4. Reference Images | 0/2 | Not started | - |
