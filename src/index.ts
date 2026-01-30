@@ -6,7 +6,7 @@ import { z } from 'zod';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { registry, type ProviderName } from './providers/index.js';
+import { registry, type ProviderName, type ImageProvider } from './providers/index.js';
 import { createOpenAIProvider } from './providers/openai.js';
 import { createGeminiProvider } from './providers/gemini.js';
 import { createReplicateProvider } from './providers/replicate.js';
@@ -38,6 +38,7 @@ function resolveDefaultProvider(): ProviderName {
       return envValue as ProviderName;
     }
     const available = registry.getAvailable();
+    // If no providers available, main() exits before tools are called — 'grok' is a safe static fallback
     const fallback = available[0] || 'grok';
     console.error(`Warning: IMAGE_GEN_DEFAULT_PROVIDER='${envValue}' is not a valid provider. Valid: ${VALID_PROVIDERS.join(', ')}. Falling back to '${fallback}'.`);
     return fallback;
@@ -48,8 +49,6 @@ function resolveDefaultProvider(): ProviderName {
 const DEFAULT_PROVIDER = resolveDefaultProvider();
 
 // Shared helpers for generate_image and generate_asset
-import type { ImageProvider } from './providers/index.js';
-
 function resolveProvider(
   requested: ProviderName | undefined,
   needsSize: boolean,
@@ -223,8 +222,8 @@ server.tool(
       // Ensure output directory exists
       await fs.promises.mkdir(path.dirname(finalOutputPath), { recursive: true });
 
-      // Save result
-      await fs.promises.writeFile(finalOutputPath, result.buffer);
+      // Save result (atomic write)
+      await saveImage(result.buffer, finalOutputPath);
 
       return {
         content: [{

@@ -59,6 +59,6 @@ export const ASSET_PRESETS: Record<AssetType, AssetPreset> = {
   },
 };
 
-export function getPreset(assetType: AssetType): AssetPreset {
+export function getPreset(assetType: AssetType): AssetPreset | undefined {
   return ASSET_PRESETS[assetType];
 }
