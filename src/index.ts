@@ -50,10 +50,21 @@ server.tool(
       .describe('Image size/aspect ratio'),
     outputPath: z.string().optional().describe('Exact output file path (must end in .png)'),
     outputDir: z.string().optional().describe('Output directory (filename auto-generated)'),
+    style: z.string().optional().describe('Style modifier prepended to the generation prompt (e.g., "watercolor painting", "pixel art", "photorealistic")'),
   },
-  async ({ prompt, provider, model, size, outputPath, outputDir }) => {
-    const providerName = provider || DEFAULT_PROVIDER;
-    const imageProvider = registry.get(providerName);
+  async ({ prompt, provider, model, size, outputPath, outputDir, style }) => {
+    let providerName = provider || DEFAULT_PROVIDER;
+    let imageProvider = registry.get(providerName);
+
+    // Size-aware selection: if size is specified and provider doesn't support it,
+    // find next available provider that does
+    if (imageProvider && size && !imageProvider.supportsSize) {
+      const sizeCapable = registry.getSizeCapable();
+      if (sizeCapable.length > 0) {
+        providerName = sizeCapable[0];
+        imageProvider = registry.get(providerName);
+      }
+    }
 
     if (!imageProvider) {
       const available = registry.getAvailable();
@@ -71,8 +82,11 @@ server.tool(
     }
 
     try {
+      // Apply style modifier to prompt (providers are unaware of style)
+      const effectivePrompt = style ? `${style}, ${prompt}` : prompt;
+
       const result = await imageProvider.generate({
-        prompt,
+        prompt: effectivePrompt,
         model,
         size,
       });
@@ -109,6 +123,7 @@ server.tool(
               success: false,
               error: message,
               provider: providerName,
+              availableProviders: registry.getAvailable(),
             }),
           },
         ],
@@ -130,6 +145,7 @@ async function main() {
   console.error(`Image Gen MCP Server starting...`);
   console.error(`Available providers: ${availableProviders.join(', ')}`);
   console.error(`Default provider: ${DEFAULT_PROVIDER}${registry.has(DEFAULT_PROVIDER) ? '' : ' (not available, will need explicit provider)'}`);
+  console.error(`Size-capable providers: ${registry.getSizeCapable().join(', ')}`);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
