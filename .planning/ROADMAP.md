@@ -29,11 +29,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. When Grok provider fails, image still generates via next provider in fallback chain without manual intervention
   4. Response shows which provider was actually used (supports debugging when fallback occurs)
   5. User can pass `style` parameter and it modifies the generation prompt appropriately
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md — Output path control, default provider change to grok, startup logs
+- [ ] 01-02-PLAN.md — Style parameter, size-aware provider selection, enhanced error responses
 
 ### Phase 2: Post-Processing
 **Goal**: Users can transform generated images through resize, crop, aspect crop, and circle mask operations
@@ -90,7 +90,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Enhancements | 0/TBD | Not started | - |
+| 1. Core Enhancements | 0/2 | Planned | - |
 | 2. Post-Processing | 0/TBD | Not started | - |
 | 3. Asset Pipeline | 0/TBD | Not started | - |
 | 4. Reference Images | 0/TBD | Not started | - |
