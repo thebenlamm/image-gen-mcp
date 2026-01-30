@@ -14,6 +14,7 @@ import { createTogetherProvider } from './providers/together.js';
 import { createGrokProvider } from './providers/grok.js';
 import { resolveOutputPath, saveImage } from './utils/image.js';
 import { applyOperations, type ProcessingOperation } from './utils/processing.js';
+import { getPreset, type AssetType } from './utils/presets.js';
 
 // Register available providers
 const providers = [
@@ -215,6 +216,120 @@ server.tool(
   }
 );
 
+// Define the generate_asset tool
+server.tool(
+  'generate_asset',
+  'Generate a ready-to-use image asset with automatic post-processing. Combines generation and processing in one call.',
+  {
+    prompt: z.string().describe('Text description of the image to generate'),
+    assetType: z
+      .enum(['profile_pic', 'post_image', 'hero_photo', 'avatar', 'scene'])
+      .describe('Type of asset to generate. profile_pic: 200x200 circular. post_image: 1200x675 16:9. hero_photo: 1080x1920 9:16. avatar: 80x80 circular. scene: 1200x675 16:9.'),
+    provider: z
+      .enum(['openai', 'gemini', 'replicate', 'together', 'grok'])
+      .optional()
+      .describe('Image generation provider to use'),
+    model: z.string().optional().describe('Provider-specific model to use'),
+    style: z.string().optional().describe('Style modifier prepended to generation prompt'),
+    assetId: z.string().optional().describe('Asset identifier for clean filename (e.g., "my-avatar" produces my-avatar.png). Omit for default date/hash naming.'),
+    outputPath: z.string().optional().describe('Exact output file path (must end in .png)'),
+    outputDir: z.string().optional().describe('Output directory'),
+  },
+  async ({ prompt, assetType, provider, model, style, assetId, outputPath, outputDir }) => {
+    // Look up preset
+    const preset = getPreset(assetType as AssetType);
+
+    // Resolve provider (same logic as generate_image)
+    let providerName = provider || DEFAULT_PROVIDER;
+    let imageProvider = registry.get(providerName);
+
+    // Size-aware selection: if preset requires size and provider doesn't support it,
+    // find next available provider that does
+    if (imageProvider && preset.generationSize && !imageProvider.supportsSize) {
+      const sizeCapable = registry.getSizeCapable();
+      if (sizeCapable.length > 0) {
+        providerName = sizeCapable[0];
+        imageProvider = registry.get(providerName);
+      }
+    }
+
+    if (!imageProvider) {
+      const available = registry.getAvailable();
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify({
+              success: false,
+              error: `Provider '${providerName}' is not available. Available providers: ${available.join(', ')}`,
+              assetType,
+            }),
+          },
+        ],
+      };
+    }
+
+    try {
+      // Apply style modifier to prompt
+      const effectivePrompt = style ? `${style}, ${prompt}` : prompt;
+
+      // Generate image with preset's generation size
+      const result = await imageProvider.generate({
+        prompt: effectivePrompt,
+        model,
+        size: preset.generationSize,
+      });
+
+      // Apply post-processing operations
+      const processed = await applyOperations(result.buffer, preset.operations);
+
+      // Resolve output path with assetId support
+      const filePath = await resolveOutputPath({
+        outputPath,
+        outputDir,
+        assetId,
+        prompt,
+        provider: providerName,
+      });
+
+      // Save processed image
+      await saveImage(processed.buffer, filePath);
+
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify({
+              success: true,
+              path: filePath,
+              provider: providerName,
+              model: result.model,
+              assetType,
+              outputSize: { width: processed.outputInfo.width, height: processed.outputInfo.height },
+              operationsApplied: processed.operationsApplied,
+            }),
+          },
+        ],
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify({
+              success: false,
+              error: message,
+              provider: providerName,
+              assetType,
+            }),
+          },
+        ],
+      };
+    }
+  }
+);
+
 // Start the server
 async function main() {
   const availableProviders = registry.getAvailable();
@@ -230,6 +345,7 @@ async function main() {
   console.error(`Default provider: ${DEFAULT_PROVIDER}${registry.has(DEFAULT_PROVIDER) ? '' : ' (not available, will need explicit provider)'}`);
   console.error(`Size-capable providers: ${registry.getSizeCapable().join(', ')}`);
   console.error(`Processing operations: resize, crop, aspectCrop, circleMask`);
+  console.error(`Asset types: profile_pic, post_image, hero_photo, avatar, scene`);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
