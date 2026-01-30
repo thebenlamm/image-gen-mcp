@@ -10,7 +10,7 @@ import { createGeminiProvider } from './providers/gemini.js';
 import { createReplicateProvider } from './providers/replicate.js';
 import { createTogetherProvider } from './providers/together.js';
 import { createGrokProvider } from './providers/grok.js';
-import { saveImage, generateFilename } from './utils/image.js';
+import { resolveOutputPath, saveImage } from './utils/image.js';
 
 // Register available providers
 const providers = [
@@ -25,7 +25,7 @@ for (const provider of providers) {
   registry.register(provider);
 }
 
-const DEFAULT_PROVIDER = (process.env.IMAGE_GEN_DEFAULT_PROVIDER || 'openai') as ProviderName;
+const DEFAULT_PROVIDER = (process.env.IMAGE_GEN_DEFAULT_PROVIDER || 'grok') as ProviderName;
 
 // Create MCP server
 const server = new McpServer({
@@ -48,8 +48,10 @@ server.tool(
       .enum(['square', 'landscape', 'portrait'])
       .optional()
       .describe('Image size/aspect ratio'),
+    outputPath: z.string().optional().describe('Exact output file path (must end in .png)'),
+    outputDir: z.string().optional().describe('Output directory (filename auto-generated)'),
   },
-  async ({ prompt, provider, model, size }) => {
+  async ({ prompt, provider, model, size, outputPath, outputDir }) => {
     const providerName = provider || DEFAULT_PROVIDER;
     const imageProvider = registry.get(providerName);
 
@@ -75,8 +77,13 @@ server.tool(
         size,
       });
 
-      const filename = generateFilename(prompt, providerName);
-      const filePath = await saveImage(result.buffer, filename);
+      const filePath = await resolveOutputPath({
+        outputPath,
+        outputDir,
+        prompt,
+        provider: providerName,
+      });
+      await saveImage(result.buffer, filePath);
 
       return {
         content: [
@@ -122,7 +129,7 @@ async function main() {
 
   console.error(`Image Gen MCP Server starting...`);
   console.error(`Available providers: ${availableProviders.join(', ')}`);
-  console.error(`Default provider: ${DEFAULT_PROVIDER}`);
+  console.error(`Default provider: ${DEFAULT_PROVIDER}${registry.has(DEFAULT_PROVIDER) ? '' : ' (not available, will need explicit provider)'}`);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
