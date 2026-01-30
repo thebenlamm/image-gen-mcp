@@ -35,7 +35,7 @@ export const ASSET_PRESETS: Record<AssetType, AssetPreset> = {
     generationSize: 'portrait',
     operations: [
       { type: 'aspectCrop', ratio: '9:16' },
-      { type: 'resize', width: 1080, height: 1920 },
+      { type: 'resize', width: 1080, height: 1920, withoutEnlargement: true },
     ],
   },
   avatar: {

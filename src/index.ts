@@ -13,8 +13,8 @@ import { createReplicateProvider } from './providers/replicate.js';
 import { createTogetherProvider } from './providers/together.js';
 import { createGrokProvider } from './providers/grok.js';
 import { resolveOutputPath, saveImage } from './utils/image.js';
-import { applyOperations, type ProcessingOperation } from './utils/processing.js';
-import { getPreset, type AssetType } from './utils/presets.js';
+import { applyOperations, getImageInfo, type ProcessingOperation } from './utils/processing.js';
+import { getPreset, ASSET_PRESETS, type AssetType } from './utils/presets.js';
 
 // Register available providers
 const providers = [
@@ -261,6 +261,18 @@ server.tool(
   async ({ prompt, assetType, provider, model, style, assetId, outputPath, outputDir }) => {
     // Look up preset
     const preset = getPreset(assetType as AssetType);
+    if (!preset) {
+      const validTypes = Object.keys(ASSET_PRESETS).join(', ');
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify({
+            success: false,
+            error: `Unknown asset type '${assetType}'. Valid types: ${validTypes}`,
+          }),
+        }],
+      };
+    }
 
     // Resolve provider (same logic as generate_image)
     let providerName = provider || DEFAULT_PROVIDER;
@@ -303,8 +315,39 @@ server.tool(
         size: preset.generationSize,
       });
 
-      // Apply post-processing operations
-      const processed = await applyOperations(result.buffer, preset.operations);
+      // Apply post-processing operations with raw fallback
+      let processed: Awaited<ReturnType<typeof applyOperations>>;
+      let processingWarning: string | undefined;
+      try {
+        processed = await applyOperations(result.buffer, preset.operations);
+      } catch (processingError) {
+        // Save raw image as fallback
+        const rawInfo = await getImageInfo(result.buffer);
+        const rawFilePath = await resolveOutputPath({
+          outputPath,
+          outputDir,
+          assetId: assetId ? `${assetId}_raw` : undefined,
+          prompt,
+          provider: providerName,
+        });
+        await saveImage(result.buffer, rawFilePath);
+
+        const processingMessage = processingError instanceof Error ? processingError.message : String(processingError);
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({
+              success: true,
+              path: rawFilePath,
+              provider: providerName,
+              model: result.model,
+              assetType,
+              outputSize: { width: rawInfo.width, height: rawInfo.height },
+              warning: `Post-processing failed, saved raw image: ${processingMessage}`,
+            }),
+          }],
+        };
+      }
 
       // Resolve output path with assetId support
       const filePath = await resolveOutputPath({

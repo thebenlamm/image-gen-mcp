@@ -101,6 +101,8 @@ export async function resolveOutputPath(options: OutputOptions): Promise<string>
 }
 
 export async function saveImage(buffer: Buffer, filePath: string): Promise<string> {
-  await fs.promises.writeFile(filePath, buffer);
+  const tmpPath = `${filePath}.tmp`;
+  await fs.promises.writeFile(tmpPath, buffer);
+  await fs.promises.rename(tmpPath, filePath);
   return filePath;
 }

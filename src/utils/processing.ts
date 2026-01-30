@@ -5,7 +5,8 @@ type ResizeOp = {
   type: 'resize';
   width?: number;
   height?: number;
-  fit?: 'cover' | 'contain' | 'fill'
+  fit?: 'cover' | 'contain' | 'fill';
+  withoutEnlargement?: boolean;
 };
 
 type CropOp = {
@@ -69,6 +70,7 @@ export async function resize(buffer: Buffer, op: ResizeOp): Promise<Buffer> {
       width: op.width,
       height: op.height,
       fit: op.fit || 'cover',
+      withoutEnlargement: op.withoutEnlargement,
     })
     .png()
     .toBuffer();
@@ -224,34 +226,41 @@ export async function applyOperations(
 
   // Apply each operation sequentially
   let currentBuffer = buffer;
-  for (const operation of operations) {
-    switch (operation.type) {
-      case 'resize': {
-        currentBuffer = await resize(currentBuffer, operation);
-        const sizeStr = `${operation.width || 'auto'}x${operation.height || 'auto'}`;
-        const fitStr = operation.fit || 'cover';
-        operationsApplied.push(`resize(${sizeStr}, ${fitStr})`);
-        break;
-      }
+  const total = operations.length;
+  for (let i = 0; i < total; i++) {
+    const operation = operations[i];
+    try {
+      switch (operation.type) {
+        case 'resize': {
+          currentBuffer = await resize(currentBuffer, operation);
+          const sizeStr = `${operation.width || 'auto'}x${operation.height || 'auto'}`;
+          const fitStr = operation.fit || 'cover';
+          operationsApplied.push(`resize(${sizeStr}, ${fitStr})`);
+          break;
+        }
 
-      case 'crop': {
-        currentBuffer = await crop(currentBuffer, operation);
-        operationsApplied.push(`crop(${operation.x},${operation.y},${operation.width}x${operation.height})`);
-        break;
-      }
+        case 'crop': {
+          currentBuffer = await crop(currentBuffer, operation);
+          operationsApplied.push(`crop(${operation.x},${operation.y},${operation.width}x${operation.height})`);
+          break;
+        }
 
-      case 'aspectCrop': {
-        currentBuffer = await aspectCrop(currentBuffer, operation);
-        const gravityStr = operation.gravity || 'center';
-        operationsApplied.push(`aspectCrop(${operation.ratio}, ${gravityStr})`);
-        break;
-      }
+        case 'aspectCrop': {
+          currentBuffer = await aspectCrop(currentBuffer, operation);
+          const gravityStr = operation.gravity || 'center';
+          operationsApplied.push(`aspectCrop(${operation.ratio}, ${gravityStr})`);
+          break;
+        }
 
-      case 'circleMask': {
-        currentBuffer = await circleMask(currentBuffer);
-        operationsApplied.push('circleMask');
-        break;
+        case 'circleMask': {
+          currentBuffer = await circleMask(currentBuffer);
+          operationsApplied.push('circleMask');
+          break;
+        }
       }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Operation ${i + 1}/${total} (${operation.type}) failed: ${message}`);
     }
   }
 
