@@ -29,7 +29,23 @@ for (const provider of providers) {
   registry.register(provider);
 }
 
-const DEFAULT_PROVIDER = (process.env.IMAGE_GEN_DEFAULT_PROVIDER || 'grok') as ProviderName;
+const VALID_PROVIDERS: ProviderName[] = ['openai', 'gemini', 'replicate', 'together', 'grok'];
+
+function resolveDefaultProvider(): ProviderName {
+  const envValue = process.env.IMAGE_GEN_DEFAULT_PROVIDER?.trim();
+  if (envValue) {
+    if (VALID_PROVIDERS.includes(envValue as ProviderName)) {
+      return envValue as ProviderName;
+    }
+    const available = registry.getAvailable();
+    const fallback = available[0] || 'grok';
+    console.error(`Warning: IMAGE_GEN_DEFAULT_PROVIDER='${envValue}' is not a valid provider. Valid: ${VALID_PROVIDERS.join(', ')}. Falling back to '${fallback}'.`);
+    return fallback;
+  }
+  return 'grok';
+}
+
+const DEFAULT_PROVIDER = resolveDefaultProvider();
 
 // Create MCP server
 const server = new McpServer({

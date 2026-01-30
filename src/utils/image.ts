@@ -10,6 +10,16 @@ function expandTilde(filePath: string): string {
   return filePath;
 }
 
+function sanitizeAssetId(assetId: string): string {
+  // Strip path traversal via basename, then keep only safe characters
+  const base = path.basename(assetId);
+  const safe = base.replace(/[^a-zA-Z0-9_-]/g, '');
+  if (!safe) {
+    throw new Error(`Invalid assetId: '${assetId}' contains no safe characters (a-zA-Z0-9_-)`);
+  }
+  return safe;
+}
+
 function slugify(text: string): string {
   return text
     .toLowerCase()
@@ -47,9 +57,12 @@ export interface OutputOptions {
 export async function resolveOutputPath(options: OutputOptions): Promise<string> {
   const { outputPath, outputDir, assetId, prompt, provider } = options;
 
+  // Sanitize assetId before any path interpolation
+  const safeAssetId = assetId ? sanitizeAssetId(assetId) : undefined;
+
   // Priority 1: Explicit outputPath (unchanged behavior)
   if (outputPath) {
-    if (!outputPath.endsWith('.png')) {
+    if (!outputPath.toLowerCase().endsWith('.png')) {
       throw new Error('outputPath must end with .png');
     }
     const expanded = expandTilde(outputPath);
@@ -59,11 +72,11 @@ export async function resolveOutputPath(options: OutputOptions): Promise<string>
   }
 
   // Priority 2: outputDir with assetId → clean filename
-  if (outputDir && assetId) {
+  if (outputDir && safeAssetId) {
     const expanded = expandTilde(outputDir);
     const absolute = path.resolve(expanded);
     await fs.promises.mkdir(absolute, { recursive: true });
-    return path.join(absolute, `${assetId}.png`);
+    return path.join(absolute, `${safeAssetId}.png`);
   }
 
   // Priority 3: outputDir without assetId → generated filename
@@ -76,9 +89,9 @@ export async function resolveOutputPath(options: OutputOptions): Promise<string>
   }
 
   // Priority 4: Default dir with assetId → clean filename
-  if (assetId) {
+  if (safeAssetId) {
     const dir = await getOutputDir();
-    return path.join(dir, `${assetId}.png`);
+    return path.join(dir, `${safeAssetId}.png`);
   }
 
   // Priority 5: Default dir without assetId → generated filename
