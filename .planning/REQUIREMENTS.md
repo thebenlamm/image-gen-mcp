@@ -72,40 +72,40 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CORE-01 | — | Pending |
-| CORE-02 | — | Pending |
-| CORE-03 | — | Pending |
-| CORE-04 | — | Pending |
-| CORE-05 | — | Pending |
-| CORE-06 | — | Pending |
-| CORE-07 | — | Pending |
-| CORE-08 | — | Pending |
-| PROC-01 | — | Pending |
-| PROC-02 | — | Pending |
-| PROC-03 | — | Pending |
-| PROC-04 | — | Pending |
-| PROC-05 | — | Pending |
-| PROC-06 | — | Pending |
-| ASSET-01 | — | Pending |
-| ASSET-02 | — | Pending |
-| ASSET-03 | — | Pending |
-| ASSET-04 | — | Pending |
-| ASSET-05 | — | Pending |
-| ASSET-06 | — | Pending |
-| ASSET-07 | — | Pending |
-| REF-01 | — | Pending |
-| REF-02 | — | Pending |
-| REF-03 | — | Pending |
-| REF-04 | — | Pending |
-| REF-05 | — | Pending |
-| REF-06 | — | Pending |
-| REF-07 | — | Pending |
+| CORE-01 | Phase 1 | Pending |
+| CORE-02 | Phase 1 | Pending |
+| CORE-03 | Phase 1 | Pending |
+| CORE-04 | Phase 1 | Pending |
+| CORE-05 | Phase 1 | Pending |
+| CORE-06 | Phase 1 | Pending |
+| CORE-07 | Phase 1 | Pending |
+| CORE-08 | Phase 1 | Pending |
+| PROC-01 | Phase 2 | Pending |
+| PROC-02 | Phase 2 | Pending |
+| PROC-03 | Phase 2 | Pending |
+| PROC-04 | Phase 2 | Pending |
+| PROC-05 | Phase 2 | Pending |
+| PROC-06 | Phase 2 | Pending |
+| ASSET-01 | Phase 3 | Pending |
+| ASSET-02 | Phase 3 | Pending |
+| ASSET-03 | Phase 3 | Pending |
+| ASSET-04 | Phase 3 | Pending |
+| ASSET-05 | Phase 3 | Pending |
+| ASSET-06 | Phase 3 | Pending |
+| ASSET-07 | Phase 3 | Pending |
+| REF-01 | Phase 4 | Pending |
+| REF-02 | Phase 4 | Pending |
+| REF-03 | Phase 4 | Pending |
+| REF-04 | Phase 4 | Pending |
+| REF-05 | Phase 4 | Pending |
+| REF-06 | Phase 4 | Pending |
+| REF-07 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 28 total
-- Mapped to phases: 0
-- Unmapped: 28 ⚠️
+- Mapped to phases: 28
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-01-29*
-*Last updated: 2026-01-29 after initial definition*
+*Last updated: 2026-01-30 after roadmap creation*
