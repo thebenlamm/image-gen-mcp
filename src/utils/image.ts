@@ -39,13 +39,15 @@ export function generateFilename(prompt: string, provider: string): string {
 export interface OutputOptions {
   outputPath?: string;
   outputDir?: string;
+  assetId?: string;
   prompt: string;
   provider: string;
 }
 
 export async function resolveOutputPath(options: OutputOptions): Promise<string> {
-  const { outputPath, outputDir, prompt, provider } = options;
+  const { outputPath, outputDir, assetId, prompt, provider } = options;
 
+  // Priority 1: Explicit outputPath (unchanged behavior)
   if (outputPath) {
     if (!outputPath.endsWith('.png')) {
       throw new Error('outputPath must end with .png');
@@ -56,6 +58,15 @@ export async function resolveOutputPath(options: OutputOptions): Promise<string>
     return absolute;
   }
 
+  // Priority 2: outputDir with assetId → clean filename
+  if (outputDir && assetId) {
+    const expanded = expandTilde(outputDir);
+    const absolute = path.resolve(expanded);
+    await fs.promises.mkdir(absolute, { recursive: true });
+    return path.join(absolute, `${assetId}.png`);
+  }
+
+  // Priority 3: outputDir without assetId → generated filename
   if (outputDir) {
     const expanded = expandTilde(outputDir);
     const absolute = path.resolve(expanded);
@@ -64,6 +75,13 @@ export async function resolveOutputPath(options: OutputOptions): Promise<string>
     return path.join(absolute, filename);
   }
 
+  // Priority 4: Default dir with assetId → clean filename
+  if (assetId) {
+    const dir = await getOutputDir();
+    return path.join(dir, `${assetId}.png`);
+  }
+
+  // Priority 5: Default dir without assetId → generated filename
   const dir = await getOutputDir();
   const filename = generateFilename(prompt, provider);
   return path.join(dir, filename);
