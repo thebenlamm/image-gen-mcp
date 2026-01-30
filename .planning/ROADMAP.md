@@ -62,10 +62,11 @@ Plans:
   4. User can call `generate_asset` with `assetType: "avatar"` and receive an 80x80 circular PNG in one operation
   5. User can call `generate_asset` with `assetType: "scene"` and receive a 1200x675 16:9 landscape PNG in one operation
   6. Asset ID-based outputs produce clean filenames (no date/hash prefix) for predictable paths
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: TBD
+- [ ] 03-01-PLAN.md -- Asset preset definitions and clean filename support
+- [ ] 03-02-PLAN.md -- generate_asset MCP tool registration
 
 ### Phase 4: Reference Images
 **Goal**: Users can generate consistent character images across multiple outputs using reference images
