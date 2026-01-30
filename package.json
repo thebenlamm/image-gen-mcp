@@ -23,12 +23,16 @@
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "node-addon-api": "^8.5.0",
+    "node-gyp": "^12.2.0",
     "openai": "^4.0.0",
     "replicate": "^1.0.0",
+    "sharp": "^0.34.5",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@types/sharp": "^0.31.1",
     "typescript": "^5.7.0"
   }
 }
