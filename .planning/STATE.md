@@ -5,33 +5,33 @@
 See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** One MCP call produces a ready-to-use image asset — generated, processed, and saved — without manual post-processing steps.
-**Current focus:** Phase 1: Core Enhancements
+**Current focus:** Phase 1: Core Enhancements -- COMPLETE
 
 ## Current Position
 
-Phase: 1 of 4 (Core Enhancements)
-Plan: 1 of 2 in phase
-Status: In progress
-Last activity: 2026-01-30 — Completed 01-01-PLAN.md (output path control + grok default)
+Phase: 1 of 4 (Core Enhancements) -- COMPLETE
+Plan: 2 of 2 in phase
+Status: Phase complete
+Last activity: 2026-01-30 — Completed 01-02-PLAN.md (style parameter + size-aware selection)
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100% (Phase 1)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
+- Total plans completed: 2
 - Average duration: 2 min
-- Total execution time: 0.03 hours
+- Total execution time: 0.07 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-core-enhancements | 1/2 | 2 min | 2 min |
+| 01-core-enhancements | 2/2 | 4 min | 2 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (2 min)
-- Trend: Not established
+- Last 5 plans: 01-01 (2 min), 01-02 (2 min)
+- Trend: Consistent
 
 *Updated after each plan completion*
 
@@ -48,6 +48,9 @@ Recent decisions affecting current work:
 - PNG-only output (transparency needed for circle masks)
 - resolveOutputPath as additive function (existing getOutputDir/generateFilename still exported)
 - Path priority: outputPath > outputDir > IMAGE_GEN_OUTPUT_DIR > ~/Downloads/generated-images
+- Style applied at tool level via prompt prepend, not passed to providers -- implemented in 01-02
+- Size-aware selection is a targeted capability filter, not a general fallback chain -- implemented in 01-02
+- Capability flags pattern on ImageProvider interface for feature detection -- established in 01-02
 
 ### Pending Todos
 
@@ -59,6 +62,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-30T14:22:45Z
-Stopped at: Completed 01-01-PLAN.md (output path control + grok default)
+Last session: 2026-01-30T14:26:31Z
+Stopped at: Completed 01-02-PLAN.md (style parameter + size-aware selection). Phase 1 complete.
 Resume file: None
