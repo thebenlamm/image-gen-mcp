@@ -10,27 +10,27 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 1 of 4 (Core Enhancements)
-Plan: None yet
-Status: Ready to plan
-Last activity: 2026-01-30 — Roadmap created with 4 phases, 28 requirements mapped
+Plan: 1 of 2 in phase
+Status: In progress
+Last activity: 2026-01-30 — Completed 01-01-PLAN.md (output path control + grok default)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: - min
-- Total execution time: 0.0 hours
+- Total plans completed: 1
+- Average duration: 2 min
+- Total execution time: 0.03 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01-core-enhancements | 1/2 | 2 min | 2 min |
 
 **Recent Trend:**
-- Last 5 plans: None yet
+- Last 5 plans: 01-01 (2 min)
 - Trend: Not established
 
 *Updated after each plan completion*
@@ -42,10 +42,12 @@ Progress: [░░░░░░░░░░] 0%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- Grok as default provider (best quality for Ben's use cases)
+- Grok as default provider (best quality for Ben's use cases) -- implemented in 01-01
 - sharp for image processing (standard Node.js library, no ImageMagick dependency)
 - Fallback chain in utility, not providers (keeps providers testable, fallback logic centralized)
 - PNG-only output (transparency needed for circle masks)
+- resolveOutputPath as additive function (existing getOutputDir/generateFilename still exported)
+- Path priority: outputPath > outputDir > IMAGE_GEN_OUTPUT_DIR > ~/Downloads/generated-images
 
 ### Pending Todos
 
@@ -57,6 +59,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-30 (roadmap creation)
-Stopped at: Roadmap and STATE.md files created, REQUIREMENTS.md traceability pending update
+Last session: 2026-01-30T14:22:45Z
+Stopped at: Completed 01-01-PLAN.md (output path control + grok default)
 Resume file: None
