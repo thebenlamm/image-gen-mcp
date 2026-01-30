@@ -47,6 +47,39 @@ function resolveDefaultProvider(): ProviderName {
 
 const DEFAULT_PROVIDER = resolveDefaultProvider();
 
+// Shared helpers for generate_image and generate_asset
+import type { ImageProvider } from './providers/index.js';
+
+function resolveProvider(
+  requested: ProviderName | undefined,
+  needsSize: boolean,
+): { provider: ImageProvider; providerName: ProviderName } | { error: string; providerName: ProviderName } {
+  let providerName = requested || DEFAULT_PROVIDER;
+  let provider = registry.get(providerName);
+
+  if (provider && needsSize && !provider.supportsSize) {
+    const sizeCapable = registry.getSizeCapable();
+    if (sizeCapable.length > 0) {
+      providerName = sizeCapable[0];
+      provider = registry.get(providerName);
+    }
+  }
+
+  if (!provider) {
+    const available = registry.getAvailable();
+    return {
+      providerName,
+      error: `Provider '${providerName}' is not available. Available providers: ${available.join(', ')}`,
+    };
+  }
+
+  return { provider, providerName };
+}
+
+function buildEffectivePrompt(prompt: string, style?: string): string {
+  return style ? `${style}, ${prompt}` : prompt;
+}
+
 // Create MCP server
 const server = new McpServer({
   name: 'image-gen',
@@ -73,37 +106,20 @@ server.tool(
     style: z.string().optional().describe('Style modifier prepended to the generation prompt (e.g., "watercolor painting", "pixel art", "photorealistic")'),
   },
   async ({ prompt, provider, model, size, outputPath, outputDir, style }) => {
-    let providerName = provider || DEFAULT_PROVIDER;
-    let imageProvider = registry.get(providerName);
-
-    // Size-aware selection: if size is specified and provider doesn't support it,
-    // find next available provider that does
-    if (imageProvider && size && !imageProvider.supportsSize) {
-      const sizeCapable = registry.getSizeCapable();
-      if (sizeCapable.length > 0) {
-        providerName = sizeCapable[0];
-        imageProvider = registry.get(providerName);
-      }
-    }
-
-    if (!imageProvider) {
-      const available = registry.getAvailable();
+    const resolved = resolveProvider(provider, !!size);
+    if ('error' in resolved) {
       return {
-        content: [
-          {
-            type: 'text' as const,
-            text: JSON.stringify({
-              success: false,
-              error: `Provider '${providerName}' is not available. Available providers: ${available.join(', ')}`,
-            }),
-          },
-        ],
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify({ success: false, error: resolved.error }),
+        }],
       };
     }
+    const imageProvider = resolved.provider;
+    const providerName = resolved.providerName;
 
     try {
-      // Apply style modifier to prompt (providers are unaware of style)
-      const effectivePrompt = style ? `${style}, ${prompt}` : prompt;
+      const effectivePrompt = buildEffectivePrompt(prompt, style);
 
       const result = await imageProvider.generate({
         prompt: effectivePrompt,
@@ -274,39 +290,21 @@ server.tool(
       };
     }
 
-    // Resolve provider (same logic as generate_image)
-    let providerName = provider || DEFAULT_PROVIDER;
-    let imageProvider = registry.get(providerName);
-
-    // Size-aware selection: if preset requires size and provider doesn't support it,
-    // find next available provider that does
-    if (imageProvider && preset.generationSize && !imageProvider.supportsSize) {
-      const sizeCapable = registry.getSizeCapable();
-      if (sizeCapable.length > 0) {
-        providerName = sizeCapable[0];
-        imageProvider = registry.get(providerName);
-      }
-    }
-
-    if (!imageProvider) {
-      const available = registry.getAvailable();
+    // Resolve provider
+    const resolved = resolveProvider(provider, !!preset.generationSize);
+    if ('error' in resolved) {
       return {
-        content: [
-          {
-            type: 'text' as const,
-            text: JSON.stringify({
-              success: false,
-              error: `Provider '${providerName}' is not available. Available providers: ${available.join(', ')}`,
-              assetType,
-            }),
-          },
-        ],
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify({ success: false, error: resolved.error, assetType }),
+        }],
       };
     }
+    const imageProvider = resolved.provider;
+    const providerName = resolved.providerName;
 
     try {
-      // Apply style modifier to prompt
-      const effectivePrompt = style ? `${style}, ${prompt}` : prompt;
+      const effectivePrompt = buildEffectivePrompt(prompt, style);
 
       // Generate image with preset's generation size
       const result = await imageProvider.generate({
@@ -317,7 +315,6 @@ server.tool(
 
       // Apply post-processing operations with raw fallback
       let processed: Awaited<ReturnType<typeof applyOperations>>;
-      let processingWarning: string | undefined;
       try {
         processed = await applyOperations(result.buffer, preset.operations);
       } catch (processingError) {
