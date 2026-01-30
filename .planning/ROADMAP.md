@@ -45,11 +45,11 @@ Plans:
   3. User can aspect-crop an image to standard ratios (1:1, 16:9, 9:16, 4:3, 3:4) with gravity control
   4. User can apply circle mask to produce circular image with transparent background
   5. User can chain multiple operations in one call (e.g., aspect-crop then circle mask then resize) and they execute in order
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md — Image processing engine (resize, crop, aspect crop, circle mask) with sharp
+- [ ] 02-02-PLAN.md — process_image MCP tool with operation chaining and size metadata response
 
 ### Phase 3: Asset Pipeline
 **Goal**: Users can generate ready-to-use assets (profile pics, post images, hero photos, avatars, scenes) in one call
@@ -91,6 +91,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Enhancements | 2/2 | ✓ Complete | 2026-01-30 |
-| 2. Post-Processing | 0/TBD | Not started | - |
+| 2. Post-Processing | 0/2 | In progress | - |
 | 3. Asset Pipeline | 0/TBD | Not started | - |
 | 4. Reference Images | 0/TBD | Not started | - |
