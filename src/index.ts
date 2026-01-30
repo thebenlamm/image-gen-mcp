@@ -88,7 +88,7 @@ const server = new McpServer({
 // Define the generate_image tool
 server.tool(
   'generate_image',
-  'Generate an image from a text prompt using various AI providers',
+  'Generate an image from a text prompt using various AI providers. Supports style modifiers (e.g., "watercolor painting"), size presets (square/landscape/portrait), and custom output paths. Providers: OpenAI, Gemini, Replicate, Together AI, Grok.',
   {
     prompt: z.string().describe('The text description of the image to generate'),
     provider: z
@@ -257,7 +257,7 @@ server.tool(
 // Define the generate_asset tool
 server.tool(
   'generate_asset',
-  'Generate a ready-to-use image asset with automatic post-processing. Combines generation and processing in one call.',
+  'Generate a ready-to-use image asset with automatic post-processing. Combines generation and processing in one call. Asset types: profile_pic (200x200 circular), post_image (1200x675 16:9), hero_photo (1080x1920 9:16), avatar (80x80 circular), scene (1200x675 16:9). Supports style modifiers and custom output paths.',
   {
     prompt: z.string().describe('Text description of the image to generate'),
     assetType: z
