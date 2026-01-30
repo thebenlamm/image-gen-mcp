@@ -14,7 +14,7 @@ export class OpenAIProvider implements ImageProvider {
   private client: OpenAI;
 
   constructor() {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY?.trim();
     if (!apiKey) {
       throw new Error('OPENAI_API_KEY environment variable is required');
     }
@@ -49,7 +49,7 @@ export class OpenAIProvider implements ImageProvider {
 }
 
 export function createOpenAIProvider(): ImageProvider | null {
-  if (!process.env.OPENAI_API_KEY) {
+  if (!process.env.OPENAI_API_KEY?.trim()) {
     return null;
   }
   return new OpenAIProvider();

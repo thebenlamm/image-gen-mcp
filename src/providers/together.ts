@@ -13,7 +13,7 @@ export class TogetherProvider implements ImageProvider {
   private apiKey: string;
 
   constructor() {
-    const apiKey = process.env.TOGETHER_API_KEY;
+    const apiKey = process.env.TOGETHER_API_KEY?.trim();
     if (!apiKey) {
       throw new Error('TOGETHER_API_KEY environment variable is required');
     }
@@ -61,7 +61,7 @@ export class TogetherProvider implements ImageProvider {
 }
 
 export function createTogetherProvider(): ImageProvider | null {
-  if (!process.env.TOGETHER_API_KEY) {
+  if (!process.env.TOGETHER_API_KEY?.trim()) {
     return null;
   }
   return new TogetherProvider();

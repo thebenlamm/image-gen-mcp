@@ -47,9 +47,14 @@ export interface ProcessingResult {
  */
 export async function getImageInfo(buffer: Buffer): Promise<ImageInfo> {
   const metadata = await sharp(buffer).metadata();
+  const width = metadata.width;
+  const height = metadata.height;
+  if (!width || width <= 0 || !height || height <= 0) {
+    throw new Error(`Invalid image metadata: width=${width}, height=${height}. Image may be corrupt.`);
+  }
   return {
-    width: metadata.width || 0,
-    height: metadata.height || 0,
+    width,
+    height,
     format: metadata.format || 'unknown',
     channels: metadata.channels || 0,
   };
@@ -73,6 +78,17 @@ export async function resize(buffer: Buffer, op: ResizeOp): Promise<Buffer> {
  * Extract a rectangular region from an image
  */
 export async function crop(buffer: Buffer, op: CropOp): Promise<Buffer> {
+  const metadata = await sharp(buffer).metadata();
+  const sourceWidth = metadata.width;
+  const sourceHeight = metadata.height;
+  if (sourceWidth && sourceHeight) {
+    if (op.x + op.width > sourceWidth || op.y + op.height > sourceHeight) {
+      throw new Error(
+        `Crop region (${op.x},${op.y} ${op.width}x${op.height}) exceeds source dimensions (${sourceWidth}x${sourceHeight})`
+      );
+    }
+  }
+
   return sharp(buffer)
     .extract({
       left: op.x,
@@ -94,8 +110,11 @@ export async function aspectCrop(buffer: Buffer, op: AspectCropOp): Promise<Buff
 
   // Get source dimensions
   const metadata = await sharp(buffer).metadata();
-  const sourceWidth = metadata.width || 0;
-  const sourceHeight = metadata.height || 0;
+  const sourceWidth = metadata.width;
+  const sourceHeight = metadata.height;
+  if (!sourceWidth || sourceWidth <= 0 || !sourceHeight || sourceHeight <= 0) {
+    throw new Error(`Cannot aspect crop: invalid source dimensions (${sourceWidth}x${sourceHeight})`);
+  }
   const sourceAspect = sourceWidth / sourceHeight;
 
   // Calculate crop dimensions
@@ -157,8 +176,11 @@ export async function aspectCrop(buffer: Buffer, op: AspectCropOp): Promise<Buff
 export async function circleMask(buffer: Buffer): Promise<Buffer> {
   // Get source dimensions
   const metadata = await sharp(buffer).metadata();
-  const sourceWidth = metadata.width || 0;
-  const sourceHeight = metadata.height || 0;
+  const sourceWidth = metadata.width;
+  const sourceHeight = metadata.height;
+  if (!sourceWidth || sourceWidth <= 0 || !sourceHeight || sourceHeight <= 0) {
+    throw new Error(`Cannot apply circle mask: invalid source dimensions (${sourceWidth}x${sourceHeight})`);
+  }
 
   // Use the smaller dimension as diameter
   const diameter = Math.min(sourceWidth, sourceHeight);

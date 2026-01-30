@@ -161,16 +161,17 @@ server.tool(
     operations: z.array(z.union([
       z.object({
         type: z.literal('resize'),
-        width: z.number().optional().describe('Target width in pixels'),
-        height: z.number().optional().describe('Target height in pixels'),
+        width: z.number().int().positive().optional().describe('Target width in pixels'),
+        height: z.number().int().positive().optional().describe('Target height in pixels'),
         fit: z.enum(['cover', 'contain', 'fill']).optional().describe('How to fit image to dimensions (default: cover)'),
+        withoutEnlargement: z.boolean().optional().describe('Prevent upscaling beyond source dimensions'),
       }),
       z.object({
         type: z.literal('crop'),
-        x: z.number().describe('Left offset in pixels'),
-        y: z.number().describe('Top offset in pixels'),
-        width: z.number().describe('Crop width in pixels'),
-        height: z.number().describe('Crop height in pixels'),
+        x: z.number().int().nonnegative().describe('Left offset in pixels'),
+        y: z.number().int().nonnegative().describe('Top offset in pixels'),
+        width: z.number().int().positive().describe('Crop width in pixels'),
+        height: z.number().int().positive().describe('Crop height in pixels'),
       }),
       z.object({
         type: z.literal('aspectCrop'),

@@ -14,7 +14,7 @@ export class ReplicateProvider implements ImageProvider {
   private client: Replicate;
 
   constructor() {
-    const apiToken = process.env.REPLICATE_API_TOKEN;
+    const apiToken = process.env.REPLICATE_API_TOKEN?.trim();
     if (!apiToken) {
       throw new Error('REPLICATE_API_TOKEN environment variable is required');
     }
@@ -56,7 +56,7 @@ export class ReplicateProvider implements ImageProvider {
 }
 
 export function createReplicateProvider(): ImageProvider | null {
-  if (!process.env.REPLICATE_API_TOKEN) {
+  if (!process.env.REPLICATE_API_TOKEN?.trim()) {
     return null;
   }
   return new ReplicateProvider();

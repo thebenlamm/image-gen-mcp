@@ -14,7 +14,7 @@ export class GeminiProvider implements ImageProvider {
   private client: GoogleGenerativeAI;
 
   constructor() {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY?.trim();
     if (!apiKey) {
       throw new Error('GEMINI_API_KEY environment variable is required');
     }
@@ -61,7 +61,7 @@ export class GeminiProvider implements ImageProvider {
 }
 
 export function createGeminiProvider(): ImageProvider | null {
-  if (!process.env.GEMINI_API_KEY) {
+  if (!process.env.GEMINI_API_KEY?.trim()) {
     return null;
   }
   return new GeminiProvider();

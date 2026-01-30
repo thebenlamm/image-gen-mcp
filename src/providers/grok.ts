@@ -7,7 +7,7 @@ export class GrokProvider implements ImageProvider {
   private apiKey: string;
 
   constructor() {
-    const apiKey = process.env.XAI_API_KEY;
+    const apiKey = process.env.XAI_API_KEY?.trim();
     if (!apiKey) {
       throw new Error('XAI_API_KEY environment variable is required');
     }
@@ -53,7 +53,7 @@ export class GrokProvider implements ImageProvider {
 }
 
 export function createGrokProvider(): ImageProvider | null {
-  if (!process.env.XAI_API_KEY) {
+  if (!process.env.XAI_API_KEY?.trim()) {
     return null;
   }
   return new GrokProvider();
