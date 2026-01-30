@@ -192,9 +192,15 @@ server.tool(
       // Apply operations
       const result = await applyOperations(inputBuffer, operations as ProcessingOperation[]);
 
-      // Determine output path
-      const finalOutputPath = outputPath || inputPath.replace(/\.png$/i, '_processed.png');
-      if (!finalOutputPath.endsWith('.png')) {
+      // Determine output path — handles any input extension (not just .png)
+      let finalOutputPath: string;
+      if (outputPath) {
+        finalOutputPath = outputPath;
+      } else {
+        const parsed = path.parse(inputPath);
+        finalOutputPath = path.join(parsed.dir, `${parsed.name}_processed.png`);
+      }
+      if (!finalOutputPath.toLowerCase().endsWith('.png')) {
         throw new Error('Output path must end with .png');
       }
 
