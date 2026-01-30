@@ -12,7 +12,7 @@ Transform the existing image generation MCP server into a complete asset pipelin
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Core Enhancements** - Enhanced generation with output control, style modifiers, and size-aware provider selection
+- [x] **Phase 1: Core Enhancements** - Enhanced generation with output control, style modifiers, and size-aware provider selection
 - [ ] **Phase 2: Post-Processing** - Image processing operations (resize, crop, aspect crop, circle mask)
 - [ ] **Phase 3: Asset Pipeline** - High-level asset generation with presets
 - [ ] **Phase 4: Reference Images** - Character consistency through reference image support
@@ -32,8 +32,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Output path control, default provider change to grok, startup logs
-- [ ] 01-02-PLAN.md — Style parameter, size-aware provider selection, enhanced error responses
+- [x] 01-01-PLAN.md — Output path control, default provider change to grok, startup logs
+- [x] 01-02-PLAN.md — Style parameter, size-aware provider selection, enhanced error responses
 
 ### Phase 2: Post-Processing
 **Goal**: Users can transform generated images through resize, crop, aspect crop, and circle mask operations
@@ -90,7 +90,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Enhancements | 0/2 | Planned | - |
+| 1. Core Enhancements | 2/2 | ✓ Complete | 2026-01-30 |
 | 2. Post-Processing | 0/TBD | Not started | - |
 | 3. Asset Pipeline | 0/TBD | Not started | - |
 | 4. Reference Images | 0/TBD | Not started | - |
