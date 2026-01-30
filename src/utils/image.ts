@@ -18,14 +18,12 @@ function slugify(text: string): string {
     .slice(0, 50);
 }
 
-export function getOutputDir(): string {
+export async function getOutputDir(): Promise<string> {
   const dir = expandTilde(
     process.env.IMAGE_GEN_OUTPUT_DIR || '~/Downloads/generated-images'
   );
 
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
+  await fs.promises.mkdir(dir, { recursive: true });
 
   return dir;
 }
@@ -38,11 +36,40 @@ export function generateFilename(prompt: string, provider: string): string {
   return `${date}-${provider}-${slug}-${hash}.png`;
 }
 
-export async function saveImage(buffer: Buffer, filename: string): Promise<string> {
-  const outputDir = getOutputDir();
-  const filePath = path.join(outputDir, filename);
+export interface OutputOptions {
+  outputPath?: string;
+  outputDir?: string;
+  prompt: string;
+  provider: string;
+}
 
+export async function resolveOutputPath(options: OutputOptions): Promise<string> {
+  const { outputPath, outputDir, prompt, provider } = options;
+
+  if (outputPath) {
+    if (!outputPath.endsWith('.png')) {
+      throw new Error('outputPath must end with .png');
+    }
+    const expanded = expandTilde(outputPath);
+    const absolute = path.resolve(expanded);
+    await fs.promises.mkdir(path.dirname(absolute), { recursive: true });
+    return absolute;
+  }
+
+  if (outputDir) {
+    const expanded = expandTilde(outputDir);
+    const absolute = path.resolve(expanded);
+    await fs.promises.mkdir(absolute, { recursive: true });
+    const filename = generateFilename(prompt, provider);
+    return path.join(absolute, filename);
+  }
+
+  const dir = await getOutputDir();
+  const filename = generateFilename(prompt, provider);
+  return path.join(dir, filename);
+}
+
+export async function saveImage(buffer: Buffer, filePath: string): Promise<string> {
   await fs.promises.writeFile(filePath, buffer);
-
   return filePath;
 }
