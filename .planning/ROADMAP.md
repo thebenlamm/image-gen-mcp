@@ -13,7 +13,7 @@ Transform the existing image generation MCP server into a complete asset pipelin
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Core Enhancements** - Enhanced generation with output control, style modifiers, and size-aware provider selection
-- [ ] **Phase 2: Post-Processing** - Image processing operations (resize, crop, aspect crop, circle mask)
+- [x] **Phase 2: Post-Processing** - Image processing operations (resize, crop, aspect crop, circle mask)
 - [ ] **Phase 3: Asset Pipeline** - High-level asset generation with presets
 - [ ] **Phase 4: Reference Images** - Character consistency through reference image support
 
@@ -48,8 +48,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Image processing engine (resize, crop, aspect crop, circle mask) with sharp
-- [ ] 02-02-PLAN.md — process_image MCP tool with operation chaining and size metadata response
+- [x] 02-01-PLAN.md — Image processing engine (resize, crop, aspect crop, circle mask) with sharp
+- [x] 02-02-PLAN.md — process_image MCP tool with operation chaining and size metadata response
 
 ### Phase 3: Asset Pipeline
 **Goal**: Users can generate ready-to-use assets (profile pics, post images, hero photos, avatars, scenes) in one call
@@ -91,6 +91,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Enhancements | 2/2 | ✓ Complete | 2026-01-30 |
-| 2. Post-Processing | 0/2 | In progress | - |
+| 2. Post-Processing | 2/2 | ✓ Complete | 2026-01-30 |
 | 3. Asset Pipeline | 0/TBD | Not started | - |
 | 4. Reference Images | 0/TBD | Not started | - |

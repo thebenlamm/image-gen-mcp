@@ -18,12 +18,12 @@
 
 ### Post-Processing
 
-- [ ] **PROC-01**: User can resize an image to specified width/height with fit modes (cover, contain, fill)
-- [ ] **PROC-02**: User can crop an image with x/y/w/h coordinates
-- [ ] **PROC-03**: User can aspect-crop an image to standard ratios (1:1, 16:9, 9:16, 4:3, 3:4) with gravity
-- [ ] **PROC-04**: User can apply circle mask to an image (transparent background)
-- [ ] **PROC-05**: Operations are composable — multiple operations chain in order via `process_image` tool
-- [ ] **PROC-06**: Response includes original size, output size, and operations applied
+- [x] **PROC-01**: User can resize an image to specified width/height with fit modes (cover, contain, fill)
+- [x] **PROC-02**: User can crop an image with x/y/w/h coordinates
+- [x] **PROC-03**: User can aspect-crop an image to standard ratios (1:1, 16:9, 9:16, 4:3, 3:4) with gravity
+- [x] **PROC-04**: User can apply circle mask to an image (transparent background)
+- [x] **PROC-05**: Operations are composable — multiple operations chain in order via `process_image` tool
+- [x] **PROC-06**: Response includes original size, output size, and operations applied
 
 ### Asset Pipeline
 
@@ -80,12 +80,12 @@
 | CORE-06 | Deferred | Deferred from Phase 1 |
 | CORE-07 | Phase 1 | Complete |
 | CORE-08 | Phase 1 | Complete |
-| PROC-01 | Phase 2 | Pending |
-| PROC-02 | Phase 2 | Pending |
-| PROC-03 | Phase 2 | Pending |
-| PROC-04 | Phase 2 | Pending |
-| PROC-05 | Phase 2 | Pending |
-| PROC-06 | Phase 2 | Pending |
+| PROC-01 | Phase 2 | Complete |
+| PROC-02 | Phase 2 | Complete |
+| PROC-03 | Phase 2 | Complete |
+| PROC-04 | Phase 2 | Complete |
+| PROC-05 | Phase 2 | Complete |
+| PROC-06 | Phase 2 | Complete |
 | ASSET-01 | Phase 3 | Pending |
 | ASSET-02 | Phase 3 | Pending |
 | ASSET-03 | Phase 3 | Pending |
@@ -109,4 +109,4 @@
 
 ---
 *Requirements defined: 2026-01-29*
-*Last updated: 2026-01-30 after roadmap creation*
+*Last updated: 2026-01-30 after Phase 2 completion*
