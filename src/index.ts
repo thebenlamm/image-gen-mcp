@@ -52,15 +52,21 @@ const DEFAULT_PROVIDER = resolveDefaultProvider();
 function resolveProvider(
   requested: ProviderName | undefined,
   needsSize: boolean,
-): { provider: ImageProvider; providerName: ProviderName } | { error: string; providerName: ProviderName } {
+): { provider: ImageProvider; providerName: ProviderName; sizeDropped?: boolean } | { error: string; providerName: ProviderName } {
   let providerName = requested || DEFAULT_PROVIDER;
   let provider = registry.get(providerName);
 
+  // Only auto-fallback to a size-capable provider when no explicit provider was requested
   if (provider && needsSize && !provider.supportsSize) {
-    const sizeCapable = registry.getSizeCapable();
-    if (sizeCapable.length > 0) {
-      providerName = sizeCapable[0];
-      provider = registry.get(providerName);
+    if (!requested) {
+      const sizeCapable = registry.getSizeCapable();
+      if (sizeCapable.length > 0) {
+        providerName = sizeCapable[0];
+        provider = registry.get(providerName);
+      }
+    } else {
+      // User explicitly chose this provider — proceed without size rather than silently switching
+      return { provider, providerName, sizeDropped: true };
     }
   }
 
@@ -116,6 +122,7 @@ server.tool(
     }
     const imageProvider = resolved.provider;
     const providerName = resolved.providerName;
+    const effectiveSize = resolved.sizeDropped ? undefined : size;
 
     try {
       const effectivePrompt = buildEffectivePrompt(prompt, style);
@@ -123,7 +130,7 @@ server.tool(
       const result = await imageProvider.generate({
         prompt: effectivePrompt,
         model,
-        size,
+        size: effectiveSize,
       });
 
       const filePath = await resolveOutputPath({
@@ -134,17 +141,22 @@ server.tool(
       });
       await saveImage(result.buffer, filePath);
 
+      const response: Record<string, unknown> = {
+        success: true,
+        path: filePath,
+        provider: providerName,
+        model: result.model,
+        revisedPrompt: result.revisedPrompt,
+      };
+      if (resolved.sizeDropped) {
+        response.warning = `Provider '${providerName}' does not support size parameter; size was ignored.`;
+      }
+
       return {
         content: [
           {
             type: 'text' as const,
-            text: JSON.stringify({
-              success: true,
-              path: filePath,
-              provider: providerName,
-              model: result.model,
-              revisedPrompt: result.revisedPrompt,
-            }),
+            text: JSON.stringify(response),
           },
         ],
       };
@@ -301,6 +313,7 @@ server.tool(
     }
     const imageProvider = resolved.provider;
     const providerName = resolved.providerName;
+    const effectiveGenSize = resolved.sizeDropped ? undefined : preset.generationSize;
 
     try {
       const effectivePrompt = buildEffectivePrompt(prompt, style);
@@ -309,7 +322,7 @@ server.tool(
       const result = await imageProvider.generate({
         prompt: effectivePrompt,
         model,
-        size: preset.generationSize,
+        size: effectiveGenSize,
       });
 
       // Apply post-processing operations with raw fallback

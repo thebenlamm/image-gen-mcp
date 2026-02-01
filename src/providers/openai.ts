@@ -3,8 +3,8 @@ import type { ImageProvider, GenerateParams, GenerateResult, ImageSize } from '.
 
 const SIZE_MAP: Record<ImageSize, string> = {
   square: '1024x1024',
-  landscape: '1792x1024',
-  portrait: '1024x1792',
+  landscape: '1536x1024',
+  portrait: '1024x1536',
 };
 
 export class OpenAIProvider implements ImageProvider {
@@ -29,8 +29,7 @@ export class OpenAIProvider implements ImageProvider {
       model,
       prompt: params.prompt,
       n: 1,
-      size: size as '1024x1024' | '1792x1024' | '1024x1792',
-      response_format: 'b64_json',
+      size: size as '1024x1024' | '1536x1024' | '1024x1536',
     });
 
     const imageData = response.data?.[0];

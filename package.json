@@ -21,7 +21,7 @@
   "author": "Ben Lamm",
   "license": "MIT",
   "dependencies": {
-    "@google/generative-ai": "^0.21.0",
+    "@google/genai": "^1.0.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "node-addon-api": "^8.5.0",
     "node-gyp": "^12.2.0",

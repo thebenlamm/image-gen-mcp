@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import type { ImageProvider, GenerateParams, GenerateResult, ImageSize } from './index.js';
 
 const ASPECT_RATIO_MAP: Record<ImageSize, string> = {
@@ -9,54 +9,59 @@ const ASPECT_RATIO_MAP: Record<ImageSize, string> = {
 
 export class GeminiProvider implements ImageProvider {
   name = 'gemini' as const;
-  defaultModel = 'gemini-2.5-flash-image';
+  defaultModel = 'gemini-2.5-flash-preview-05-20';
   supportsSize = true;
-  private client: GoogleGenerativeAI;
+  private client: GoogleGenAI;
 
   constructor() {
     const apiKey = process.env.GEMINI_API_KEY?.trim();
     if (!apiKey) {
       throw new Error('GEMINI_API_KEY environment variable is required');
     }
-    this.client = new GoogleGenerativeAI(apiKey);
+    this.client = new GoogleGenAI({ apiKey });
   }
 
   async generate(params: GenerateParams): Promise<GenerateResult> {
     const model = params.model || this.defaultModel;
     const aspectRatio = ASPECT_RATIO_MAP[params.size || 'square'];
 
-    // Use the Imagen model for image generation
-    const imagenModel = this.client.getGenerativeModel({
-      model,
-    });
-
-    const response = await imagenModel.generateContent({
-      contents: [{ role: 'user', parts: [{ text: params.prompt }] }],
-      generationConfig: {
-        // @ts-expect-error - Imagen-specific config
-        responseModalities: ['image'],
-        aspectRatio,
-      },
-    });
-
-    const result = response.response;
-    const candidate = result.candidates?.[0];
-
-    if (!candidate?.content?.parts?.[0]) {
-      throw new Error('No image data returned from Gemini');
-    }
-
-    const part = candidate.content.parts[0];
-    if (!('inlineData' in part) || !part.inlineData?.data) {
-      throw new Error('No image data in Gemini response');
-    }
-
-    const buffer = Buffer.from(part.inlineData.data, 'base64');
-
-    return {
-      buffer,
-      model,
+    const config: Record<string, unknown> = {
+      responseModalities: ['TEXT', 'IMAGE'],
     };
+
+    if (aspectRatio) {
+      config.imageConfig = {
+        aspectRatio,
+      };
+    }
+
+    const response = await this.client.models.generateContent({
+      model,
+      contents: params.prompt,
+      config,
+    });
+
+    const candidates = response.candidates;
+    if (!candidates || candidates.length === 0) {
+      throw new Error('No candidates returned from Gemini');
+    }
+
+    const parts = candidates[0].content?.parts;
+    if (!parts) {
+      throw new Error('No content parts in Gemini response');
+    }
+
+    for (const part of parts) {
+      if ('inlineData' in part && part.inlineData?.data) {
+        const buffer = Buffer.from(part.inlineData.data, 'base64');
+        return {
+          buffer,
+          model,
+        };
+      }
+    }
+
+    throw new Error('No image data found in Gemini response');
   }
 }
 
