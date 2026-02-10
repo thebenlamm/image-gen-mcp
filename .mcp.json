@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "image-gen": {
+      "command": "node",
+      "args": ["dist/index.js"],
+      "env": {
+        "IMAGE_GEN_DEFAULT_PROVIDER": "${IMAGE_GEN_DEFAULT_PROVIDER:-openai}",
+        "IMAGE_GEN_OUTPUT_DIR": "${IMAGE_GEN_OUTPUT_DIR:-~/Downloads/generated-images}",
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}",
+        "GEMINI_API_KEY": "${GEMINI_API_KEY}",
+        "XAI_API_KEY": "${XAI_API_KEY}"
+      }
+    }
+  }
+}
