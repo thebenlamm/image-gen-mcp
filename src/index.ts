@@ -2,9 +2,12 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { z } from 'zod';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as http from 'http';
+import express from 'express';
 
 import { registry, type ProviderName, type ImageProvider } from './providers/index.js';
 import { createOpenAIProvider } from './providers/openai.js';
@@ -85,11 +88,19 @@ function buildEffectivePrompt(prompt: string, style?: string): string {
   return style ? `${style}, ${prompt}` : prompt;
 }
 
-// Create MCP server
-const server = new McpServer({
-  name: 'image-gen',
-  version: '1.0.0',
-});
+// Factory: creates a fully configured McpServer instance.
+// Each SSE client needs its own McpServer, so tool registration is in here.
+function createServer(): McpServer {
+  const server = new McpServer({
+    name: 'image-gen',
+    version: '1.0.0',
+  });
+
+  registerTools(server);
+  return server;
+}
+
+function registerTools(server: McpServer): void {
 
 // Define the generate_image tool
 server.tool(
@@ -405,6 +416,25 @@ server.tool(
   }
 );
 
+} // end registerTools
+
+// Determine SSE port from --sse flag or MCP_SSE_PORT env var.
+// Returns undefined when stdio mode should be used.
+function getSSEPort(): number | undefined {
+  const idx = process.argv.indexOf('--sse');
+  if (idx !== -1) {
+    const next = process.argv[idx + 1];
+    const port = next ? parseInt(next, 10) : 3101;
+    return Number.isNaN(port) ? 3101 : port;
+  }
+  const envPort = process.env.MCP_SSE_PORT;
+  if (envPort) {
+    const port = parseInt(envPort, 10);
+    return Number.isNaN(port) ? 3101 : port;
+  }
+  return undefined;
+}
+
 // Start the server
 async function main() {
   const availableProviders = registry.getAvailable();
@@ -422,8 +452,82 @@ async function main() {
   console.error(`Processing operations: resize, crop, aspectCrop, circleMask`);
   console.error(`Asset types: profile_pic, post_image, hero_photo, avatar, scene`);
 
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  const ssePort = getSSEPort();
+
+  if (ssePort) {
+    // ── SSE mode ────────────────────────────────────────────────
+    const app = express();
+    app.use(express.json());
+
+    // Map sessionId → transport for routing POST messages
+    const transports = new Map<string, SSEServerTransport>();
+
+    app.get('/health', (_req, res) => {
+      res.json({ status: 'ok', transport: 'sse', providers: availableProviders });
+    });
+
+    app.get('/sse', async (req, res) => {
+      // Each SSE client gets its own McpServer + transport
+      const server = createServer();
+      const transport = new SSEServerTransport('/messages', res);
+      transports.set(transport.sessionId, transport);
+
+      transport.onclose = () => {
+        transports.delete(transport.sessionId);
+        console.error(`SSE client disconnected: ${transport.sessionId}`);
+      };
+
+      console.error(`SSE client connected: ${transport.sessionId}`);
+      await server.connect(transport);
+    });
+
+    app.post('/messages', async (req, res) => {
+      const sessionId = req.query.sessionId as string | undefined;
+      if (!sessionId) {
+        res.status(400).json({ error: 'Missing sessionId query parameter' });
+        return;
+      }
+
+      const transport = transports.get(sessionId);
+      if (!transport) {
+        res.status(404).json({ error: 'Unknown session' });
+        return;
+      }
+
+      await transport.handlePostMessage(req, res, req.body);
+    });
+
+    const httpServer = http.createServer(app);
+
+    // Graceful shutdown
+    const shutdown = () => {
+      console.error('\nShutting down SSE server...');
+      for (const transport of transports.values()) {
+        transport.close().catch(() => {});
+      }
+      transports.clear();
+      httpServer.close(() => {
+        console.error('SSE server stopped.');
+        process.exit(0);
+      });
+      // Force exit after 5s if connections linger
+      setTimeout(() => process.exit(0), 5000).unref();
+    };
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
+
+    httpServer.listen(ssePort, () => {
+      console.error(`SSE transport listening on http://localhost:${ssePort}`);
+      console.error(`  SSE endpoint:     GET  http://localhost:${ssePort}/sse`);
+      console.error(`  Message endpoint: POST http://localhost:${ssePort}/messages`);
+      console.error(`  Health endpoint:  GET  http://localhost:${ssePort}/health`);
+    });
+  } else {
+    // ── stdio mode (default, backward compatible) ───────────────
+    const server = createServer();
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+  }
 }
 
 main().catch((error) => {
