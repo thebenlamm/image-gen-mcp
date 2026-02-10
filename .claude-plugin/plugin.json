@@ -1,0 +1,9 @@
+{
+  "name": "image-gen",
+  "description": "Multi-provider image generation MCP supporting OpenAI, Gemini, Replicate, Together AI, and Grok",
+  "version": "1.0.0",
+  "author": {
+    "name": "Ben Lamm"
+  },
+  "license": "MIT"
+}
