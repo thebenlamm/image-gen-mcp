@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "image-gen",
-      "source": ".",
+      "source": "./",
       "description": "Generate images with OpenAI, Gemini, Replicate, Together AI, and Grok via MCP"
     }
   ]
