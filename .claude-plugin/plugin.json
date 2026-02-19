@@ -5,5 +5,17 @@
   "author": {
     "name": "Ben Lamm"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "repository": "https://github.com/thebenlamm/image-gen-mcp",
+  "keywords": ["mcp", "image-generation", "openai", "gemini", "replicate", "grok"],
+  "mcpServers": {
+    "image-gen": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/index.js"],
+      "env": {
+        "IMAGE_GEN_DEFAULT_PROVIDER": "openai",
+        "IMAGE_GEN_OUTPUT_DIR": "~/Downloads/generated-images"
+      }
+    }
+  }
 }

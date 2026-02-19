@@ -1,0 +1,16 @@
+{
+  "name": "image-gen-marketplace",
+  "owner": {
+    "name": "Ben Lamm"
+  },
+  "metadata": {
+    "description": "Multi-provider image generation tools for Claude Code"
+  },
+  "plugins": [
+    {
+      "name": "image-gen",
+      "source": ".",
+      "description": "Generate images with OpenAI, Gemini, Replicate, Together AI, and Grok via MCP"
+    }
+  ]
+}
