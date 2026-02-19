@@ -24,16 +24,45 @@ An MCP (Model Context Protocol) server for multi-provider image generation. Work
 
 ## Installation
 
+### Claude Code Plugin (Recommended)
+
+The easiest way to install — no manual config needed:
+
 ```bash
-git clone https://github.com/yourusername/image-gen-mcp.git
+# Add the marketplace
+claude plugin marketplace add thebenlamm/image-gen-mcp
+
+# Install the plugin
+claude plugin install image-gen@image-gen-marketplace
+```
+
+The plugin automatically registers the MCP server. You just need to set your API keys as environment variables (at least one):
+
+```bash
+export OPENAI_API_KEY=sk-...
+export GEMINI_API_KEY=...
+export REPLICATE_API_TOKEN=...
+export TOGETHER_API_KEY=...
+export XAI_API_KEY=...
+```
+
+Restart Claude Code and the tools will be available.
+
+### Manual Installation
+
+If you prefer manual setup or want to use with other MCP clients:
+
+```bash
+git clone https://github.com/thebenlamm/image-gen-mcp.git
 cd image-gen-mcp
 npm install
-npm run build
 ```
+
+The `postinstall` script builds automatically. Then configure your client (see below).
 
 ## Configuration
 
-### Claude Code
+### Claude Code (Manual)
 
 Add to `~/.claude/settings.json`:
 
