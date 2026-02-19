@@ -280,12 +280,12 @@ server.tool(
 // Define the generate_asset tool
 server.tool(
   'generate_asset',
-  'Generate a ready-to-use image asset with automatic post-processing. Combines generation and processing in one call. Asset types: profile_pic (200x200 circular), post_image (1200x675 16:9), hero_photo (1080x1920 9:16), avatar (80x80 circular), scene (1200x675 16:9). Supports style modifiers and custom output paths.',
+  'Generate a ready-to-use image asset with automatic post-processing. Combines generation and processing in one call. Asset types: profile_pic (200x200 circular), post_image (1200x675 16:9), hero_photo (1080x1920 9:16), avatar (80x80 circular), scene (1200x675 16:9). Avery label presets: avery_8293 (1.5" round sticker, 450x450 circular), avery_5160 (address label, 788x300), avery_22830 (2.5" round sticker, 750x750 circular), avery_8164 (shipping label, 1000x1200). Supports style modifiers and custom output paths.',
   {
     prompt: z.string().describe('Text description of the image to generate'),
     assetType: z
-      .enum(['profile_pic', 'post_image', 'hero_photo', 'avatar', 'scene'])
-      .describe('Type of asset to generate. profile_pic: 200x200 circular. post_image: 1200x675 16:9. hero_photo: 1080x1920 9:16. avatar: 80x80 circular. scene: 1200x675 16:9.'),
+      .enum(['profile_pic', 'post_image', 'hero_photo', 'avatar', 'scene', 'avery_8293', 'avery_5160', 'avery_22830', 'avery_8164'])
+      .describe('Type of asset to generate. profile_pic: 200x200 circular. post_image: 1200x675 16:9. hero_photo: 1080x1920 9:16. avatar: 80x80 circular. scene: 1200x675 16:9. avery_8293: 1.5" round sticker (450x450 circular). avery_5160: address label (788x300). avery_22830: 2.5" round sticker (750x750 circular). avery_8164: shipping label (1000x1200).'),
     provider: z
       .enum(['openai', 'gemini', 'replicate', 'together', 'grok'])
       .optional()
@@ -450,7 +450,7 @@ async function main() {
   console.error(`Default provider: ${DEFAULT_PROVIDER}${registry.has(DEFAULT_PROVIDER) ? '' : ' (not available, will need explicit provider)'}`);
   console.error(`Size-capable providers: ${registry.getSizeCapable().join(', ')}`);
   console.error(`Processing operations: resize, crop, aspectCrop, circleMask`);
-  console.error(`Asset types: profile_pic, post_image, hero_photo, avatar, scene`);
+  console.error(`Asset types: profile_pic, post_image, hero_photo, avatar, scene, avery_8293, avery_5160, avery_22830, avery_8164`);
 
   const ssePort = getSSEPort();
 
