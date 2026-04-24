@@ -9,7 +9,7 @@ const SIZE_MAP: Record<ImageSize, string> = {
 
 export class OpenAIProvider implements ImageProvider {
   name = 'openai' as const;
-  defaultModel = 'gpt-image-1';
+  defaultModel = 'gpt-image-2';
   supportsSize = true;
   private client: OpenAI;
 

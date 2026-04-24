@@ -22,7 +22,7 @@ src/
 ├── index.ts              # MCP server entry point, tool registration
 ├── providers/
 │   ├── index.ts          # Provider interface, registry
-│   ├── openai.ts         # OpenAI (gpt-image-1, DALL-E)
+│   ├── openai.ts         # OpenAI (gpt-image-2, gpt-image-1, DALL-E)
 │   ├── gemini.ts         # Google Gemini (Imagen)
 │   ├── replicate.ts      # Replicate (FLUX, SD, etc.)
 │   ├── together.ts       # Together AI (FLUX)
