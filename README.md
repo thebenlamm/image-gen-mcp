@@ -16,11 +16,11 @@ An MCP (Model Context Protocol) server for multi-provider image generation. Work
 
 | Provider | Models | Notes |
 |----------|--------|-------|
-| **OpenAI** | `gpt-image-1` (default), `dall-e-3`, `dall-e-2` | Highest quality, supports revised prompts |
-| **Google Gemini** | `gemini-2.5-flash-image` (default), `gemini-3-pro-image-preview` | Fast default, pro for higher quality |
+| **OpenAI** | `gpt-image-2` (default), `gpt-image-1`, `dall-e-3`, `dall-e-2` | Highest quality, supports revised prompts |
+| **Google Gemini** | `gemini-2.5-flash-image` (default), `gemini-3-pro-image` | Fast default, pro for higher quality |
 | **Replicate** | `black-forest-labs/flux-1.1-pro` (default), any Replicate model | Huge model variety |
 | **Together AI** | `black-forest-labs/FLUX.1-schnell` (default) | Fast, affordable |
-| **xAI Grok** | `grok-2-image` (default) | Aurora image generation |
+| **xAI Grok** | `grok-imagine-image` (default), `grok-imagine-image-pro`, `grok-2-image` | Aurora image generation |
 
 ## Installation
 
@@ -225,11 +225,11 @@ Generate an image from a text prompt.
 
 | Provider | Available Models |
 |----------|-----------------|
-| OpenAI | `gpt-image-1`, `dall-e-3`, `dall-e-2` |
-| Gemini | `gemini-2.5-flash-image`, `gemini-3-pro-image-preview` |
+| OpenAI | `gpt-image-2`, `gpt-image-1`, `dall-e-3`, `dall-e-2` |
+| Gemini | `gemini-2.5-flash-image`, `gemini-3-pro-image` |
 | Replicate | Any model on Replicate (e.g., `stability-ai/sdxl`) |
 | Together | `black-forest-labs/FLUX.1-schnell`, `black-forest-labs/FLUX.1-pro` |
-| Grok | `grok-2-image` |
+| Grok | `grok-imagine-image`, `grok-imagine-image-pro`, `grok-2-image` |
 
 #### Response
 
@@ -238,7 +238,7 @@ Generate an image from a text prompt.
   "success": true,
   "path": "/Users/you/Downloads/generated-images/2026-01-29-openai-cat-astronaut-a1b2c3.png",
   "provider": "openai",
-  "model": "gpt-image-1",
+  "model": "gpt-image-2",
   "revisedPrompt": "A cute orange tabby cat wearing a NASA spacesuit..."
 }
 ```
@@ -352,7 +352,7 @@ Each preset automatically selects the best generation size for the provider and 
   "success": true,
   "path": "/Users/you/Downloads/generated-images/my-avatar.png",
   "provider": "openai",
-  "model": "gpt-image-1",
+  "model": "gpt-image-2",
   "assetType": "avatar",
   "outputSize": { "width": 80, "height": 80 },
   "operationsApplied": ["aspectCrop(1:1, center)", "circleMask", "resize(80x80, cover)"]
