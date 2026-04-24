@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 Phase: 3 of 4 complete, ready for Phase 4
 Plan: All Phase 3 plans complete (2/2)
 Status: Phase 3 verified and complete
-Last activity: 2026-01-30 — Phase 3 verified (6/6 must-haves), ready for Phase 4
+Last activity: 2026-04-24 — Quick task 260424-heb complete (Grok default bumped to grok-imagine-image)
 
 Progress: [███████░░░] 75% (3/4 phases)
 
@@ -75,9 +75,10 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-24
-Stopped at: Quick task 260424-h6z complete (check-models inventory script). Phase 3 verified; Phase 4 still pending planning.
+Stopped at: Quick task 260424-heb complete (Grok default bumped from grok-2-image to grok-imagine-image; provider + KNOWN_DEFAULTS mirror + README tables updated in lockstep; build passes). Phase 3 verified; Phase 4 still pending planning.
 Resume file: None
 
 ## Quick Tasks
 
 - 2026-04-24 — 260424-h6z — Added `npm run check-models` inventory script (scripts/check-models.ts + README section). Detected drift: xAI default `grok-2-image` no longer in listing (now `grok-imagine-image` / `-pro`); Gemini 3 preview variants available.
+- 2026-04-24 — 260424-heb — Bumped Grok provider default from `grok-2-image` to `grok-imagine-image` in lockstep across `src/providers/grok.ts`, `KNOWN_DEFAULTS` mirror in `scripts/check-models.ts`, and both README model tables. Retained `grok-2-image` as callable override. Replaced incorrect `grok-imagine` shorthand with real xAI API IDs. Build passes. No behavior change to `generate()`.
