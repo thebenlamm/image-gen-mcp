@@ -8,7 +8,8 @@
     "postinstall": "npm run build",
     "build": "tsc",
     "dev": "tsc --watch",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "check-models": "tsx scripts/check-models.ts"
   },
   "keywords": [
     "mcp",
@@ -36,6 +37,7 @@
     "@types/express": "^5.0.6",
     "@types/node": "^22.0.0",
     "@types/sharp": "^0.31.1",
+    "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   }
 }

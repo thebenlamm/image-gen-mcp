@@ -120,6 +120,27 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 
 Only configure API keys for providers you want to use. Providers without keys are automatically disabled.
 
+### Checking for new models
+
+Providers regularly release new image models. To see what's currently available
+from each provider's API and compare against the defaults this server uses:
+
+```bash
+npm run check-models
+```
+
+The script queries each provider's `/models` endpoint and prints a report
+showing which image-capable models exist and which one is currently the
+default in `src/providers/*.ts`. Providers without an API key in your
+environment are skipped. Replicate has no simple listing endpoint and is
+always skipped — browse https://replicate.com/collections/text-to-image
+manually.
+
+This is a read-only report; it never changes any defaults. When you spot a
+new model worth adopting, update the relevant provider's `defaultModel` in
+`src/providers/*.ts` (and the `KNOWN_DEFAULTS` map in
+`scripts/check-models.ts`) by hand.
+
 ## Usage
 
 Once configured, restart Claude and ask it to generate images:
