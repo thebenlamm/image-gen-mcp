@@ -29,7 +29,7 @@ A Model Context Protocol (MCP) server that provides unified image generation acr
   "success": true,
   "path": "/path/to/generated-image.png",
   "provider": "openai",
-  "model": "gpt-image-1"
+  "model": "gpt-image-2"
 }
 ```
 
@@ -48,11 +48,11 @@ A Model Context Protocol (MCP) server that provides unified image generation acr
 ## Provider Details
 
 ### OpenAI
-- Models: `gpt-image-1` (default), `dall-e-3`, `dall-e-2`
+- Models: `gpt-image-2` (default), `gpt-image-1`, `dall-e-3`, `dall-e-2`
 - Sizes: 1024x1024 (square), 1792x1024 (landscape), 1024x1792 (portrait)
 
 ### Google Gemini
-- Models: `imagen-3.0-generate-002` (default)
+- Models: `gemini-2.5-flash-image` (default), `gemini-3-pro-image`
 - Sizes: 1:1 (square), 16:9 (landscape), 9:16 (portrait)
 
 ### Replicate
@@ -64,7 +64,7 @@ A Model Context Protocol (MCP) server that provides unified image generation acr
 - Sizes: Various aspect ratios supported
 
 ### xAI Grok
-- Models: `grok-2-image` (Aurora)
+- Models: `grok-imagine-image` (default), `grok-imagine-image-pro`, `grok-2-image`
 - Sizes: TBD based on API documentation
 
 ## Future Enhancements (v2+)
