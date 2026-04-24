@@ -74,6 +74,10 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-30
-Stopped at: Phase 3 complete and verified. Ready for Phase 4 planning.
+Last session: 2026-04-24
+Stopped at: Quick task 260424-h6z complete (check-models inventory script). Phase 3 verified; Phase 4 still pending planning.
 Resume file: None
+
+## Quick Tasks
+
+- 2026-04-24 — 260424-h6z — Added `npm run check-models` inventory script (scripts/check-models.ts + README section). Detected drift: xAI default `grok-2-image` no longer in listing (now `grok-imagine-image` / `-pro`); Gemini 3 preview variants available.
