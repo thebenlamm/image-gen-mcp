@@ -285,15 +285,28 @@ async function fetchReplicate(): Promise<ProviderReport> {
 // ---------------------------------------------------------------------------
 
 /**
- * Conservative NEW detector: tag a model as NEW when it looks image-capable AND
- * its first version-number digit (after the provider/family prefix) is strictly
- * greater than the default's. Fall back to false when unsure — a false NEW is
- * worse than a false known. The user still eyeballs the report.
+ * Conservative NEW detector: tag a model as NEW only when:
+ *   1. Its model-family prefix matches the default's (e.g. both start with
+ *      `gpt-image-`, both start with `gemini-`, both start with `imagen-`).
+ *   2. AND its first version-number digit is strictly greater than the
+ *      default's.
+ *
+ * This prevents cross-family false positives (e.g. `dall-e-3` vs. default
+ * `gpt-image-2` — different families, unrelated version numbers). A false NEW
+ * is worse than a false known; the user still eyeballs the report.
+ *
+ * Family prefix = substring up to (but not including) the first run of digits.
  */
-function firstGenerationNumber(id: string): number | null {
-  // Strip org prefix so we compare model-family versions, not org slugs.
+function familyPrefix(id: string): string {
+  // Strip org prefix so we compare model-family names, not org slugs.
   const tail = id.includes('/') ? id.split('/').slice(1).join('/') : id;
-  // Match the first integer in the id (e.g. "gpt-image-2" -> 2, "gemini-3-pro-image" -> 3).
+  const m = tail.match(/^([^0-9]*?)\d/);
+  // If no digit, the whole tail is the "family" (and there's no version to compare).
+  return (m?.[1] ?? tail).toLowerCase();
+}
+
+function firstGenerationNumber(id: string): number | null {
+  const tail = id.includes('/') ? id.split('/').slice(1).join('/') : id;
   const m = tail.match(/(\d+)/);
   if (!m) return null;
   const n = parseInt(m[1], 10);
@@ -301,6 +314,9 @@ function firstGenerationNumber(id: string): number | null {
 }
 
 function isNewer(id: string, defaultId: string): boolean {
+  const idFamily = familyPrefix(id);
+  const defFamily = familyPrefix(defaultId);
+  if (!idFamily || idFamily !== defFamily) return false;
   const idGen = firstGenerationNumber(id);
   const defGen = firstGenerationNumber(defaultId);
   if (idGen == null || defGen == null) return false;
