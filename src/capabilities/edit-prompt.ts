@@ -15,14 +15,22 @@ interface OpenAIImageEditResponse {
   }>;
 }
 
+function resolveOptionalEnv(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed || /^\$\{[^}]+\}$/.test(trimmed)) {
+    return undefined;
+  }
+  return trimmed;
+}
+
 export function createEditPromptCapability(): Capability | null {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  const apiKey = resolveOptionalEnv(process.env.OPENAI_API_KEY);
 
   if (!apiKey) {
     return null;
   }
 
-  const model = process.env.OPENAI_EDIT_MODEL?.trim() || 'gpt-image-1.5';
+  const model = resolveOptionalEnv(process.env.OPENAI_EDIT_MODEL) || 'gpt-image-1.5';
 
   return {
     op: 'edit_prompt',
