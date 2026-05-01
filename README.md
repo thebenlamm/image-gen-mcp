@@ -5,7 +5,8 @@ An MCP (Model Context Protocol) server for multi-provider image generation. Work
 ## Features
 
 - **5 providers** — OpenAI, Google Gemini, Replicate, Together AI, xAI Grok
-- **3 tools** — `generate_image`, `process_image`, `generate_asset`
+- **4 tools** — `generate_image`, `process_image`, `generate_asset`, `image_op`
+- **Capability operations** — Directly invoke `extract_subject` and `edit_prompt` through `image_op`
 - **Asset presets** — One-call generation of profile pics, post images, hero photos, avatars, and scenes
 - **Image processing** — Resize, crop, aspect crop, and circle mask operations
 - **Style modifiers** — Prepend style directives (e.g., "watercolor painting") to any prompt
@@ -16,7 +17,7 @@ An MCP (Model Context Protocol) server for multi-provider image generation. Work
 
 | Provider | Models | Notes |
 |----------|--------|-------|
-| **OpenAI** | `gpt-image-1` (default), `gpt-image-2`, `dall-e-3`, `dall-e-2` | Highest quality, supports revised prompts. `gpt-image-2` requires OpenAI org verification (verify at https://platform.openai.com/settings/organization/general, wait up to 15 min for propagation), then set `OPENAI_DEFAULT_MODEL=gpt-image-2`. |
+| **OpenAI** | `gpt-image-1` (generation default), `gpt-image-2`, `dall-e-3`, `dall-e-2`; `gpt-image-1.5` for `image_op` edits | Highest quality, supports revised prompts. `gpt-image-2` requires OpenAI org verification (verify at https://platform.openai.com/settings/organization/general, wait up to 15 min for propagation), then set `OPENAI_DEFAULT_MODEL=gpt-image-2`. |
 | **Google Gemini** | `gemini-2.5-flash-image` (default), `gemini-3-pro-image` | Fast default, pro for higher quality |
 | **Replicate** | `black-forest-labs/flux-1.1-pro` (default), any Replicate model | Huge model variety |
 | **Together AI** | `black-forest-labs/FLUX.1-schnell` (default) | Fast, affordable |
@@ -36,7 +37,7 @@ claude plugin marketplace add thebenlamm/image-gen-mcp
 claude plugin install image-gen@image-gen-marketplace
 ```
 
-The plugin automatically registers the MCP server. You just need to set your API keys as environment variables (at least one):
+The plugin automatically registers the MCP server. Set API keys for the remote providers you want to use. Local `extract_subject` works without an API key:
 
 ```bash
 export OPENAI_API_KEY=sk-...
@@ -76,6 +77,7 @@ Add to `~/.claude/settings.json`:
         "IMAGE_GEN_DEFAULT_PROVIDER": "openai",
         "IMAGE_GEN_OUTPUT_DIR": "~/Downloads/generated-images",
         "OPENAI_API_KEY": "sk-...",
+        "OPENAI_EDIT_MODEL": "gpt-image-1.5",
         "GEMINI_API_KEY": "...",
         "REPLICATE_API_TOKEN": "...",
         "TOGETHER_API_KEY": "...",
@@ -99,7 +101,8 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
       "env": {
         "IMAGE_GEN_DEFAULT_PROVIDER": "openai",
         "IMAGE_GEN_OUTPUT_DIR": "~/Downloads/generated-images",
-        "OPENAI_API_KEY": "sk-..."
+        "OPENAI_API_KEY": "sk-...",
+        "OPENAI_EDIT_MODEL": "gpt-image-1.5"
       }
     }
   }
@@ -203,6 +206,16 @@ Create a hero photo of a mountain landscape for my blog
 
 ```
 Crop this image to 16:9 and resize to 1200x675
+```
+
+### Invoke Image Operations Directly
+
+```
+Extract the subject from /path/to/photo.png using image_op
+```
+
+```
+Use image_op to edit /path/to/photo.png with OpenAI: change the background to a clean white studio backdrop
 ```
 
 ## Tool Reference
@@ -363,6 +376,95 @@ Each preset automatically selects the best generation size for the provider and 
 
 If post-processing fails, the raw generated image is saved as a fallback with a `warning` field in the response.
 
+---
+
+### `image_op`
+
+Invoke a registered image capability directly by operation and provider. This is useful for targeted image operations that are not pure text-to-image generation.
+
+#### Current Capabilities
+
+| Operation | Provider | Requires | Description |
+|-----------|----------|----------|-------------|
+| `extract_subject` | `@imgly/local` | `params.input` | Removes the background from a local image using `@imgly/background-removal-node`. No API key required. |
+| `edit_prompt` | `openai` | `OPENAI_API_KEY`, `params.input`, `params.prompt` | Edits a local image using OpenAI GPT Image through the JSON Images API. Defaults to `OPENAI_EDIT_MODEL=gpt-image-1.5`. |
+
+Future operations are reserved in the schema: `composite_layers`, `transform`, `enhance_upscale`, `analyze_dimensions`, `analyze_palette`, `analyze_ocr`, and `generate`.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `op` | string | Yes | Operation name. Currently `extract_subject` or `edit_prompt`. |
+| `provider` | string | Yes | Capability provider. Use `@imgly/local` for `extract_subject`, `openai` for `edit_prompt`. |
+| `params` | object | No | Operation-specific parameters. |
+| `outputPath` | string | No | Exact output file path (must end in `.png`). |
+| `outputDir` | string | No | Output directory (filename auto-generated). |
+
+#### `extract_subject` Params
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `input` | string | Yes | Absolute or relative path to the source image. |
+
+Example:
+
+```json
+{
+  "op": "extract_subject",
+  "provider": "@imgly/local",
+  "params": {
+    "input": "/Users/you/Pictures/photo.png"
+  },
+  "outputDir": "/Users/you/Downloads/generated-images"
+}
+```
+
+#### `edit_prompt` Params
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `input` | string | Yes | Absolute or relative path to the source image. |
+| `prompt` | string | Yes | Edit instruction, up to 4000 characters. |
+| `size` | string | No | `square`, `landscape`, or `portrait`. |
+
+Example:
+
+```json
+{
+  "op": "edit_prompt",
+  "provider": "openai",
+  "params": {
+    "input": "/Users/you/Pictures/photo.png",
+    "prompt": "Change the background to a clean white studio backdrop",
+    "size": "square"
+  },
+  "outputDir": "/Users/you/Downloads/generated-images"
+}
+```
+
+#### Response
+
+```json
+{
+  "success": true,
+  "output": "/Users/you/Downloads/generated-images/2026-05-01-openai-edit-prompt-openai-a1b2c3.png",
+  "runId": "run-2026-05-01T22-20-57-411Z-22e913",
+  "trace": {
+    "nodes": [
+      {
+        "id": "n1",
+        "op": "edit_prompt",
+        "provider": "openai",
+        "model": "gpt-image-1.5",
+        "output": "/Users/you/Downloads/generated-images/2026-05-01-openai-edit-prompt-openai-a1b2c3.png",
+        "latencyMs": 21400
+      }
+    ]
+  }
+}
+```
+
 ## Output Files
 
 Generated images are saved with descriptive filenames:
@@ -373,17 +475,29 @@ Generated images are saved with descriptive filenames:
 
 Example: `2026-01-29-openai-cat-astronaut-floating-in-space-a1b2c3.png`
 
+Provider names are sanitized before filename generation, so capability providers such as `@imgly/local` produce safe filenames like `2026-05-01-imgly-local-extract-subject-imgly-local-a1b2c3.png`.
+
 ## Troubleshooting
 
-### "No image providers configured"
+### "No image providers or capabilities configured"
 
-At least one API key must be set. Check that your environment variables are correctly configured in your MCP settings.
+No generation provider or local capability registered at startup. Rebuild the project and check the MCP server logs. Remote generation and OpenAI edits require API keys, but local `extract_subject` should register without one.
 
 ### "Provider 'X' is not available"
 
 The requested provider doesn't have an API key configured. Either:
 - Add the API key to your MCP configuration
 - Use a different provider that is configured
+
+### "Capability not registered"
+
+`image_op` could not find the requested `(op, provider)` pair. Check the provider name exactly:
+- `extract_subject` uses `@imgly/local`
+- `edit_prompt` uses `openai` and requires `OPENAI_API_KEY`
+
+### "The model '${OPENAI_EDIT_MODEL}' does not exist"
+
+Restart your MCP client so it reloads the current `.mcp.json`. The config now defaults `OPENAI_EDIT_MODEL` to `gpt-image-1.5`, and the server treats unresolved `${...}` placeholders as unset before applying defaults.
 
 ### Images not appearing
 

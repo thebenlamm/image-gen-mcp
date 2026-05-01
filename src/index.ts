@@ -423,13 +423,20 @@ server.tool(
 
 server.tool(
   'image_op',
-  'Invoke a registered image capability directly by operation and provider. Saves PNG output through the standard output path rules and returns file paths plus execution trace.',
+  'Invoke a registered image capability directly by operation and provider. Current capabilities: extract_subject with provider @imgly/local removes a background from params.input with no API key; edit_prompt with provider openai edits params.input using params.prompt and optional params.size through GPT Image. Saves PNG output through standard output path rules and returns {success, output, runId, trace}.',
   {
-    op: z.enum(['extract_subject', 'edit_prompt', 'composite_layers', 'transform', 'enhance_upscale', 'analyze_dimensions', 'analyze_palette', 'analyze_ocr', 'generate']),
-    provider: z.string(),
-    params: z.record(z.unknown()).default({}),
-    outputPath: z.string().optional(),
-    outputDir: z.string().optional(),
+    op: z
+      .enum(['extract_subject', 'edit_prompt', 'composite_layers', 'transform', 'enhance_upscale', 'analyze_dimensions', 'analyze_palette', 'analyze_ocr', 'generate'])
+      .describe('Capability operation. Currently supported: extract_subject, edit_prompt. Other values are reserved for future capabilities.'),
+    provider: z
+      .string()
+      .describe('Capability provider. Use @imgly/local for extract_subject, or openai for edit_prompt.'),
+    params: z
+      .record(z.unknown())
+      .default({})
+      .describe('Operation parameters. extract_subject requires {input: string}. edit_prompt requires {input: string, prompt: string} and accepts size: square | landscape | portrait.'),
+    outputPath: z.string().optional().describe('Exact output file path (must end in .png)'),
+    outputDir: z.string().optional().describe('Output directory (filename auto-generated)'),
   },
   async ({ op, provider, params, outputPath, outputDir }) => {
     const startedAt = Date.now();
@@ -533,7 +540,8 @@ async function main() {
   const availableCapabilities = capabilityRegistry.list();
 
   if (availableProviders.length === 0 && availableCapabilities.length === 0) {
-    console.error('No image providers or capabilities configured. Set at least one API key:');
+    console.error('No image providers or capabilities configured.');
+    console.error('  Rebuild the project and check startup logs. Remote providers require API keys:');
     console.error('  OPENAI_API_KEY, GEMINI_API_KEY, REPLICATE_API_TOKEN, TOGETHER_API_KEY, or XAI_API_KEY');
     process.exit(1);
   }

@@ -5,6 +5,7 @@ This file provides guidance to Claude Code when working with this repository.
 ## Project Overview
 
 Image Gen MCP is a Model Context Protocol server that provides unified image generation across multiple AI providers: OpenAI, Google Gemini, Replicate, Together AI, and xAI Grok.
+It also exposes a capability layer through `image_op` for direct image operations such as local subject extraction and OpenAI prompt-based image edits.
 
 ## Commands
 
@@ -27,6 +28,13 @@ src/
 │   ├── replicate.ts      # Replicate (FLUX, SD, etc.)
 │   ├── together.ts       # Together AI (FLUX)
 │   └── grok.ts           # xAI Grok (Aurora)
+├── capabilities/
+│   ├── types.ts          # Capability operation/invoke contracts
+│   ├── registry.ts       # CapabilityRegistry for (op, provider) routing
+│   ├── register.ts       # Built-in capability registration
+│   ├── extract-subject.ts # @imgly/local subject extraction
+│   ├── edit-prompt.ts    # OpenAI GPT Image prompt edits
+│   └── validation.ts     # Pre-invocation capability validation
 └── utils/
     └── image.ts          # File saving, filename generation
 ```
@@ -37,7 +45,11 @@ src/
 
 **Provider Registry**: Providers self-register at startup if their API key is present. Missing keys simply skip registration rather than throwing errors.
 
-**Unified Tool**: Single `generate_image` tool handles all providers. The `provider` parameter routes to the correct implementation.
+**Generation Tools**: `generate_image` handles raw text-to-image generation and `generate_asset` combines generation with preset post-processing.
+
+**Capability Layer**: `image_op` routes arbitrary `(op, provider)` pairs through `CapabilityRegistry` without modifying the existing `ImageProvider` interface. Current built-ins are `extract_subject` via `@imgly/local` and `edit_prompt` via `openai`.
+
+**Output Contract**: Capabilities return PNG buffers. `image_op` owns output path resolution, atomic saving, `runId`, and trace response generation.
 
 ## Adding a New Provider
 
@@ -46,6 +58,14 @@ src/
 3. Import and register in `src/index.ts`
 4. Add to the provider enum in the tool schema
 5. Document in README.md
+
+## Adding a New Capability
+
+1. Add or update operation types in `src/capabilities/types.ts`
+2. Implement a factory returning `Capability` or `null` if credentials are unavailable
+3. Register it in `src/capabilities/register.ts`
+4. Add pre-invocation validation in `src/capabilities/validation.ts` when needed
+5. Expose user-facing details in the `image_op` tool description and README.md
 
 ## Environment Variables
 
@@ -60,7 +80,7 @@ src/
 To test locally without MCP client:
 
 ```bash
-# Set at least one API key
+# Set API keys for remote provider tests
 export OPENAI_API_KEY=sk-...
 
 # Run server (will wait for MCP messages on stdin)
