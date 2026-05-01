@@ -1,7 +1,7 @@
 ---
 phase: 05-capability-layer-image-op-first-2-caps
 verified: 2026-05-01T21:07:40Z
-status: human_needed
+status: passed
 score: 16/16 must-haves verified
 overrides_applied: 0
 human_verification:
@@ -17,7 +17,7 @@ human_verification:
 
 **Phase Goal:** Developers can register and invoke arbitrary (op, provider) pairs through `image_op` without modifying the existing `ImageProvider` interface; users can extract subjects and edit images via prompt
 **Verified:** 2026-05-01T21:07:40Z
-**Status:** human_needed
+**Status:** passed
 **Re-verification:** No - initial verification
 
 ## Goal Achievement
@@ -114,23 +114,23 @@ No Phase 5 requirement IDs from `.planning/REQUIREMENTS.md` are orphaned; all 11
 | `src/capabilities/edit-prompt.ts` | 73,77 | `b64_json` handling | Info | Provider response decoding only; `image_op` response does not expose base64 |
 | `src/index.ts` | 85,543 | "not available" provider text | Info | Existing/user-facing provider availability messages |
 
-### Human Verification Required
+### Human Verification Completed
 
 ### 1. `image_op` Extract Subject
 
 **Test:** From Claude Code, call `image_op` with `{op: 'extract_subject', provider: '@imgly/local', params: {input: '/path/to/photo.png'}}`.
 **Expected:** Response has `success: true`, `output`, `runId`, `trace.nodes[0].output`; saved PNG is a clean alpha cutout.
-**Why human:** Static/runtime checks verify the route, but the roadmap requires visual cutout quality and actual MCP client invocation.
+**Result:** Passed in Claude Code MCP UAT. Output PNG saved with runId and trace; transparency confirmed by alpha/tRNS evidence in `05-HUMAN-UAT.md`.
 
 ### 2. `image_op` OpenAI Prompt Edit
 
 **Test:** With `OPENAI_API_KEY` configured, call `image_op` with `{op: 'edit_prompt', provider: 'openai', params: {input: '/path/to/photo.png', prompt: '...'}}`.
 **Expected:** Response has `success: true`, `output`, `runId`, `trace.nodes[0].output`; saved PNG reflects the requested edit via GPT Image.
-**Why human:** Requires live OpenAI credentials/network and visual assessment of the edited image.
+**Result:** Passed in Claude Code MCP UAT. Output PNG saved with runId and trace; model resolved to `gpt-image-1.5` and OpenAI accepted the request.
 
 ### Gaps Summary
 
-No blocking codebase gaps found. Automated checks verify the capability layer, first two capabilities, `image_op` wiring, pre-invocation validation, standard output saving, `runId`, trace, and requirement coverage. Status remains `human_needed` because two roadmap success criteria require live MCP/user-visible validation.
+No blocking codebase gaps found. Automated checks verify the capability layer, first two capabilities, `image_op` wiring, pre-invocation validation, standard output saving, `runId`, trace, and requirement coverage. Human UAT passed both live MCP checks.
 
 ---
 

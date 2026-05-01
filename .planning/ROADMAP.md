@@ -23,7 +23,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 ### v2.0 — Goal-Shaped Image MCP
 
-- [ ] **Phase 5: Capability Layer + image_op + first 2 caps** - Capability registry parallel to ImageProvider; `image_op` MCP tool; first capabilities (`extract_subject` via @imgly, `edit_prompt` via gpt-image-1)
+- [x] **Phase 5: Capability Layer + image_op + first 2 caps** - Capability registry parallel to ImageProvider; `image_op` MCP tool; first capabilities (`extract_subject` via @imgly, `edit_prompt` via GPT Image)
 - [ ] **Phase 6: Run/Session Artifact Layer** - Persistent run artifacts under `.runs/<runId>/` with retention sweep
 - [ ] **Phase 7: Eval Harness + Golden Set** - Programmatic scoring populates capability quality scores so the planner routes on measurement
 - [ ] **Phase 8: Op Primitives Expansion** - composite, transform, upscale, analyze_* capabilities
@@ -103,12 +103,23 @@ Plans:
 **Requirements**: CAP-01, CAP-02, CAP-03, CAP-04, CAP-05, OP-01, OP-02, OP-03, OP-04, PRIM-01, PRIM-02
 **Success Criteria** (what must be TRUE):
   1. From Claude Code, calling `image_op` with `{op: 'extract_subject', provider: '@imgly/local', params: {input: '/path/to/photo.png'}}` returns a saved path to a clean alpha cutout
-  2. From Claude Code, calling `image_op` with `{op: 'edit_prompt', provider: 'openai', params: {input: '/path/to/photo.png', prompt: '...'}}` returns a saved path to an edited image via gpt-image-1
+  2. From Claude Code, calling `image_op` with `{op: 'edit_prompt', provider: 'openai', params: {input: '/path/to/photo.png', prompt: '...'}}` returns a saved path to an edited image via GPT Image
   3. Calling `image_op` with an unregistered `(op, provider)` pair returns a clear "capability not registered" error before any provider HTTP call
   4. Calling `image_op` with prompt or size violating capability constraints returns a constraint-violation error before the provider call
   5. The five existing v1.0 providers (`src/providers/*`) remain unmodified; an "extract-only" capability registers without implementing `ImageProvider.generate()`
-**Plans**: 2-3 plans
+**Plans**: 3 plans
 **UI hint**: no
+
+Plans:
+- [x] 05-01-PLAN.md — Capability data model, registry, built-in registration hook, @imgly dependency
+- [x] 05-02-PLAN.md — `extract_subject` and `edit_prompt` capability implementations and registration
+- [x] 05-03-PLAN.md — `image_op` MCP tool, capability validation, output persistence, runId/trace response
+
+**Completion artifacts**:
+- [x] 05-REVIEW.md — clean
+- [x] 05-SECURITY.md — secured, 10/10 threats closed, 0 open
+- [x] 05-VERIFICATION.md — passed after UAT
+- [x] 05-HUMAN-UAT.md — passed
 
 ### Phase 6: Run/Session Artifact Layer
 **Goal**: Every `image_op` (and future `image_task`) invocation produces a uniquely-identified run with persistent intermediate artifacts and bounded retention
@@ -209,7 +220,7 @@ Phases execute in numeric order with one parallelization window:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 5. Capability Layer + image_op | 0/2-3 | Not started | - |
+| 5. Capability Layer + image_op | 3/3 | ✓ Complete | 2026-05-01 |
 | 6. Run/Session Artifact Layer | 0/2 | Not started | - |
 | 7. Eval Harness + Golden Set | 0/2 | Not started (parallel with 8) | - |
 | 8. Op Primitives Expansion | 0/2-3 | Not started (parallel with 7) | - |
