@@ -1,5 +1,4 @@
 import { removeBackground } from '@imgly/background-removal-node';
-import * as fs from 'fs';
 import type { Capability } from './types.js';
 
 const MODEL_VERSION = '@imgly/background-removal-node@1';
@@ -35,8 +34,7 @@ export function createExtractSubjectCapability(): Capability {
         throw new Error('extract_subject requires params.input file path');
       }
 
-      const source = await fs.promises.readFile(filePath);
-      const result = await removeBackground(source);
+      const result = await removeBackground(filePath);
       const buffer = await toBuffer(result);
 
       return {
