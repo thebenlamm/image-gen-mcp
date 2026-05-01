@@ -1,8 +1,14 @@
 import * as fs from 'fs';
+import * as path from 'path';
 import OpenAI, { toFile } from 'openai';
 import type { Capability } from './types.js';
 
 const MAX_PROMPT_LENGTH = 4000;
+const SIZE_MAP = {
+  square: '1024x1024',
+  landscape: '1536x1024',
+  portrait: '1024x1536',
+} as const;
 
 export function createEditPromptCapability(): Capability | null {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
@@ -43,12 +49,24 @@ export function createEditPromptCapability(): Capability | null {
         throw new Error('edit_prompt prompt exceeds max length 4000');
       }
 
+      const requestedSize = input.params.size;
+      if (
+        requestedSize !== undefined &&
+        (typeof requestedSize !== 'string' || !(requestedSize in SIZE_MAP))
+      ) {
+        throw new Error(`edit_prompt does not support size '${requestedSize}'`);
+      }
+      const size = requestedSize === undefined
+        ? undefined
+        : SIZE_MAP[requestedSize as keyof typeof SIZE_MAP];
+
       const source = await fs.promises.readFile(filePath);
       const response = await client.images.edit({
         model,
-        image: await toFile(source, filePath),
+        image: await toFile(source, path.basename(filePath)),
         prompt,
         n: 1,
+        size,
       });
 
       const imageData = response.data?.[0];
@@ -62,7 +80,7 @@ export function createEditPromptCapability(): Capability | null {
         buffer,
         model,
         revisedPrompt: imageData.revised_prompt,
-        metadata: { input: filePath },
+        metadata: { input: filePath, size: requestedSize },
       };
     },
   };

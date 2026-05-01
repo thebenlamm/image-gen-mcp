@@ -530,18 +530,19 @@ function getSSEPort(): number | undefined {
 // Start the server
 async function main() {
   const availableProviders = registry.getAvailable();
+  const availableCapabilities = capabilityRegistry.list();
 
-  if (availableProviders.length === 0) {
-    console.error('No image providers configured. Set at least one API key:');
+  if (availableProviders.length === 0 && availableCapabilities.length === 0) {
+    console.error('No image providers or capabilities configured. Set at least one API key:');
     console.error('  OPENAI_API_KEY, GEMINI_API_KEY, REPLICATE_API_TOKEN, TOGETHER_API_KEY, or XAI_API_KEY');
     process.exit(1);
   }
 
   console.error(`Image Gen MCP Server starting...`);
-  console.error(`Available providers: ${availableProviders.join(', ')}`);
+  console.error(`Available providers: ${availableProviders.join(', ') || '(none)'}`);
   console.error(`Default provider: ${DEFAULT_PROVIDER}${registry.has(DEFAULT_PROVIDER) ? '' : ' (not available, will need explicit provider)'}`);
   console.error(`Size-capable providers: ${registry.getSizeCapable().join(', ')}`);
-  console.error(`Capabilities: ${capabilityRegistry.list().map((c) => `${c.op}:${c.provider}`).join(', ')}`);
+  console.error(`Capabilities: ${availableCapabilities.map((c) => `${c.op}:${c.provider}`).join(', ') || '(none)'}`);
   console.error(`Processing operations: resize, crop, aspectCrop, circleMask`);
   console.error(`Asset types: profile_pic, post_image, hero_photo, avatar, scene, avery_8293, avery_5160, avery_22830, avery_8164`);
 
