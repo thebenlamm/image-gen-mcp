@@ -134,6 +134,10 @@ Plans:
 **Plans**: 2 plans
 **UI hint**: no
 
+Plans:
+- [ ] 06-01-PLAN.md — runs module: id, dir, atomic write, manifest, retention sweep, trace types, vitest setup
+- [ ] 06-02-PLAN.md — wire image_op + main() sweep, integration tests, trace snapshot, human UAT script
+
 ### Phase 7: Eval Harness + Golden Set
 **Goal**: `npm run eval` produces measured quality scores for every registered capability, populating the registry so future planner routing is evidence-based
 **Depends on**: Phase 6 (uses run artifacts for eval outputs); can run in parallel with Phase 8
