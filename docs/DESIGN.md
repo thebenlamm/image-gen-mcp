@@ -29,7 +29,7 @@ A Model Context Protocol (MCP) server that provides unified image generation acr
   "success": true,
   "path": "/path/to/generated-image.png",
   "provider": "openai",
-  "model": "gpt-image-2"
+  "model": "gpt-image-1"
 }
 ```
 
@@ -40,6 +40,7 @@ A Model Context Protocol (MCP) server that provides unified image generation acr
 | `IMAGE_GEN_DEFAULT_PROVIDER` | Default provider | `openai` |
 | `IMAGE_GEN_OUTPUT_DIR` | Output directory | `~/Downloads/generated-images` |
 | `OPENAI_API_KEY` | OpenAI API key | - |
+| `OPENAI_DEFAULT_MODEL` | OpenAI model used when `model` param omitted | `gpt-image-1` |
 | `GEMINI_API_KEY` | Google Gemini API key | - |
 | `REPLICATE_API_TOKEN` | Replicate API token | - |
 | `TOGETHER_API_KEY` | Together AI API key | - |
@@ -48,7 +49,7 @@ A Model Context Protocol (MCP) server that provides unified image generation acr
 ## Provider Details
 
 ### OpenAI
-- Models: `gpt-image-2` (default), `gpt-image-1`, `dall-e-3`, `dall-e-2`
+- Models: `gpt-image-1` (default), `gpt-image-2`, `dall-e-3`, `dall-e-2` (`gpt-image-2` requires OpenAI org verification — opt in via `OPENAI_DEFAULT_MODEL=gpt-image-2`)
 - Sizes: 1024x1024 (square), 1792x1024 (landscape), 1024x1792 (portrait)
 
 ### Google Gemini

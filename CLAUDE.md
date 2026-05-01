@@ -51,6 +51,7 @@ src/
 
 - `IMAGE_GEN_DEFAULT_PROVIDER` - Default provider (default: `openai`)
 - `IMAGE_GEN_OUTPUT_DIR` - Output directory (default: `~/Downloads/generated-images`)
+- `OPENAI_DEFAULT_MODEL` - OpenAI model used when `model` param is omitted (default: `gpt-image-1`; set to `gpt-image-2` once org verification is enabled)
 - Provider API keys: `OPENAI_API_KEY`, `GEMINI_API_KEY`, `REPLICATE_API_TOKEN`, `TOGETHER_API_KEY`, `XAI_API_KEY`
 
 ## Testing

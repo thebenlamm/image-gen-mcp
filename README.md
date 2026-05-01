@@ -16,7 +16,7 @@ An MCP (Model Context Protocol) server for multi-provider image generation. Work
 
 | Provider | Models | Notes |
 |----------|--------|-------|
-| **OpenAI** | `gpt-image-2` (default), `gpt-image-1`, `dall-e-3`, `dall-e-2` | Highest quality, supports revised prompts |
+| **OpenAI** | `gpt-image-1` (default), `gpt-image-2`, `dall-e-3`, `dall-e-2` | Highest quality, supports revised prompts. `gpt-image-2` requires OpenAI org verification — opt in via `OPENAI_DEFAULT_MODEL`. |
 | **Google Gemini** | `gemini-2.5-flash-image` (default), `gemini-3-pro-image` | Fast default, pro for higher quality |
 | **Replicate** | `black-forest-labs/flux-1.1-pro` (default), any Replicate model | Huge model variety |
 | **Together AI** | `black-forest-labs/FLUX.1-schnell` (default) | Fast, affordable |
@@ -113,6 +113,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 | `IMAGE_GEN_DEFAULT_PROVIDER` | Provider used when none specified | `openai` |
 | `IMAGE_GEN_OUTPUT_DIR` | Directory for saved images | `~/Downloads/generated-images` |
 | `OPENAI_API_KEY` | OpenAI API key | - |
+| `OPENAI_DEFAULT_MODEL` | OpenAI model used when `model` param is omitted | `gpt-image-1` |
 | `GEMINI_API_KEY` | Google AI Studio API key | - |
 | `REPLICATE_API_TOKEN` | Replicate API token | - |
 | `TOGETHER_API_KEY` | Together AI API key | - |
@@ -238,7 +239,7 @@ Generate an image from a text prompt.
   "success": true,
   "path": "/Users/you/Downloads/generated-images/2026-01-29-openai-cat-astronaut-a1b2c3.png",
   "provider": "openai",
-  "model": "gpt-image-2",
+  "model": "gpt-image-1",
   "revisedPrompt": "A cute orange tabby cat wearing a NASA spacesuit..."
 }
 ```
@@ -352,7 +353,7 @@ Each preset automatically selects the best generation size for the provider and 
   "success": true,
   "path": "/Users/you/Downloads/generated-images/my-avatar.png",
   "provider": "openai",
-  "model": "gpt-image-2",
+  "model": "gpt-image-1",
   "assetType": "avatar",
   "outputSize": { "width": 80, "height": 80 },
   "operationsApplied": ["aspectCrop(1:1, center)", "circleMask", "resize(80x80, cover)"]

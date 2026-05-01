@@ -9,7 +9,7 @@ const SIZE_MAP: Record<ImageSize, string> = {
 
 export class OpenAIProvider implements ImageProvider {
   name = 'openai' as const;
-  defaultModel = 'gpt-image-2';
+  defaultModel: string;
   supportsSize = true;
   private client: OpenAI;
 
@@ -18,6 +18,7 @@ export class OpenAIProvider implements ImageProvider {
     if (!apiKey) {
       throw new Error('OPENAI_API_KEY environment variable is required');
     }
+    this.defaultModel = process.env.OPENAI_DEFAULT_MODEL?.trim() || 'gpt-image-1';
     this.client = new OpenAI({ apiKey });
   }
 
