@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-05-01T19:31:30.137Z"
 last_activity: 2026-05-01
 progress:
-  total_phases: 0
+  total_phases: 7
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,17 +17,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-01-29)
+See: .planning/PROJECT.md (updated 2026-05-01)
 
-**Core value:** One MCP call produces a ready-to-use image asset — generated, processed, and saved — without manual post-processing steps.
-**Current focus:** Phase 3 complete, ready for Phase 4
+**Core value:** Two value props — guaranteed primitives (v1.0) and flexible goal handoff (v2.0).
+**Current focus:** v2.0 roadmap defined (Phases 5-11). Ready to plan Phase 5 (Capability Layer + image_op + first 2 caps).
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Not started — Phase 5 next
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-01 — Milestone v2.0 started
+Status: Roadmap complete; awaiting `/gsd-plan-phase 5`
+Last activity: 2026-05-01 — v2.0 roadmap drafted (Phases 5-11); v1.0 Phase 4 marked superseded
 
 ## Performance Metrics
 
@@ -49,6 +49,7 @@ Last activity: 2026-05-01 — Milestone v2.0 started
 
 - Last 5 plans: 02-01 (2 min), 02-02 (1 min), 03-01 (1 min), 03-02 (1 min)
 - Trend: Accelerating — Phase 3 completed efficiently at 1 min/plan
+- Note: v2.0 phases are larger surface (planner, eval harness, capability registry) — expect longer per-plan durations
 
 *Updated after each plan completion*
 
@@ -59,39 +60,38 @@ Last activity: 2026-05-01 — Milestone v2.0 started
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- Grok as default provider (best quality for Ben's use cases) -- implemented in 01-01
-- sharp for image processing (standard Node.js library, no ImageMagick dependency)
-- Fallback chain in utility, not providers (keeps providers testable, fallback logic centralized)
-- PNG-only output (transparency needed for circle masks)
-- resolveOutputPath as additive function (existing getOutputDir/generateFilename still exported)
+**v2.0 architectural locks (from master plan):**
+- CapabilityRegistry parallel to ImageProvider (NOT optional methods on ImageProvider) — five existing providers untouched
+- Drop ProviderName enum at capability layer; use plain string so adding providers doesn't break the type union
+- Anthropic Claude Haiku as planner LLM ($0.001-0.003/call)
+- Templates seed from ASSET_PRESETS by reference (not forked) — fixes propagate to v1.0 generate_asset
+- Trace returns paths only, never base64 (MCP stdio response size bound)
+- Eval harness blocks second provider per op without measured score
+- generate_asset is NOT deprecated — kept as guaranteed/cheap/deterministic alternative to image_task
+
+**v1.0 decisions (still in force):**
+- sharp for image processing (no ImageMagick dependency)
+- PNG-only output (transparency for circle masks and intermediate alpha)
+- Buffer-in/Buffer-out processing pattern (composability)
+- Tagged union for ProcessingOperation (type-safe dispatch)
 - Path priority: outputPath > outputDir > IMAGE_GEN_OUTPUT_DIR > ~/Downloads/generated-images
-- Style applied at tool level via prompt prepend, not passed to providers -- implemented in 01-02
-- Size-aware selection is a targeted capability filter, not a general fallback chain -- implemented in 01-02
-- Capability flags pattern on ImageProvider interface for feature detection -- established in 01-02
-- Buffer-in-Buffer-out pattern for composability and testability -- established in 02-01
-- Tagged union type for type-safe operation dispatch -- established in 02-01
-- Default fit mode 'cover' for resize, default gravity 'center' for aspectCrop -- established in 02-01
-- Default output path uses _processed suffix when outputPath not specified -- established in 02-02
-- PNG-only output enforced at tool level -- established in 02-02
-- Error handling follows generate_image pattern for consistency -- established in 02-02
-- Circle mask before resize for smoother edges -- established in 03-01
-- Clean filename priority: outputPath > outputDir+assetId > outputDir > default+assetId > default -- established in 03-01
-- generate_asset orchestrates full pipeline (generate → process → save) -- established in 03-02
-- Size-aware selection applies at generation time with preset size -- established in 03-02
+- Atomic writes (tmp + rename) for files
 
 ### Pending Todos
 
-None yet.
+- Plan Phase 5 via `/gsd-plan-phase 5`
+- Add new deps before P5 execution: `@imgly/background-removal-node` (P5), `pixelmatch` (P7), `tesseract.js` (P8), `@anthropic-ai/sdk` (P9)
+- New env var documentation: `ANTHROPIC_API_KEY` (P9), `IMAGE_GEN_RUN_RETENTION_HOURS` (P6)
 
 ### Blockers/Concerns
 
-None yet.
+- None currently. Phase 7 (eval) is on the critical path before Phase 11 (provider breadth) — second-provider-per-op requires measured eval score before shipping.
 
 ## Session Continuity
 
-Last session: 2026-04-24
-Stopped at: Quick task 260424-heb complete (Grok default bumped from grok-2-image to grok-imagine-image; provider + KNOWN_DEFAULTS mirror + README tables updated in lockstep; build passes). Phase 3 verified; Phase 4 still pending planning.
-Resume file: None
+Last session: 2026-05-01
+Stopped at: v2.0 roadmap drafted with 7 phases (5-11). v1.0 Phase 4 marked superseded by v2.0 P5. Coverage validated: 46/46 v2.0 requirements mapped, no orphans.
+Resume file: .planning/ROADMAP.md (Phase 5 details)
 
 ## Quick Tasks
 

@@ -161,18 +161,23 @@ After Phase 9 (image_task ships):
 | PROC-01..06 | 2 | Complete |
 | ASSET-01..07 | 3 | Complete |
 | CORE-04/05/06, REF-01..07 | — | Superseded by v2.0 |
-| CAP-01..05, OP-01..04, PRIM-01, PRIM-02 | 5 | Pending (v2.0 P5) |
-| RUN-01..05 | 6 | Pending (v2.0 P6) |
-| EVAL-01..05 (P1 caps) | 7 | Pending (v2.0 P7) |
-| PRIM-03..08 | 8 | Pending (v2.0 P8) |
-| TASK-01..10 | 9 | Pending (v2.0 P9) |
-| TMPL-01..04 | 10 | Pending (v2.0 P10) |
-| PROV-01..05 | 11 | Pending (v2.0 P11) |
+| CAP-01, CAP-02, CAP-03, CAP-04, CAP-05 | 5 | Pending (v2.0 P5) |
+| OP-01, OP-02, OP-03, OP-04 | 5 | Pending (v2.0 P5) |
+| PRIM-01, PRIM-02 | 5 | Pending (v2.0 P5) |
+| RUN-01, RUN-02, RUN-03, RUN-04, RUN-05 | 6 | Pending (v2.0 P6) |
+| EVAL-01, EVAL-02, EVAL-03, EVAL-04, EVAL-05 | 7 | Pending (v2.0 P7) |
+| PRIM-03, PRIM-04, PRIM-05, PRIM-06, PRIM-07, PRIM-08 | 8 | Pending (v2.0 P8) |
+| TASK-01..TASK-10 | 9 | Pending (v2.0 P9) |
+| TMPL-01, TMPL-02, TMPL-03, TMPL-04 | 10 | Pending (v2.0 P10) |
+| PROV-01, PROV-02, PROV-03, PROV-04, PROV-05 | 11 | Pending (v2.0 P11) |
 
 **Coverage (v2.0):**
-- v2.0 requirements: 41 total (CAP 5, OP 4, RUN 5, EVAL 5, PRIM 8, TASK 10, TMPL 4, PROV 5)
-- Mapped to phases: filled by roadmapper
+- v2.0 requirements total: 46 (CAP 5, OP 4, RUN 5, EVAL 5, PRIM 8, TASK 10, TMPL 4, PROV 5)
+  - *Note: an earlier draft of this file said "41 total"; the actual sum of the listed REQ-IDs is 46. Corrected during v2.0 roadmap creation.*
+- Per-phase mapping: P5=11 (CAP 5 + OP 4 + PRIM 2), P6=5 (RUN), P7=5 (EVAL), P8=6 (PRIM-03..08), P9=10 (TASK), P10=4 (TMPL), P11=5 (PROV) → sum = 46
+- Mapped to phases: 46 ✓
 - Unmapped: 0 ✓
+- Duplicates: 0 ✓ (each REQ-ID appears in exactly one phase)
 
 ---
 *Requirements defined: 2026-01-29 (v1.0) | v2.0 added: 2026-05-01*
