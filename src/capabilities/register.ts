@@ -1,3 +1,14 @@
-export function registerBuiltInCapabilities(): void {
-  // Built-in capability registrations are added by later Phase 5 plans.
+import { createEditPromptCapability } from './edit-prompt.js';
+import { createExtractSubjectCapability } from './extract-subject.js';
+import { capabilityRegistry } from './registry.js';
+
+export function registerBuiltInCapabilities() {
+  capabilityRegistry.register(createExtractSubjectCapability());
+
+  const editPrompt = createEditPromptCapability();
+  if (editPrompt) {
+    capabilityRegistry.register(editPrompt);
+  }
+
+  return capabilityRegistry;
 }
