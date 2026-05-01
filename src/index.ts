@@ -9,6 +9,7 @@ import * as path from 'path';
 import * as http from 'http';
 import express from 'express';
 
+import { capabilityRegistry, registerBuiltInCapabilities } from './capabilities/index.js';
 import { registry, type ProviderName, type ImageProvider } from './providers/index.js';
 import { createOpenAIProvider } from './providers/openai.js';
 import { createGeminiProvider } from './providers/gemini.js';
@@ -31,6 +32,8 @@ const providers = [
 for (const provider of providers) {
   registry.register(provider);
 }
+
+registerBuiltInCapabilities();
 
 const VALID_PROVIDERS: ProviderName[] = ['openai', 'gemini', 'replicate', 'together', 'grok'];
 
@@ -449,6 +452,7 @@ async function main() {
   console.error(`Available providers: ${availableProviders.join(', ')}`);
   console.error(`Default provider: ${DEFAULT_PROVIDER}${registry.has(DEFAULT_PROVIDER) ? '' : ' (not available, will need explicit provider)'}`);
   console.error(`Size-capable providers: ${registry.getSizeCapable().join(', ')}`);
+  console.error(`Capabilities: ${capabilityRegistry.list().map((c) => `${c.op}:${c.provider}`).join(', ')}`);
   console.error(`Processing operations: resize, crop, aspectCrop, circleMask`);
   console.error(`Asset types: profile_pic, post_image, hero_photo, avatar, scene, avery_8293, avery_5160, avery_22830, avery_8164`);
 
