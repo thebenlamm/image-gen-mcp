@@ -114,6 +114,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 | `IMAGE_GEN_OUTPUT_DIR` | Directory for saved images | `~/Downloads/generated-images` |
 | `OPENAI_API_KEY` | OpenAI API key | - |
 | `OPENAI_DEFAULT_MODEL` | OpenAI model used when `model` param is omitted | `gpt-image-1` |
+| `OPENAI_EDIT_MODEL` | OpenAI GPT Image model used by `image_op` `edit_prompt` | `gpt-image-1.5` |
 | `GEMINI_API_KEY` | Google AI Studio API key | - |
 | `REPLICATE_API_TOKEN` | Replicate API token | - |
 | `TOGETHER_API_KEY` | Together AI API key | - |

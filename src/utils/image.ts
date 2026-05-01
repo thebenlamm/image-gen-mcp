@@ -28,6 +28,11 @@ function slugify(text: string): string {
     .slice(0, 50);
 }
 
+function sanitizeFilenamePart(text: string): string {
+  const safe = slugify(text);
+  return safe || 'unknown';
+}
+
 export async function getOutputDir(): Promise<string> {
   const dir = expandTilde(
     process.env.IMAGE_GEN_OUTPUT_DIR || '~/Downloads/generated-images'
@@ -41,9 +46,10 @@ export async function getOutputDir(): Promise<string> {
 export function generateFilename(prompt: string, provider: string): string {
   const date = new Date().toISOString().split('T')[0];
   const slug = slugify(prompt);
+  const safeProvider = sanitizeFilenamePart(provider);
   const hash = crypto.randomBytes(3).toString('hex');
 
-  return `${date}-${provider}-${slug}-${hash}.png`;
+  return `${date}-${safeProvider}-${slug}-${hash}.png`;
 }
 
 export interface OutputOptions {

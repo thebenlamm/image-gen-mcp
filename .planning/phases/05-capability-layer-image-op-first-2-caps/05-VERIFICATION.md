@@ -9,7 +9,7 @@ human_verification:
     expected: "Returns success true with output, runId, trace.nodes[0].output, and the saved PNG is a clean alpha cutout"
     why_human: "Code path and local capability are verified, but visual cutout quality and MCP client invocation need human confirmation"
   - test: "Call image_op edit_prompt from Claude Code with OPENAI_API_KEY configured"
-    expected: "Returns success true with output, runId, trace.nodes[0].output, and the saved image reflects the requested gpt-image-1 prompt edit"
+    expected: "Returns success true with output, runId, trace.nodes[0].output, and the saved image reflects the requested GPT Image prompt edit"
     why_human: "Requires live OpenAI credentials/network and visual assessment of edited output"
 ---
 
@@ -27,7 +27,7 @@ human_verification:
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
 | 1 | `image_op` can route `extract_subject` / `@imgly/local` and save a path | VERIFIED | `src/index.ts:424-483` registers `image_op`, invokes capability, saves via `resolveOutputPath`/`saveImage`, and returns `output`, `runId`, `trace`; `src/capabilities/extract-subject.ts:18-46` implements `@imgly/local` |
-| 2 | `image_op` can route `edit_prompt` / `openai` via gpt-image-1 and save a path | VERIFIED | `src/capabilities/edit-prompt.ts:13-87` conditionally creates OpenAI capability with default `gpt-image-1`, calls `client.images.edit`, returns buffer; `src/index.ts:455-483` persists output |
+| 2 | `image_op` can route `edit_prompt` / `openai` via GPT Image and save a path | VERIFIED | `src/capabilities/edit-prompt.ts` conditionally creates OpenAI capability with default `gpt-image-1.5`, calls JSON `/v1/images/edits`, returns buffer; `src/index.ts:455-483` persists output |
 | 3 | Unregistered `(op, provider)` returns clear error before provider call | VERIFIED | `src/index.ts:437-450` checks `capabilityRegistry.get()` and returns `Capability not registered...` before `validateCapabilityParams` or `capability.invoke` |
 | 4 | Constraint violations return before provider call | VERIFIED | `src/index.ts:453-455` calls `validateCapabilityParams` before `capability.invoke`; `src/capabilities/validation.ts:7-37` covers input, prompt, max prompt length, and size |
 | 5 | Existing v1 providers remain unmodified and extract-only capability does not implement `ImageProvider.generate()` | VERIFIED | `git diff -- src/providers/*` was empty; `rg` found no `ProviderName`, `ImageProvider`, or `generate(` references under `src/capabilities` |
@@ -36,7 +36,7 @@ human_verification:
 | 8 | Capabilities register invoke functions instead of ImageProvider.generate | VERIFIED | `src/capabilities/types.ts:56` requires `invoke`; built-ins register capabilities through `src/capabilities/register.ts:5-13` |
 | 9 | `quality.scores` is undefined initially and invalidated when `modelVersion` changes | VERIFIED | Built-in capability objects omit `quality`; `src/capabilities/registry.ts:11-12` clears `incoming.quality`; node spot-check confirmed changed modelVersion produces undefined quality |
 | 10 | `extract_subject` is registered as `@imgly/local` with no API key requirement | VERIFIED | `src/capabilities/register.ts:6` registers unconditionally; `src/capabilities/extract-subject.ts:20-29` defines op/provider/cost/constraints |
-| 11 | `edit_prompt` is registered as `openai` and uses OpenAI image edit endpoint | VERIFIED | `src/capabilities/register.ts:8-10` registers when factory returns a capability; `src/capabilities/edit-prompt.ts:20-70` uses OpenAI client and `images.edit` |
+| 11 | `edit_prompt` is registered as `openai` and uses OpenAI image edit endpoint | VERIFIED | `src/capabilities/register.ts:8-10` registers when factory returns a capability; `src/capabilities/edit-prompt.ts` uses JSON `/v1/images/edits` with image data URL references |
 | 12 | Capabilities return buffers and leave saving to `image_op` | VERIFIED | Capability results return `buffer` only at `extract-subject.ts:40-44` and `edit-prompt.ts:79-84`; saving occurs in `src/index.ts:456-462` |
 | 13 | `image_op` validates capability existence before invocation | VERIFIED | Missing capability branch returns at `src/index.ts:439-450`; invocation is later at `src/index.ts:455` |
 | 14 | `image_op` accepts file path inputs through `params.input` | VERIFIED | Tool schema accepts `params` as record at `src/index.ts:428-430`; validation requires `params.input` for image-input capabilities |
@@ -54,7 +54,7 @@ human_verification:
 | `src/capabilities/register.ts` | Built-in registration | VERIFIED | Registers extract subject unconditionally and OpenAI edit conditionally |
 | `src/capabilities/index.ts` | Barrel exports | VERIFIED | Exports types, registry, register |
 | `src/capabilities/extract-subject.ts` | Local subject extraction | VERIFIED | Uses `@imgly/background-removal-node`, returns PNG buffer |
-| `src/capabilities/edit-prompt.ts` | OpenAI image edit capability | VERIFIED | Uses `OPENAI_API_KEY`, `gpt-image-1` default, `images.edit`, base64-to-buffer |
+| `src/capabilities/edit-prompt.ts` | OpenAI image edit capability | VERIFIED | Uses `OPENAI_API_KEY`, `OPENAI_EDIT_MODEL` or `gpt-image-1.5` default, JSON image edits, base64-to-buffer |
 | `src/capabilities/validation.ts` | Pre-invocation validation | VERIFIED | Pure validation helper; no invocation/file reads |
 | `src/index.ts` | `image_op` MCP tool and startup capability registration | VERIFIED | Startup registration, registry lookup, validation, invoke, save, trace |
 | `package.json` | Background removal dependency | VERIFIED | Contains `@imgly/background-removal-node` at published `^1.4.5` |
@@ -64,7 +64,7 @@ human_verification:
 | From | To | Via | Status | Details |
 |---|---|---|---|---|
 | `register.ts` | `registry.ts` | `capabilityRegistry.register` | VERIFIED | `gsd-sdk verify.key-links` passed |
-| `edit-prompt.ts` | `providers/openai.ts` convention | `OPENAI_API_KEY`, default model | VERIFIED | `OPENAI_API_KEY` and `gpt-image-1` default present |
+| `edit-prompt.ts` | OpenAI API convention | `OPENAI_API_KEY`, edit model default | VERIFIED | `OPENAI_API_KEY` and `gpt-image-1.5` default present |
 | `index.ts` | `register.ts` | startup `registerBuiltInCapabilities()` | VERIFIED | Called at `src/index.ts:38` |
 | `index.ts` | `registry.ts` | `capabilityRegistry.get` | VERIFIED | Lookup at `src/index.ts:437` |
 | `index.ts` | `utils/image.ts` | `resolveOutputPath` and `saveImage` | VERIFIED | Save path at `src/index.ts:456-462` |
@@ -77,7 +77,7 @@ human_verification:
 | `src/index.ts` | `result.buffer` | `capability.invoke({ params, outputPath, outputDir })` | Yes, from registered provider implementation | FLOWING |
 | `src/index.ts` | `filePath` | `resolveOutputPath({ outputPath, outputDir, prompt, provider })` | Yes | FLOWING |
 | `src/capabilities/extract-subject.ts` | `buffer` | `removeBackground(filePath)` converted by `toBuffer` | Yes | FLOWING |
-| `src/capabilities/edit-prompt.ts` | `buffer` | OpenAI `images.edit` `b64_json` decoded to Buffer | Yes when credentials/provider response exist | FLOWING |
+| `src/capabilities/edit-prompt.ts` | `buffer` | OpenAI JSON image edit `b64_json` decoded to Buffer | Yes when credentials/provider response exist | FLOWING |
 
 ### Behavioral Spot-Checks
 
@@ -102,7 +102,7 @@ human_verification:
 | OP-03 | 05-03 | Constraint violations before provider call | SATISFIED | `src/index.ts:453-455`; `validation.ts` |
 | OP-04 | 05-03 | File path inputs and existing output rules | SATISFIED | `params.input` validation; `resolveOutputPath`/`saveImage` |
 | PRIM-01 | 05-02, 05-03 | `extract_subject` via local background removal | SATISFIED | `extract-subject.ts` and unconditional registration |
-| PRIM-02 | 05-02, 05-03 | `edit_prompt` via OpenAI gpt-image-1 edit | SATISFIED | `edit-prompt.ts` uses `images.edit`, default `gpt-image-1` |
+| PRIM-02 | 05-02, 05-03 | `edit_prompt` via OpenAI GPT Image edit | SATISFIED | `edit-prompt.ts` uses JSON `/v1/images/edits`, default `gpt-image-1.5` |
 
 No Phase 5 requirement IDs from `.planning/REQUIREMENTS.md` are orphaned; all 11 are declared in plan frontmatter and accounted for above.
 
@@ -125,7 +125,7 @@ No Phase 5 requirement IDs from `.planning/REQUIREMENTS.md` are orphaned; all 11
 ### 2. `image_op` OpenAI Prompt Edit
 
 **Test:** With `OPENAI_API_KEY` configured, call `image_op` with `{op: 'edit_prompt', provider: 'openai', params: {input: '/path/to/photo.png', prompt: '...'}}`.
-**Expected:** Response has `success: true`, `output`, `runId`, `trace.nodes[0].output`; saved PNG reflects the requested edit via gpt-image-1.
+**Expected:** Response has `success: true`, `output`, `runId`, `trace.nodes[0].output`; saved PNG reflects the requested edit via GPT Image.
 **Why human:** Requires live OpenAI credentials/network and visual assessment of the edited image.
 
 ### Gaps Summary

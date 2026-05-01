@@ -1,6 +1,4 @@
 import * as fs from 'fs';
-import * as path from 'path';
-import OpenAI, { toFile } from 'openai';
 import type { Capability } from './types.js';
 
 const MAX_PROMPT_LENGTH = 4000;
@@ -10,6 +8,13 @@ const SIZE_MAP = {
   portrait: '1024x1536',
 } as const;
 
+interface OpenAIImageEditResponse {
+  data?: Array<{
+    b64_json?: string;
+    revised_prompt?: string;
+  }>;
+}
+
 export function createEditPromptCapability(): Capability | null {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
 
@@ -17,8 +22,7 @@ export function createEditPromptCapability(): Capability | null {
     return null;
   }
 
-  const model = process.env.OPENAI_DEFAULT_MODEL?.trim() || 'gpt-image-1';
-  const client = new OpenAI({ apiKey });
+  const model = process.env.OPENAI_EDIT_MODEL?.trim() || 'gpt-image-1.5';
 
   return {
     op: 'edit_prompt',
@@ -61,15 +65,31 @@ export function createEditPromptCapability(): Capability | null {
         : SIZE_MAP[requestedSize as keyof typeof SIZE_MAP];
 
       const source = await fs.promises.readFile(filePath);
-      const response = await client.images.edit({
-        model,
-        image: await toFile(source, path.basename(filePath)),
-        prompt,
-        n: 1,
-        size,
+      const response = await fetch('https://api.openai.com/v1/images/edits', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          images: [{
+            image_url: `data:image/png;base64,${source.toString('base64')}`,
+          }],
+          prompt,
+          n: 1,
+          size,
+        }),
       });
 
-      const imageData = response.data?.[0];
+      const responseBody = await response.json() as OpenAIImageEditResponse & {
+        error?: { message?: string };
+      };
+      if (!response.ok) {
+        throw new Error(responseBody.error?.message || `OpenAI edit failed with status ${response.status}`);
+      }
+
+      const imageData = responseBody.data?.[0];
       if (!imageData?.b64_json) {
         throw new Error('No image data returned from OpenAI edit');
       }
