@@ -24,6 +24,7 @@
   "license": "MIT",
   "dependencies": {
     "@google/genai": "^1.0.0",
+    "@imgly/background-removal-node": "^1.4.5",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "express": "^5.2.1",
     "node-addon-api": "^8.5.0",
