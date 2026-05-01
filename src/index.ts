@@ -7,9 +7,11 @@ import { z } from 'zod';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as http from 'http';
+import * as crypto from 'crypto';
 import express from 'express';
 
-import { capabilityRegistry, registerBuiltInCapabilities } from './capabilities/index.js';
+import { capabilityRegistry, registerBuiltInCapabilities, type CapabilityOp } from './capabilities/index.js';
+import { validateCapabilityParams } from './capabilities/validation.js';
 import { registry, type ProviderName, type ImageProvider } from './providers/index.js';
 import { createOpenAIProvider } from './providers/openai.js';
 import { createGeminiProvider } from './providers/gemini.js';
@@ -414,6 +416,93 @@ server.tool(
             }),
           },
         ],
+      };
+    }
+  }
+);
+
+server.tool(
+  'image_op',
+  'Invoke a registered image capability directly by operation and provider. Saves PNG output through the standard output path rules and returns file paths plus execution trace.',
+  {
+    op: z.enum(['extract_subject', 'edit_prompt', 'composite_layers', 'transform', 'enhance_upscale', 'analyze_dimensions', 'analyze_palette', 'analyze_ocr', 'generate']),
+    provider: z.string(),
+    params: z.record(z.unknown()).default({}),
+    outputPath: z.string().optional(),
+    outputDir: z.string().optional(),
+  },
+  async ({ op, provider, params, outputPath, outputDir }) => {
+    const startedAt = Date.now();
+    const runId = `run-${new Date().toISOString().replace(/[:.]/g, '-')}-${crypto.randomBytes(3).toString('hex')}`;
+    const capability = capabilityRegistry.get(op as CapabilityOp, provider);
+
+    if (!capability) {
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify({
+            success: false,
+            error: `Capability not registered for op '${op}' and provider '${provider}'`,
+            available: capabilityRegistry.list(op as CapabilityOp).map((c) => c.provider),
+          }),
+        }],
+      };
+    }
+
+    try {
+      validateCapabilityParams(capability, params);
+
+      const result = await capability.invoke({ params, outputPath, outputDir });
+      const filePath = await resolveOutputPath({
+        outputPath,
+        outputDir,
+        prompt: `${op}-${provider}`,
+        provider,
+      });
+      await saveImage(result.buffer, filePath);
+
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify({
+            success: true,
+            output: filePath,
+            runId,
+            trace: {
+              nodes: [{
+                id: 'n1',
+                op,
+                provider,
+                model: result.model,
+                output: filePath,
+                latencyMs: Date.now() - startedAt,
+                revisedPrompt: result.revisedPrompt,
+                metadata: result.metadata,
+              }],
+            },
+          }),
+        }],
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify({
+            success: false,
+            error: message,
+            runId,
+            trace: {
+              nodes: [{
+                id: 'n1',
+                op,
+                provider,
+                error: message,
+                latencyMs: Date.now() - startedAt,
+              }],
+            },
+          }),
+        }],
       };
     }
   }
