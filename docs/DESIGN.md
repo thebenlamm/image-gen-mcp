@@ -49,7 +49,8 @@ A Model Context Protocol (MCP) server that provides unified image generation acr
 ## Provider Details
 
 ### OpenAI
-- Models: `gpt-image-1` (default), `gpt-image-2`, `dall-e-3`, `dall-e-2` (`gpt-image-2` requires OpenAI org verification — opt in via `OPENAI_DEFAULT_MODEL=gpt-image-2`)
+- Models: `gpt-image-1` (default), `gpt-image-2`, `dall-e-3`, `dall-e-2`
+  - `gpt-image-2` requires OpenAI org verification. Verify at https://platform.openai.com/settings/organization/general (allow up to 15 min for propagation), then set `OPENAI_DEFAULT_MODEL=gpt-image-2`.
 - Sizes: 1024x1024 (square), 1792x1024 (landscape), 1024x1792 (portrait)
 
 ### Google Gemini

@@ -16,7 +16,7 @@ An MCP (Model Context Protocol) server for multi-provider image generation. Work
 
 | Provider | Models | Notes |
 |----------|--------|-------|
-| **OpenAI** | `gpt-image-1` (default), `gpt-image-2`, `dall-e-3`, `dall-e-2` | Highest quality, supports revised prompts. `gpt-image-2` requires OpenAI org verification — opt in via `OPENAI_DEFAULT_MODEL`. |
+| **OpenAI** | `gpt-image-1` (default), `gpt-image-2`, `dall-e-3`, `dall-e-2` | Highest quality, supports revised prompts. `gpt-image-2` requires OpenAI org verification (verify at https://platform.openai.com/settings/organization/general, wait up to 15 min for propagation), then set `OPENAI_DEFAULT_MODEL=gpt-image-2`. |
 | **Google Gemini** | `gemini-2.5-flash-image` (default), `gemini-3-pro-image` | Fast default, pro for higher quality |
 | **Replicate** | `black-forest-labs/flux-1.1-pro` (default), any Replicate model | Huge model variety |
 | **Together AI** | `black-forest-labs/FLUX.1-schnell` (default) | Fast, affordable |
