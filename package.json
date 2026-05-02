@@ -30,10 +30,12 @@
     "@google/genai": "^1.0.0",
     "@imgly/background-removal-node": "^1.4.5",
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "@types/pixelmatch": "^5.2.6",
     "express": "^5.2.1",
     "node-addon-api": "^8.5.0",
     "node-gyp": "^12.2.0",
     "openai": "^4.0.0",
+    "pixelmatch": "^7.2.0",
     "replicate": "^1.0.0",
     "sharp": "^0.34.5",
     "zod": "^3.25.76"
