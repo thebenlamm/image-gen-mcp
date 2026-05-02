@@ -27,7 +27,7 @@ afterEach(async () => {
 });
 
 describe('eval scorers', () => {
-  it('scores partial alpha coverage', async () => {
+  it('scores alpha-covered foreground pixels', async () => {
     const output = await writePng(
       'alpha.png',
       '<svg width="4" height="4"><rect width="4" height="4" fill="none"/><rect width="2" height="4" fill="black" fill-opacity="0.5"/></svg>',
@@ -37,8 +37,23 @@ describe('eval scorers', () => {
 
     expect(score.scorer).toBe('alpha_coverage');
     expect(score.status).toBe('scored');
+    // partial-alpha pixels (alpha > 0) are counted, so value > 0
     expect(score.value).toBeGreaterThan(0);
     expect(score.value).toBeLessThanOrEqual(1);
+  });
+
+  it('scores opaque hard-mask at correct coverage', async () => {
+    // 4x4 transparent background with a 2x4 fully opaque black rectangle = 8/16 pixels covered
+    const output = await writePng(
+      'hard-mask.png',
+      '<svg width="4" height="4"><rect width="4" height="4" fill="none"/><rect width="2" height="4" fill="black" fill-opacity="1"/></svg>',
+    );
+
+    const score = await scoreAlphaCoverage(output);
+
+    expect(score.scorer).toBe('alpha_coverage');
+    expect(score.status).toBe('scored');
+    expect(score.value).toBe(0.5);
   });
 
   it('scores pixel delta between normalized images', async () => {
@@ -58,14 +73,38 @@ describe('eval scorers', () => {
     expect(score.value).toBeGreaterThan(0);
   });
 
-  it('keeps OCR scoring as a deterministic placeholder', async () => {
-    const score = await scoreOcrTextPresence('unused.png', 'OPEN');
+  it('scores OCR text presence when expected text is found', async () => {
+    const output = await writePng(
+      'ocr-open.png',
+      '<svg width="200" height="80" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="80" fill="white"/><text x="10" y="60" font-size="48" font-family="Arial" fill="black">OPEN</text></svg>',
+    );
 
-    expect(score).toEqual({
-      scorer: 'ocr_text_presence',
-      status: 'skipped',
-      reason: 'ocr dependency unavailable',
-    });
+    const score = await scoreOcrTextPresence(output, 'OPEN');
+
+    expect(score.scorer).toBe('ocr_text_presence');
+    expect(score.status).toBe('scored');
+    expect(score.value).toBe(1);
+  }, 30000);
+
+  it('scores OCR text absence when expected text is missing', async () => {
+    const output = await writePng(
+      'ocr-open-not-closed.png',
+      '<svg width="200" height="80" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="80" fill="white"/><text x="10" y="60" font-size="48" font-family="Arial" fill="black">OPEN</text></svg>',
+    );
+
+    const score = await scoreOcrTextPresence(output, 'CLOSED');
+
+    expect(score.scorer).toBe('ocr_text_presence');
+    expect(score.status).toBe('scored');
+    expect(score.value).toBe(0);
+  }, 30000);
+
+  it('errors OCR scoring when expectedText is blank', async () => {
+    const score = await scoreOcrTextPresence('unused.png', ' ');
+
+    expect(score.scorer).toBe('ocr_text_presence');
+    expect(score.status).toBe('error');
+    expect(score.reason).toBe('expectedText is required for OCR scoring');
   });
 
   it('runs scorers in request order', async () => {
@@ -75,14 +114,14 @@ describe('eval scorers', () => {
     );
     const output = await writePng(
       'output.png',
-      '<svg width="16" height="16"><rect width="16" height="16" fill="black"/></svg>',
+      '<svg width="200" height="80" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="80" fill="white"/><text x="10" y="60" font-size="48" font-family="Arial" fill="black">OPEN</text></svg>',
     );
 
-    const scores = await runScorers(input, output, ['pixel_delta', 'ocr_text_presence']);
+    const scores = await runScorers(input, output, ['pixel_delta', 'ocr_text_presence'], 'OPEN');
 
     expect(scores.map((score) => score.scorer)).toEqual([
       'pixel_delta',
       'ocr_text_presence',
     ]);
-  });
+  }, 30000);
 });

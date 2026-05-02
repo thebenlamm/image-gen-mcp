@@ -1,11 +1,16 @@
 import pixelmatch from 'pixelmatch';
 import sharp from 'sharp';
+import { createWorker } from 'tesseract.js';
 import type { EvalScore, EvalScorerId } from './types.js';
 
 const SCORE_SIZE = 256;
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
+}
+
+function normalizeOcrText(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
 async function normalizedRaw(path: string): Promise<Buffer> {
@@ -24,20 +29,20 @@ export async function scoreAlphaCoverage(outputPath: string): Promise<EvalScore>
     .raw()
     .toBuffer({ resolveWithObject: true });
   const channels = info.channels;
-  let partialAlphaPixels = 0;
+  let coveredAlphaPixels = 0;
   const totalPixels = info.width * info.height;
 
   for (let index = channels - 1; index < data.length; index += channels) {
     const alpha = data[index];
-    if (alpha > 0 && alpha < 255) {
-      partialAlphaPixels += 1;
+    if (alpha > 0) {
+      coveredAlphaPixels += 1;
     }
   }
 
   return {
     scorer: 'alpha_coverage',
     status: 'scored',
-    value: clamp01(partialAlphaPixels / totalPixels),
+    value: clamp01(coveredAlphaPixels / totalPixels),
   };
 }
 
@@ -57,14 +62,44 @@ export async function scorePixelDelta(
 }
 
 export async function scoreOcrTextPresence(
-  _outputPath: string,
-  _expectedText?: string,
+  outputPath: string,
+  expectedText?: string,
 ): Promise<EvalScore> {
-  return {
-    scorer: 'ocr_text_presence',
-    status: 'skipped',
-    reason: 'ocr dependency unavailable',
-  };
+  if (!expectedText || !expectedText.trim()) {
+    return {
+      scorer: 'ocr_text_presence',
+      status: 'error',
+      reason: 'expectedText is required for OCR scoring',
+    };
+  }
+
+  const worker = await createWorker('eng');
+  try {
+    const result = await worker.recognize(outputPath);
+    const recognizedText = normalizeOcrText(result.data.text);
+    const needle = normalizeOcrText(expectedText);
+    if (recognizedText.includes(needle)) {
+      return {
+        scorer: 'ocr_text_presence',
+        status: 'scored',
+        value: 1,
+      };
+    }
+    return {
+      scorer: 'ocr_text_presence',
+      status: 'scored',
+      value: 0,
+      reason: 'expected text not found',
+    };
+  } catch (error) {
+    return {
+      scorer: 'ocr_text_presence',
+      status: 'error',
+      reason: error instanceof Error ? error.message : String(error),
+    };
+  } finally {
+    await worker.terminate();
+  }
 }
 
 export async function runScorers(
