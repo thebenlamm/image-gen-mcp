@@ -29,7 +29,7 @@ function registerFakeCapability(
       return { buffer: FAKE_PNG, model: 'fake-model' };
     },
   };
-  capabilityRegistry.register(cap);
+  capabilityRegistry.register(cap, { allowUnscoredProduction: true });
   return { unregister: () => capabilityRegistry.unregister(op, provider) };
 }
 

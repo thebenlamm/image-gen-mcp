@@ -43,7 +43,7 @@ describe('image_op trace shape (Phase 6 -> Phase 9 contract)', () => {
         metadata: { fixture: true },
       }),
     };
-    capabilityRegistry.register(cap);
+    capabilityRegistry.register(cap, { allowUnscoredProduction: true });
   });
 
   afterEach(async () => {

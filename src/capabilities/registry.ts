@@ -1,15 +1,40 @@
-import type { Capability, CapabilityKey, CapabilityOp } from './types.js';
+import type {
+  Capability,
+  CapabilityKey,
+  CapabilityOp,
+  CapabilityRegistrationOptions,
+} from './types.js';
 
 export class CapabilityRegistry {
   private capabilities = new Map<CapabilityKey, Capability>();
 
-  register(capability: Capability): void {
+  register(
+    capability: Capability,
+    options: CapabilityRegistrationOptions = {},
+  ): void {
     const key = this.createKey(capability.op, capability.provider);
     const existing = this.capabilities.get(key);
     const incoming = { ...capability };
 
     if (existing && existing.modelVersion !== incoming.modelVersion) {
       incoming.quality = undefined;
+    }
+
+    const sameOpProviders = this.list(incoming.op).filter(
+      (registered) => registered.provider !== incoming.provider
+    );
+    const hasScores = Boolean(
+      incoming.quality?.scores && Object.keys(incoming.quality.scores).length > 0
+    );
+
+    if (
+      sameOpProviders.length > 0 &&
+      !hasScores &&
+      !options.allowUnscoredProduction
+    ) {
+      throw new Error(
+        `Capability ${incoming.op}/${incoming.provider} is unscored; add an eval case before production routing`
+      );
     }
 
     this.capabilities.set(key, incoming);
@@ -31,6 +56,14 @@ export class CapabilityRegistry {
     }
 
     return capabilities.filter((capability) => capability.op === op);
+  }
+
+  listScored(op?: CapabilityOp): Capability[] {
+    return this.list(op).filter(
+      (capability) =>
+        capability.quality?.scores &&
+        Object.keys(capability.quality.scores).length > 0
+    );
   }
 
   listByProvider(provider: string): Capability[] {

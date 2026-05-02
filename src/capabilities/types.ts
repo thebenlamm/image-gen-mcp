@@ -23,6 +23,10 @@ export interface CapabilityQuality {
   evalResultPath?: string;
 }
 
+export interface CapabilityRegistrationOptions {
+  allowUnscoredProduction?: boolean;
+}
+
 export interface CapabilityCost {
   perCallUsd?: number;
   perMegapixelUsd?: number;
