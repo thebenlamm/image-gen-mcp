@@ -135,7 +135,7 @@ Plans:
 **UI hint**: no
 
 Plans:
-- [ ] 06-01-PLAN.md — runs module: id, dir, atomic write, manifest, retention sweep, trace types, vitest setup
+- [x] 06-01-PLAN.md — runs module: id, dir, atomic write, manifest, retention sweep, trace types, vitest setup
 - [ ] 06-02-PLAN.md — wire image_op + main() sweep, integration tests, trace snapshot, human UAT script
 
 ### Phase 7: Eval Harness + Golden Set

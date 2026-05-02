@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Goal-Shaped Image MCP
 status: executing
-stopped_at: "Phase 5 complete: capability registry, image_op, extract_subject, edit_prompt, code review, security audit, verification, and human UAT passed."
-last_updated: "2026-05-01T22:30:00Z"
-last_activity: 2026-05-01 -- Phase 5 complete; Phase 6 ready to plan
+stopped_at: Phase 5 complete with review, security, verification, and human UAT passed.
+last_updated: "2026-05-02T00:07:05.286Z"
+last_activity: 2026-05-02
 progress:
   total_phases: 11
   completed_phases: 4
-  total_plans: 11
-  completed_plans: 9
-  percent: 82
+  total_plans: 13
+  completed_plans: 10
+  percent: 77
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-01)
 
 **Core value:** Two value props — guaranteed primitives (v1.0) and flexible goal handoff (v2.0).
-**Current focus:** Phase 6 — Run/Session Artifact Layer.
+**Current focus:** Phase 06 — run-session-artifact-layer
 
 ## Current Position
 
-Phase: Phase 5 complete — Phase 6 next
-Plan: —
-Status: Ready to plan Phase 6
-Last activity: 2026-05-01 -- Phase 5 complete; human UAT passed
+Phase: 06 (run-session-artifact-layer) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-05-02
 
 ## Performance Metrics
 
@@ -82,6 +82,9 @@ Recent decisions affecting current work:
 - Tagged union for ProcessingOperation (type-safe dispatch)
 - Path priority: outputPath > outputDir > IMAGE_GEN_OUTPUT_DIR > ~/Downloads/generated-images
 - Atomic writes (tmp + rename) for files
+- [Phase 06]: Vitest 2.x is the Phase 6 test framework; tsconfig remains unchanged because tests run through Vitest transform.
+- [Phase 06]: Run artifact roots resolve from server-level IMAGE_GEN_OUTPUT_DIR via getOutputDir(), not per-call outputDir.
+- [Phase 06]: Trace nodes preserve latencyMs while adding startedAtMs, endedAtMs, durationMs, outcome, and artifactPath.
 
 ### Pending Todos
 
@@ -95,9 +98,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-05-01
+Last session: 2026-05-02T00:06:41.614Z
 Stopped at: Phase 5 complete with review, security, verification, and human UAT passed.
-Resume file: .planning/ROADMAP.md (Phase 6 details)
+Resume file: None
 
 ## Quick Tasks
 
