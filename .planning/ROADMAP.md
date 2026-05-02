@@ -159,7 +159,7 @@ Plans:
 Plans:
 - [x] 07-01-PLAN.md — Eval harness golden fixtures, case definitions, scorer primitives, result JSON
 - [x] 07-02-PLAN.md — Eval results populate registry quality and enforce unscored-provider guardrails
-- [ ] 07-03-PLAN.md — Gap closure: alpha coverage semantics, tesseract-backed OCR scoring, expectedText validation
+- [x] 07-03-PLAN.md — Gap closure: alpha coverage semantics, tesseract-backed OCR scoring, expectedText validation
 
 ### Phase 8: Op Primitives Expansion
 **Goal**: Users can invoke composite, transform, upscale, and analyze operations via `image_op`, completing the op taxonomy needed by the planner
