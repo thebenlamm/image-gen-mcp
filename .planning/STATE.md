@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Goal-Shaped Image MCP
-status: ready_to_plan
-stopped_at: Phase 6 complete: run/session artifact layer verified with restart UAT; Phase 7 ready to plan.
-last_updated: "2026-05-02T00:47:12Z"
+status: executing
+stopped_at: Completed 07-01-PLAN.md
+last_updated: "2026-05-02T20:45:06.245Z"
 last_activity: 2026-05-02
 progress:
   total_phases: 11
-  completed_phases: 6
-  total_plans: 13
-  completed_plans: 13
-  percent: 55
+  completed_phases: 5
+  total_plans: 15
+  completed_plans: 12
+  percent: 80
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-01)
 
 **Core value:** Two value props — guaranteed primitives (v1.0) and flexible goal handoff (v2.0).
-**Current focus:** Phase 7 — Eval Harness + Golden Set.
+**Current focus:** Phase 07 — eval-harness-golden-set
 
 ## Current Position
 
-Phase: 7
-Plan: Not started
-Status: Ready to plan
+Phase: 07 (eval-harness-golden-set) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-05-02
 
 ## Performance Metrics
@@ -55,6 +55,7 @@ Last activity: 2026-05-02
 - Note: Phase 7 can now consume persistent `.runs/<runId>/` artifacts for eval outputs.
 
 *Updated after each plan completion*
+| Phase 07-eval-harness-golden-set P01 | 11min | 4 tasks | 28 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,9 @@ Recent decisions affecting current work:
 - [Phase 06]: Trace nodes preserve latencyMs while adding startedAtMs, endedAtMs, durationMs, outcome, and artifactPath.
 - [Phase 06]: image_op writes in-progress manifests before capability execution and final success/error manifests after.
 - [Phase 06]: retentionHours=0 deletes all eligible run directories, including just-created runs.
+- [Phase 07]: Ignored eval/results/ because npm run eval produces runtime verification artifacts.
+- [Phase 07]: Kept OCR scoring as a deterministic skipped scorer until Phase 8 adds OCR dependencies.
+- [Phase 07]: Generated deterministic local PNG fixtures with sharp instead of using network or AI image generation.
 
 ### Pending Todos
 
@@ -100,8 +104,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-05-02T00:47:12Z
-Stopped at: Phase 6 complete; Phase 7 ready to plan
+Last session: 2026-05-02T20:44:39.721Z
+Stopped at: Completed 07-01-PLAN.md
 Resume file: None
 
 ## Quick Tasks
