@@ -1,0 +1,31 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`image_op trace shape (Phase 6 -> Phase 9 contract) > snapshot of redacted trace (single-node case) 1`] = `
+{
+  "output": "<outputPath>.png",
+  "runIdPresent": true,
+  "success": true,
+  "trace": {
+    "nodes": [
+      {
+        "artifactPath": "<runDir>/n1.png",
+        "cost_usd": 0,
+        "durationMs": "<redacted>",
+        "endedAtMs": "<redacted>",
+        "id": "n1",
+        "latencyMs": "<redacted>",
+        "metadata": {
+          "fixture": true,
+        },
+        "model": "snap-model",
+        "op": "extract_subject",
+        "outcome": "success",
+        "output": "<outputPath>.png",
+        "provider": "fake/trace-snap",
+        "startedAtMs": "<redacted>",
+      },
+    ],
+    "runIdMatches": true,
+  },
+}
+`;

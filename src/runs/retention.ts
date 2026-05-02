@@ -73,7 +73,7 @@ export async function sweepRunArtifacts(
         result.skipped += 1;
         continue;
       }
-      if (stat.mtimeMs >= cutoff) continue;
+      if (retentionHours > 0 && stat.mtimeMs >= cutoff) continue;
 
       await fs.rm(runDir, { recursive: true, force: true });
       result.deleted += 1;
