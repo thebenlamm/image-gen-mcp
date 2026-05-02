@@ -1,136 +1,219 @@
 ---
 phase: 07-eval-harness-golden-set
-reviewed: 2026-05-02T21:04:05Z
+reviewed: 2026-05-02T00:00:00Z
 depth: standard
-files_reviewed: 35
+files_reviewed: 6
 files_reviewed_list:
-  - .gitignore
-  - eval/cases/edit-prompt.json
-  - eval/cases/extract-subject.json
-  - eval/fixtures/low-contrast-shape.png
-  - eval/fixtures/manifest.json
-  - eval/fixtures/multi-object.png
-  - eval/fixtures/person-hair-edge.png
-  - eval/fixtures/person-silhouette.png
-  - eval/fixtures/product-low-contrast.png
-  - eval/fixtures/product-simple.png
-  - eval/fixtures/small-icon.png
-  - eval/fixtures/text-label.png
-  - eval/fixtures/text-poster.png
-  - eval/fixtures/transparent-edge.png
-  - package.json
-  - scripts/run-eval.ts
-  - src/capabilities/registry.ts
-  - src/capabilities/types.ts
-  - src/eval/apply-results.ts
-  - src/eval/cases.ts
-  - src/eval/fixtures.ts
-  - src/eval/index.ts
-  - src/eval/results.ts
-  - src/eval/run.ts
   - src/eval/scorers.ts
-  - src/eval/types.ts
-  - tests/capabilities/registry-quality.test.ts
-  - tests/eval/apply-results.test.ts
-  - tests/eval/fixtures.test.ts
-  - tests/eval/phase7.acceptance.test.ts
-  - tests/eval/results.test.ts
-  - tests/eval/run-quality.test.ts
-  - tests/eval/run.test.ts
+  - src/eval/cases.ts
   - tests/eval/scorers.test.ts
-  - tests/integration/image_op.runs.test.ts
-  - tests/integration/image_op.trace.test.ts
+  - tests/eval/cases.test.ts
+  - tests/eval/phase7.acceptance.test.ts
+  - eval/cases/edit-prompt.json
 findings:
-  critical: 2
-  warning: 2
-  info: 0
-  total: 4
+  critical: 0
+  warning: 4
+  info: 4
+  total: 8
 status: issues_found
 ---
 
-# Phase 7: Code Review Report
+# Phase 07: Code Review Report (Phase 07-03 gap closure)
 
-**Reviewed:** 2026-05-02T21:04:05Z
+**Reviewed:** 2026-05-02
 **Depth:** standard
-**Files Reviewed:** 35
+**Files Reviewed:** 6
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the eval harness, golden fixture catalog, capability quality registry changes, runner script, and associated tests. No repo-local `AGENTS.md` or `.codex/skills` / `.agents/skills` project skill instructions were present. The main risks are correctness issues in the quality scores the harness produces and durability issues in stored run artifacts.
+The Phase 07-03 changes wire tesseract.js OCR scoring into `scoreOcrTextPresence`, replace
+the prior alpha-coverage placeholder with an actual foreground-pixel count, and add loader
+validation requiring `params.expectedText` whenever `ocr_text_presence` is among the scorers.
+The implementation is small and readable, the test coverage matches the new behaviors, and
+the acceptance test asserts that the documented placeholder strings are gone.
 
-## Critical Issues
+The most consequential defect is in `scoreOcrTextPresence` itself: when `createWorker('eng')`
+throws (network failure pulling traineddata, missing native bindings, sandbox without
+`/tmp` write access, etc.), the error escapes the scorer and aborts the entire eval case
+in `runEval` instead of producing a per-scorer `status: 'error'` result. That contradicts
+the contract used by every other scorer and the catch branch already in the same function.
+Several smaller issues — loose type guards in `isEvalCase`, fragile OCR text normalization,
+and pre-existing per-call worker creation — are documented as warnings/info.
 
-### CR-01: `alpha_coverage` Scores Only Semi-Transparent Pixels
-
-**File:** `src/eval/scorers.ts:27`
-**Issue:** `scoreAlphaCoverage` increments `partialAlphaPixels` only when `alpha > 0 && alpha < 255`, then divides by total pixels. That means a successful hard-mask extraction with opaque foreground pixels and transparent background scores `0`, the same as a fully transparent or otherwise useless output. This corrupts `alpha_coverage` quality data and can promote/demote providers based on the wrong signal.
-**Fix:**
-```ts
-let coveredAlphaPixels = 0;
-
-for (let index = channels - 1; index < data.length; index += channels) {
-  if (data[index] > 0) {
-    coveredAlphaPixels += 1;
-  }
-}
-
-return {
-  scorer: 'alpha_coverage',
-  status: 'scored',
-  value: clamp01(coveredAlphaPixels / totalPixels),
-};
-```
-If edge softness is also needed, add a separate scorer such as `partial_alpha_coverage` instead of overloading `alpha_coverage`.
-
-### CR-02: Eval Artifacts Are Overwritten Across Runs
-
-**File:** `src/eval/run.ts:11`
-**Issue:** All runs write artifacts into the fixed directory `eval/results/artifacts`, and each case writes to a fixed `${caseId}.png` path at line 78. Every later eval run overwrites the artifacts referenced by earlier result JSON files, and concurrent runs can race on the same output files. The persisted `outputPath` values in historical results therefore stop pointing at the image that was actually scored.
-**Fix:**
-```ts
-const runId = new Date().toISOString().replace(/[:.]/g, '-');
-const artifactsDir = path.join(EVAL_RESULTS_DIR, 'artifacts', runId);
-await fs.mkdir(artifactsDir, { recursive: true });
-
-// inside the case loop
-outputPath = path.join(artifactsDir, `${evalCase.id}.png`);
-```
-Alternatively create the result filename first and derive the artifact directory from that basename so one result JSON owns one immutable artifact directory.
+No security, injection, or secret-handling issues were found. No test was observed to be
+flaky or assertion-light beyond the noted item about `alpha_coverage` accepting
+`> 0` instead of an exact value in the partial-alpha test.
 
 ## Warnings
 
-### WR-01: Runtime Case Validation Accepts Unsupported Ops And Scorers
+### WR-01: Worker-creation failure escapes `scoreOcrTextPresence` instead of returning `status: 'error'`
 
-**File:** `src/eval/cases.ts:11`
-**Issue:** `isEvalCase` only checks that `op` and every scorer are strings, but the parsed JSON is cast to `EvalCase`. A typo such as `"pixel-delta"` passes loading and then fails later after capability lookup or invocation. This makes case-file mistakes surface late and can waste paid provider calls before the bad scorer is discovered.
-**Fix:** Validate against explicit allowed sets during load:
+**File:** `src/eval/scorers.ts:64-103`
+**Issue:** `const worker = await createWorker('eng');` is awaited *before* the `try` block.
+When `createWorker` rejects (network error fetching the eng traineddata, native module
+loading failure, missing cache permissions), the rejection bubbles out of
+`scoreOcrTextPresence`. `runScorers` does not catch per-scorer, so the rejection unwinds
+into `runEval`'s outer `catch` (`src/eval/run.ts:105`) and the *entire* eval case is
+recorded as `status: 'error'` with empty `scores: []`. This loses the partial pixel_delta
+score that was computed earlier in the same iteration of `runScorers` and contradicts the
+explicit `catch` branch already present in this function (lines 94-99) that converts
+runtime errors into `{ scorer, status: 'error', reason }`. Two failure modes for the same
+scorer therefore produce different result shapes, and downstream consumers
+(`apply-results.ts`) cannot tell that the OCR scorer specifically failed.
+
+**Fix:**
 ```ts
-const OPS = new Set<CapabilityOp>(['extract_subject', 'edit_prompt', 'composite_layers', 'transform', 'enhance_upscale', 'analyze_dimensions', 'analyze_palette', 'analyze_ocr', 'generate']);
-const SCORERS = new Set<EvalScorerId>(['alpha_coverage', 'pixel_delta', 'ocr_text_presence']);
+export async function scoreOcrTextPresence(
+  outputPath: string,
+  expectedText?: string,
+): Promise<EvalScore> {
+  if (!expectedText || !expectedText.trim()) {
+    return { scorer: 'ocr_text_presence', status: 'error', reason: 'expectedText is required for OCR scoring' };
+  }
 
-typeof evalCase.op === 'string' &&
-OPS.has(evalCase.op as CapabilityOp) &&
-Array.isArray(evalCase.scorers) &&
-evalCase.scorers.every((scorer) => SCORERS.has(scorer as EvalScorerId))
-```
-
-### WR-02: Text Edit Cases Do Not Provide Expected OCR Text
-
-**File:** `eval/cases/edit-prompt.json:19`
-**Issue:** The text-edit cases request `ocr_text_presence`, and `runEval` passes `params.expectedText` into the OCR scorer, but these cases only encode the target text inside the natural-language prompt. Once OCR scoring is implemented, these cases will score without a machine-readable expected string and can silently skip or mis-score the intended text assertions.
-**Fix:** Add explicit expected text to each OCR-backed case:
-```json
-"params": {
-  "input": "${fixture.path}",
-  "prompt": "Change the label text from SALE 25 to SALE 50 while keeping the label style.",
-  "expectedText": "SALE 50"
+  let worker: Awaited<ReturnType<typeof createWorker>> | undefined;
+  try {
+    worker = await createWorker('eng');
+    const result = await worker.recognize(outputPath);
+    const recognizedText = normalizeOcrText(result.data.text);
+    const needle = normalizeOcrText(expectedText);
+    return recognizedText.includes(needle)
+      ? { scorer: 'ocr_text_presence', status: 'scored', value: 1 }
+      : { scorer: 'ocr_text_presence', status: 'scored', value: 0, reason: 'expected text not found' };
+  } catch (error) {
+    return {
+      scorer: 'ocr_text_presence',
+      status: 'error',
+      reason: error instanceof Error ? error.message : String(error),
+    };
+  } finally {
+    if (worker) {
+      await worker.terminate().catch(() => undefined);
+    }
+  }
 }
 ```
-Do the same for the poster case with `"expectedText": "CLOSED"`, and add a test that `loadEvalCases()` preserves `expectedText`.
+
+### WR-02: `isEvalCase` blanket-casts unknown to `EvalCase` and accepts arbitrary `op`/`provider` strings
+
+**File:** `src/eval/cases.ts:14-29`
+**Issue:** The first line of the type guard is `const evalCase = value as EvalCase;` — any
+unknown shape is asserted to be `EvalCase` before validation, defeating the type guard.
+Worse, `op` and `provider` are validated only as `typeof ... === 'string'`. A typo such as
+`"extract_subjct"` passes the loader, then fails much later in `runEval` with the
+generic "capability not registered" path (recorded as `skipped`, not flagged as malformed).
+Production capability ops are a closed set in `CapabilityOp`; the loader should enforce it
+so the failure surfaces at load time.
+
+**Fix:**
+```ts
+const CAPABILITY_OPS = new Set<CapabilityOp>(['extract_subject', 'edit_prompt']);
+
+function isEvalCase(value: unknown): value is EvalCase {
+  if (typeof value !== 'object' || value === null) return false;
+  const v = value as Record<string, unknown>;
+  if (typeof v.id !== 'string' || !v.id.trim()) return false;
+  if (typeof v.op !== 'string' || !CAPABILITY_OPS.has(v.op as CapabilityOp)) return false;
+  if (typeof v.provider !== 'string' || !v.provider.trim()) return false;
+  if (typeof v.fixtureId !== 'string' || !v.fixtureId.trim()) return false;
+  if (typeof v.params !== 'object' || v.params === null) return false;
+  if (!Array.isArray(v.scorers) || !v.scorers.every((s) => SCORERS.has(s as EvalScorerId))) return false;
+  if (v.requiredEnv !== undefined &&
+      (!Array.isArray(v.requiredEnv) || !v.requiredEnv.every((e) => typeof e === 'string'))) return false;
+  return true;
+}
+```
+
+### WR-03: `loadEvalCases` does not validate `expectedText` type for non-OCR cases
+
+**File:** `src/eval/cases.ts:56-61`
+**Issue:** The OCR-specific check rejects missing or blank `expectedText`, but if a non-OCR
+case includes `expectedText` set to a non-string (e.g., the JSON author wrote
+`"expectedText": 50`), it is silently passed through into `evalCase.params`. `runEval`'s
+`getExpectedText` returns `undefined` for non-strings and the bug becomes invisible —
+authors will assume the value was passed when in fact it was dropped. Either reject any
+non-string `expectedText` regardless of scorer, or strip the key explicitly.
+
+**Fix:**
+```ts
+if (
+  entry.params.expectedText !== undefined &&
+  (typeof entry.params.expectedText !== 'string' || !entry.params.expectedText.trim())
+) {
+  throw new Error(`Eval case ${entry.id} has invalid params.expectedText (must be non-empty string when provided)`);
+}
+```
+Then the existing OCR-required check can be simplified to a presence check.
+
+### WR-04: Partial-alpha test does not assert the actual coverage value
+
+**File:** `tests/eval/scorers.test.ts:30-43`
+**Issue:** The first test paints a 2×4 black rectangle at `fill-opacity="0.5"` over a 4×4
+canvas — the *deterministic* expected coverage is `8/16 = 0.5`. The test only asserts
+`> 0` and `<= 1`, which would still pass if the loop accidentally counted the
+fully-transparent half of the canvas (a regression that would yield `1.0`). The
+"opaque hard-mask" case below it does assert `0.5` exactly; the partial-alpha case should
+do the same to detect regressions where translucent and transparent are no longer
+distinguished.
+
+**Fix:** replace the loose assertion with `expect(score.value).toBe(0.5);` (or
+`toBeCloseTo(0.5, 5)` if antialiasing introduces sub-pixel jitter at this 4×4 size; the
+sibling hard-mask test demonstrates the exact value is reproducible).
+
+## Info
+
+### IN-01: OCR worker is created and terminated on every scorer call
+
+**File:** `src/eval/scorers.ts:76-101`
+**Issue:** Performance is out of scope for v1 review, but it is worth noting that
+`createWorker('eng')` initializes WASM, downloads/loads ~10 MB of trained data, and spins
+up a worker thread on every call. With two OCR cases in `edit-prompt.json` today, that is
+two full initializations per eval run. The worker object can be cached at module scope
+(or accepted as an injected dependency by `runScorers`) and reused across cases. Mark this
+as future work — a cached worker would also make WR-01's failure handling simpler.
+
+### IN-02: `normalizeOcrText` does not strip punctuation or OCR substitution noise
+
+**File:** `src/eval/scorers.ts:12-14`
+**Issue:** Normalization is whitespace+lowercase only. Tesseract commonly emits punctuation
+adjacent to characters (e.g., `"SALE-50"`, `"SALE 50."`, `"SALE  50!"`). The first two are
+fine because `.includes('sale 50')` still matches, but a hyphen would not. Consider
+stripping non-alphanumeric runs to whitespace before collapse, or document explicitly that
+expected text should match the OCR engine's verbatim output. This is most likely to bite
+on the upcoming `edit-text-poster` (`CLOSED`) case if Tesseract emits `"CLOSED."`.
+
+**Fix:**
+```ts
+function normalizeOcrText(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+```
+
+### IN-03: `'${fixture.path}'` placeholder substitution silently no-ops on missing input
+
+**File:** `src/eval/cases.ts:63-66`
+**Issue:** If `params.input` is omitted entirely (or set to a different placeholder
+string), the loader leaves `params` unchanged and the case fails much later in `runEval`
+at `getInputPath`. Since the placeholder string is the documented contract for fixture
+substitution, the loader is the right place to enforce that an `input` field is present
+and either equals `${fixture.path}` or is an absolute path. Pre-existing behavior, but
+worth tightening alongside the WR-02 schema work.
+
+### IN-04: `EVAL-03` acceptance test asserts on raw source text, not behavior
+
+**File:** `tests/eval/phase7.acceptance.test.ts:57-75`
+**Issue:** The test reads `src/eval/scorers.ts` and `src/eval/cases.ts` as text and greps
+for specific substrings (`"expectedText": "SALE 50"`, `'ocr_text_presence but is missing
+params.expectedText'`). This couples the test to exact wording — a reasonable error
+message rephrasing would break it without indicating any actual behavior regression. The
+behavioral assertions exist already in `tests/eval/cases.test.ts` and the OCR tests in
+`tests/eval/scorers.test.ts`; the source-grep checks are a brittle belt-and-braces layer.
+Acceptable as a phase-gate sentinel, but tag/document it as such so future maintainers
+don't preserve the literal strings unnecessarily.
 
 ---
 
-_Reviewed: 2026-05-02T21:04:05Z_
-_Reviewer: the agent (gsd-code-reviewer)_
+_Reviewed: 2026-05-02_
+_Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
