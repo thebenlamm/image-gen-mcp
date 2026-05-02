@@ -9,7 +9,10 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
-    "check-models": "tsx scripts/check-models.ts"
+    "check-models": "tsx scripts/check-models.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:runs": "vitest run tests/runs"
   },
   "keywords": [
     "mcp",
@@ -39,6 +42,7 @@
     "@types/node": "^22.0.0",
     "@types/sharp": "^0.31.1",
     "tsx": "^4.19.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.9"
   }
 }
