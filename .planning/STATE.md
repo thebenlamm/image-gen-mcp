@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Goal-Shaped Image MCP
-status: executing
-stopped_at: Completed 07-01-PLAN.md
-last_updated: "2026-05-02T20:45:06.245Z"
+status: verifying
+stopped_at: Completed 07-02-PLAN.md
+last_updated: "2026-05-02T21:00:22.307Z"
 last_activity: 2026-05-02
 progress:
   total_phases: 11
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 15
-  completed_plans: 12
-  percent: 80
+  completed_plans: 13
+  percent: 87
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 Phase: 07 (eval-harness-golden-set) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-05-02
 
 ## Performance Metrics
@@ -56,6 +56,7 @@ Last activity: 2026-05-02
 
 *Updated after each plan completion*
 | Phase 07-eval-harness-golden-set P01 | 11min | 4 tasks | 28 files |
+| Phase 07-eval-harness-golden-set P02 | 11min | 4 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -92,6 +93,9 @@ Recent decisions affecting current work:
 - [Phase 07]: Ignored eval/results/ because npm run eval produces runtime verification artifacts.
 - [Phase 07]: Kept OCR scoring as a deterministic skipped scorer until Phase 8 adds OCR dependencies.
 - [Phase 07]: Generated deterministic local PNG fixtures with sharp instead of using network or AI image generation.
+- [Phase 07]: Second providers for an existing op require non-empty quality.scores unless allowUnscoredProduction is explicitly passed.
+- [Phase 07]: Eval score application ignores skipped, errored, non-finite, and model-version-mismatched results.
+- [Phase 07]: runEval() writes result JSON first, then applies that result in-process so quality.evalResultPath points at the persisted artifact.
 
 ### Pending Todos
 
@@ -104,8 +108,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-05-02T20:44:39.721Z
-Stopped at: Completed 07-01-PLAN.md
+Last session: 2026-05-02T21:00:22.303Z
+Stopped at: Completed 07-02-PLAN.md
 Resume file: None
 
 ## Quick Tasks

@@ -62,8 +62,8 @@
 - [x] **EVAL-01**: `eval/fixtures/` contains 10 input images covering subject types (product, person, text-heavy, transparent-edge, low-contrast)
 - [x] **EVAL-02**: `eval/cases/` contains per-capability test definitions (input fixture + expected scoring criteria)
 - [x] **EVAL-03**: `npm run eval` executes all cases with per-op programmatic scorers (pixelmatch, alpha coverage, OCR round-trip), writes `eval/results/<date>.json`
-- [ ] **EVAL-04**: Eval results populate `quality.scores` on registered capabilities
-- [ ] **EVAL-05**: Adding a second provider for an existing op requires an eval case and measured score before the capability can ship to production
+- [x] **EVAL-04**: Eval results populate `quality.scores` on registered capabilities
+- [x] **EVAL-05**: Adding a second provider for an existing op requires an eval case and measured score before the capability can ship to production
 
 ### Op Primitives (PRIM)
 
