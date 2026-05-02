@@ -1,6 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { resolveRunsRoot } from './dir.js';
+import { isValidRunId, resolveRunsRoot } from './dir.js';
 
 export const DEFAULT_RETENTION_HOURS = 24;
 
@@ -59,7 +59,7 @@ export async function sweepRunArtifacts(
       result.skipped += 1;
       continue;
     }
-    if (!entry.name.startsWith('run-')) {
+    if (!isValidRunId(entry.name)) {
       result.skipped += 1;
       continue;
     }

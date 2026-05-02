@@ -106,7 +106,7 @@ describe('image_op trace shape (Phase 6 -> Phase 9 contract)', () => {
         provider: 'fake',
         model: 'm',
         artifactPath: `/tmp/n${i + 1}.png`,
-        output: i === 2 ? '/tmp/final.png' : undefined,
+        output: `/tmp/output-${i + 1}.png`,
         startedAtMs: i,
         endedAtMs: i + 10,
         durationMs: 10,
@@ -118,6 +118,6 @@ describe('image_op trace shape (Phase 6 -> Phase 9 contract)', () => {
     };
     const roundTripped = JSON.parse(JSON.stringify(synth));
     const allKeys = roundTripped.nodes.map((n: any) => Object.keys(n).sort().join(','));
-    expect(new Set(allKeys).size).toBeLessThanOrEqual(2);
+    expect(new Set(allKeys).size).toBe(1);
   });
 });

@@ -90,17 +90,21 @@ describe('sweepRunArtifacts', () => {
     expect(exists).toBe(true);
   });
 
-  it('skips non-run-* siblings', async () => {
+  it('skips non-run-id siblings', async () => {
     const root = await resolveRunsRoot();
     const sibling = path.join(root, 'not-a-run');
+    const runPrefixedSibling = path.join(root, 'run-important');
     await fs.mkdir(sibling, { recursive: true });
+    await fs.mkdir(runPrefixedSibling, { recursive: true });
     await makeRun(2 * 60 * 60 * 1000);
 
     const result = await sweepRunArtifacts(1);
 
     expect(result.deleted).toBe(1);
     const survives = await fs.stat(sibling).then(() => true).catch(() => false);
+    const runPrefixedSurvives = await fs.stat(runPrefixedSibling).then(() => true).catch(() => false);
     expect(survives).toBe(true);
+    expect(runPrefixedSurvives).toBe(true);
   });
 
   it('skips symbolic links pointing outside .runs/', async () => {

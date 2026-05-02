@@ -462,6 +462,26 @@ export interface ImageOpArgs {
   outputDir?: string;
 }
 
+function imageOpErrorResponse(
+  runId: string,
+  error: string,
+  nodes: ReturnType<typeof buildTraceNode>[] = [],
+  extra: Record<string, unknown> = {},
+): { content: Array<{ type: 'text'; text: string }> } {
+  return {
+    content: [{
+      type: 'text' as const,
+      text: JSON.stringify({
+        success: false,
+        error,
+        runId,
+        trace: { runId, nodes },
+        ...extra,
+      }),
+    }],
+  };
+}
+
 export async function handleImageOp(args: ImageOpArgs): Promise<{
   content: Array<{ type: 'text'; text: string }>;
 }> {
@@ -474,17 +494,7 @@ export async function handleImageOp(args: ImageOpArgs): Promise<{
     runDir = await resolveRunDir(runId);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return {
-      content: [{
-        type: 'text' as const,
-        text: JSON.stringify({
-          success: false,
-          error: `Failed to create run directory: ${message}`,
-          runId,
-          trace: { runId, nodes: [] },
-        }),
-      }],
-    };
+    return imageOpErrorResponse(runId, `Failed to create run directory: ${message}`);
   }
 
   const baseInvocation: RunManifest['invocation'] = {
@@ -496,14 +506,19 @@ export async function handleImageOp(args: ImageOpArgs): Promise<{
     outputDir,
   };
 
-  await writeManifest(runDir, {
-    schemaVersion: 1,
-    runId,
-    startedAt: new Date(startedAt).toISOString(),
-    status: 'in_progress',
-    invocation: baseInvocation,
-    nodes: [],
-  });
+  try {
+    await writeManifest(runDir, {
+      schemaVersion: 1,
+      runId,
+      startedAt: new Date(startedAt).toISOString(),
+      status: 'in_progress',
+      invocation: baseInvocation,
+      nodes: [],
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return imageOpErrorResponse(runId, `Failed to write run manifest: ${message}`);
+  }
 
   const capability = capabilityRegistry.get(op as CapabilityOp, provider);
   if (!capability) {
@@ -519,24 +534,37 @@ export async function handleImageOp(args: ImageOpArgs): Promise<{
       error,
     });
 
-    await writeManifest(runDir, {
-      schemaVersion: 1,
-      runId,
-      startedAt: new Date(startedAt).toISOString(),
-      endedAt: new Date(endedAt).toISOString(),
-      status: 'error',
-      invocation: baseInvocation,
-      nodes: [{
-        id: errorNode.id,
-        op,
-        provider,
-        outcome: 'error',
+    try {
+      await writeManifest(runDir, {
+        schemaVersion: 1,
+        runId,
+        startedAt: new Date(startedAt).toISOString(),
+        endedAt: new Date(endedAt).toISOString(),
+        status: 'error',
+        invocation: baseInvocation,
+        nodes: [{
+          id: errorNode.id,
+          op,
+          provider,
+          outcome: 'error',
+          error,
+          durationMs: errorNode.durationMs,
+        }],
+        totalDurationMs: errorNode.durationMs,
         error,
-        durationMs: errorNode.durationMs,
-      }],
-      totalDurationMs: errorNode.durationMs,
-      error,
-    });
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return imageOpErrorResponse(
+        runId,
+        error,
+        [errorNode],
+        {
+          available: capabilityRegistry.list(op as CapabilityOp).map((c) => c.provider),
+          manifestError: `Failed to write run manifest: ${message}`,
+        },
+      );
+    }
 
     return {
       content: [{
@@ -630,24 +658,34 @@ export async function handleImageOp(args: ImageOpArgs): Promise<{
       error: message,
     });
 
-    await writeManifest(runDir, {
-      schemaVersion: 1,
-      runId,
-      startedAt: new Date(startedAt).toISOString(),
-      endedAt: new Date(endedAt).toISOString(),
-      status: 'error',
-      invocation: baseInvocation,
-      nodes: [{
-        id: errorNode.id,
-        op,
-        provider,
-        outcome: 'error',
+    try {
+      await writeManifest(runDir, {
+        schemaVersion: 1,
+        runId,
+        startedAt: new Date(startedAt).toISOString(),
+        endedAt: new Date(endedAt).toISOString(),
+        status: 'error',
+        invocation: baseInvocation,
+        nodes: [{
+          id: errorNode.id,
+          op,
+          provider,
+          outcome: 'error',
+          error: message,
+          durationMs: errorNode.durationMs,
+        }],
+        totalDurationMs: errorNode.durationMs,
         error: message,
-        durationMs: errorNode.durationMs,
-      }],
-      totalDurationMs: errorNode.durationMs,
-      error: message,
-    });
+      });
+    } catch (err) {
+      const manifestMessage = err instanceof Error ? err.message : String(err);
+      return imageOpErrorResponse(
+        runId,
+        message,
+        [errorNode],
+        { manifestError: `Failed to write run manifest: ${manifestMessage}` },
+      );
+    }
 
     return {
       content: [{
