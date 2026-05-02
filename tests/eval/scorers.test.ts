@@ -37,9 +37,9 @@ describe('eval scorers', () => {
 
     expect(score.scorer).toBe('alpha_coverage');
     expect(score.status).toBe('scored');
-    // partial-alpha pixels (alpha > 0) are counted, so value > 0
-    expect(score.value).toBeGreaterThan(0);
-    expect(score.value).toBeLessThanOrEqual(1);
+    // 2x4 partially-transparent rectangle over 4x4 transparent canvas: 8/16 = 0.5
+    // Asserts exact coverage to detect regressions where transparent pixels are counted.
+    expect(score.value).toBe(0.5);
   });
 
   it('scores opaque hard-mask at correct coverage', async () => {
