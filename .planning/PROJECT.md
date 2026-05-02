@@ -45,6 +45,7 @@ Two value props, one MCP:
 - ✓ Asset type presets (profile_pic, post_image, hero_photo, avatar, scene, avery_*) via `generate_asset`
 - ✓ Combined generate + process pipeline (`generate_asset` tool)
 - ✓ `image_op` run/session artifact layer with unique run IDs, atomic intermediates under `.runs/<runId>/`, manifests, trace paths, and startup retention sweep (Phase 6)
+- ✓ Deterministic eval harness + golden set with measured-quality routing: per-capability registry quality from `npm run eval`, real tesseract.js OCR scoring, alpha-coverage and pixel-delta scorers, OCR cases require machine-readable `expectedText` (Phase 7)
 
 ### Active (v2.0)
 
@@ -130,4 +131,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-02 — Phase 6 run/session artifact layer validated with restart UAT*
+*Last updated: 2026-05-02 — Phase 7 eval harness + golden set complete; capability registry quality now driven by measured eval results*
