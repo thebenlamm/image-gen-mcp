@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Goal-Shaped Image MCP
-status: verifying
+status: ready_to_plan
 stopped_at: Planned 07-03-PLAN.md gap closure
 last_updated: "2026-05-02T21:20:00.000Z"
 last_activity: 2026-05-02
 progress:
   total_phases: 11
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 16
   completed_plans: 13
-  percent: 81
+  percent: 64
 ---
 
 # Project State
@@ -25,16 +25,16 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 ## Current Position
 
-Phase: 07 (eval-harness-golden-set) — PLANNING
-Plan: 3 of 3
-Status: Verification gaps found — 07-03 gap-closure plan ready for execution
+Phase: 8
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-05-02
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 13
+- Total plans completed: 16
 - Average duration: 2.6 min
 - Total execution time: 0.5 hours
 
@@ -47,6 +47,7 @@ Last activity: 2026-05-02
 | 03-asset-pipeline | 2/2 | 2 min | 1 min |
 | 05-capability-layer-image-op-first-2-caps | 3/3 | 9 min | 3 min |
 | 06-run-session-artifact-layer | 2/2 | 11 min | 5.5 min |
+| 07 | 3 | - | - |
 
 **Recent Trend:**
 
