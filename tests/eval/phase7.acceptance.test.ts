@@ -1,3 +1,5 @@
+import * as fs from 'fs/promises';
+import * as path from 'path';
 import { describe, expect, it } from 'vitest';
 import { CapabilityRegistry } from '../../src/capabilities/registry.js';
 import type { Capability } from '../../src/capabilities/types.js';
@@ -50,6 +52,26 @@ describe('Phase 7 acceptance: eval harness routing preconditions', () => {
       evalCase.op === 'edit_prompt' &&
       evalCase.provider === 'openai'
     )).toBe(true);
+  });
+
+  it('EVAL-03 programmatic scorers are implemented without OCR placeholder', async () => {
+    const scorersSource = await fs.readFile(
+      path.resolve('src/eval/scorers.ts'),
+      'utf8',
+    );
+    const editCasesSource = await fs.readFile(
+      path.resolve('eval/cases/edit-prompt.json'),
+      'utf8',
+    );
+    const casesLoaderSource = await fs.readFile(
+      path.resolve('src/eval/cases.ts'),
+      'utf8',
+    );
+
+    expect(scorersSource).not.toContain('ocr dependency unavailable');
+    expect(editCasesSource).toContain('"expectedText": "SALE 50"');
+    expect(editCasesSource).toContain('"expectedText": "CLOSED"');
+    expect(casesLoaderSource).toContain('ocr_text_presence but is missing params.expectedText');
   });
 
   it('EVAL-05 blocks unscored second providers and lists scored providers for routing', () => {

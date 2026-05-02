@@ -18,7 +18,8 @@
     "fixtureId": "text-label",
     "params": {
       "input": "${fixture.path}",
-      "prompt": "Change the label text from SALE 25 to SALE 50 while keeping the label style."
+      "prompt": "Change the label text from SALE 25 to SALE 50 while keeping the label style.",
+      "expectedText": "SALE 50"
     },
     "scorers": ["pixel_delta", "ocr_text_presence"],
     "requiredEnv": ["OPENAI_API_KEY"]
@@ -30,7 +31,8 @@
     "fixtureId": "text-poster",
     "params": {
       "input": "${fixture.path}",
-      "prompt": "Change the poster text from OPEN to CLOSED while preserving the poster color blocks."
+      "prompt": "Change the poster text from OPEN to CLOSED while preserving the poster color blocks.",
+      "expectedText": "CLOSED"
     },
     "scorers": ["pixel_delta", "ocr_text_presence"],
     "requiredEnv": ["OPENAI_API_KEY"]
