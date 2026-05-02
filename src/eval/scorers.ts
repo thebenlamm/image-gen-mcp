@@ -73,8 +73,9 @@ export async function scoreOcrTextPresence(
     };
   }
 
-  const worker = await createWorker('eng');
+  let worker: Awaited<ReturnType<typeof createWorker>> | undefined;
   try {
+    worker = await createWorker('eng');
     const result = await worker.recognize(outputPath);
     const recognizedText = normalizeOcrText(result.data.text);
     const needle = normalizeOcrText(expectedText);
@@ -98,7 +99,9 @@ export async function scoreOcrTextPresence(
       reason: error instanceof Error ? error.message : String(error),
     };
   } finally {
-    await worker.terminate();
+    if (worker) {
+      await worker.terminate().catch(() => undefined);
+    }
   }
 }
 
