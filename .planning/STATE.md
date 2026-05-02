@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Goal-Shaped Image MCP
-status: executing
-stopped_at: Phase 5 complete with review, security, verification, and human UAT passed.
-last_updated: "2026-05-02T00:07:05.286Z"
+status: verifying
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-05-02T00:17:55.346Z"
 last_activity: 2026-05-02
 progress:
   total_phases: 11
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 13
-  completed_plans: 10
-  percent: 77
+  completed_plans: 11
+  percent: 85
 ---
 
 # Project State
@@ -27,16 +27,16 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 Phase: 06 (run-session-artifact-layer) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-05-02
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 9
-- Average duration: 2 min
-- Total execution time: 0.3 hours
+- Total plans completed: 11
+- Average duration: 2.6 min
+- Total execution time: 0.5 hours
 
 **By Phase:**
 
@@ -46,12 +46,13 @@ Last activity: 2026-05-02
 | 02-post-processing | 2/2 | 3 min | 1.5 min |
 | 03-asset-pipeline | 2/2 | 2 min | 1 min |
 | 05-capability-layer-image-op-first-2-caps | 3/3 | 9 min | 3 min |
+| 06-run-session-artifact-layer | 2/2 | 11 min | 5.5 min |
 
 **Recent Trend:**
 
-- Last 5 plans: 03-01 (1 min), 03-02 (1 min), 05-01 (4 min), 05-02 (3 min), 05-03 (2 min)
-- Trend: Phase 5 executed successfully with extra UAT fix cycles after the planned tasks
-- Note: Phase 6 introduces persistent run artifacts and retention behavior, which will become the substrate for Phase 7 evals
+- Last 5 plans: 05-01 (4 min), 05-02 (3 min), 05-03 (2 min), 06-01 (4 min), 06-02 (7 min)
+- Trend: Phase 6 completed with the run artifact layer wired into image_op and startup retention.
+- Note: Phase 7 can now consume persistent `.runs/<runId>/` artifacts for eval outputs.
 
 *Updated after each plan completion*
 
@@ -85,6 +86,8 @@ Recent decisions affecting current work:
 - [Phase 06]: Vitest 2.x is the Phase 6 test framework; tsconfig remains unchanged because tests run through Vitest transform.
 - [Phase 06]: Run artifact roots resolve from server-level IMAGE_GEN_OUTPUT_DIR via getOutputDir(), not per-call outputDir.
 - [Phase 06]: Trace nodes preserve latencyMs while adding startedAtMs, endedAtMs, durationMs, outcome, and artifactPath.
+- [Phase 06]: image_op writes in-progress manifests before capability execution and final success/error manifests after.
+- [Phase 06]: retentionHours=0 deletes all eligible run directories, including just-created runs.
 
 ### Pending Todos
 
@@ -98,8 +101,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-05-02T00:06:41.614Z
-Stopped at: Phase 5 complete with review, security, verification, and human UAT passed.
+Last session: 2026-05-02T00:17:55.342Z
+Stopped at: Completed 06-02-PLAN.md
 Resume file: None
 
 ## Quick Tasks

@@ -55,7 +55,7 @@
 - [x] **RUN-02**: Intermediate artifacts saved to `<outputDir>/.runs/<runId>/n<nodeId>.png` via atomic write (tmp + rename)
 - [x] **RUN-03**: `IMAGE_GEN_RUN_RETENTION_HOURS` env var controls cleanup (default 24)
 - [x] **RUN-04**: Retention sweep runs at server startup; deletes runs older than threshold
-- [ ] **RUN-05**: `image_op` and `image_task` return `runId` in response so users can locate intermediates
+- [x] **RUN-05**: `image_op` and `image_task` return `runId` in response so users can locate intermediates
 
 ### Eval Harness (EVAL)
 
