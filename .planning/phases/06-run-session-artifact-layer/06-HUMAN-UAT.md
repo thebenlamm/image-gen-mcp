@@ -1,4 +1,23 @@
+---
+status: passed
+phase: 06-run-session-artifact-layer
+source: [06-VERIFICATION.md]
+started: 2026-05-02T00:29:26Z
+updated: 2026-05-02T00:47:12Z
+---
+
 # Phase 6 Human UAT - Retention on Restart
+
+## Result
+
+PASSED on 2026-05-02T00:47:12Z using `IMAGE_GEN_OUTPUT_DIR=/private/tmp/image-gen-mcp-phase6-uat`.
+
+- `IMAGE_GEN_RUN_RETENTION_HOURS=1 node dist/index.js < /dev/null` logged `Run retention: scanned=2 deleted=1 skipped=1 retention=1h`.
+- The aged strict run directory was deleted.
+- The fresh strict run directory remained.
+- `run-important` remained, proving retention does not delete arbitrary `run-*` names.
+- Unset env logged `retention=24h` and deleted the aged strict run.
+- Invalid env logged `Warning: IMAGE_GEN_RUN_RETENTION_HOURS='garbage' is invalid` and `retention=24h`.
 
 This script verifies ROADMAP Phase 6 success criterion #3:
 > "Setting `IMAGE_GEN_RUN_RETENTION_HOURS=1` and restarting the server deletes runs older than 1 hour from disk"
