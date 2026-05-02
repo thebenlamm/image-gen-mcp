@@ -7,11 +7,22 @@ import { z } from 'zod';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as http from 'http';
-import * as crypto from 'crypto';
+import { pathToFileURL } from 'node:url';
 import express from 'express';
 
 import { capabilityRegistry, registerBuiltInCapabilities, type CapabilityOp } from './capabilities/index.js';
 import { validateCapabilityParams } from './capabilities/validation.js';
+import {
+  createRunId,
+  resolveRunDir,
+  nodeArtifactPath,
+  writeFileAtomic,
+  writeManifest,
+  buildTraceNode,
+  parseRetentionHours,
+  sweepRunArtifacts,
+  type RunManifest,
+} from './runs/index.js';
 import { registry, type ProviderName, type ImageProvider } from './providers/index.js';
 import { createOpenAIProvider } from './providers/openai.js';
 import { createGeminiProvider } from './providers/gemini.js';
@@ -95,7 +106,7 @@ function buildEffectivePrompt(prompt: string, style?: string): string {
 
 // Factory: creates a fully configured McpServer instance.
 // Each SSE client needs its own McpServer, so tool registration is in here.
-function createServer(): McpServer {
+export function createServer(): McpServer {
   const server = new McpServer({
     name: 'image-gen',
     version: '1.0.0',
@@ -438,84 +449,219 @@ server.tool(
     outputPath: z.string().optional().describe('Exact output file path (must end in .png)'),
     outputDir: z.string().optional().describe('Output directory (filename auto-generated)'),
   },
-  async ({ op, provider, params, outputPath, outputDir }) => {
-    const startedAt = Date.now();
-    const runId = `run-${new Date().toISOString().replace(/[:.]/g, '-')}-${crypto.randomBytes(3).toString('hex')}`;
-    const capability = capabilityRegistry.get(op as CapabilityOp, provider);
-
-    if (!capability) {
-      return {
-        content: [{
-          type: 'text' as const,
-          text: JSON.stringify({
-            success: false,
-            error: `Capability not registered for op '${op}' and provider '${provider}'`,
-            available: capabilityRegistry.list(op as CapabilityOp).map((c) => c.provider),
-          }),
-        }],
-      };
-    }
-
-    try {
-      validateCapabilityParams(capability, params);
-
-      const result = await capability.invoke({ params, outputPath, outputDir });
-      const filePath = await resolveOutputPath({
-        outputPath,
-        outputDir,
-        prompt: `${op}-${provider}`,
-        provider,
-      });
-      await saveImage(result.buffer, filePath);
-
-      return {
-        content: [{
-          type: 'text' as const,
-          text: JSON.stringify({
-            success: true,
-            output: filePath,
-            runId,
-            trace: {
-              nodes: [{
-                id: 'n1',
-                op,
-                provider,
-                model: result.model,
-                output: filePath,
-                latencyMs: Date.now() - startedAt,
-                revisedPrompt: result.revisedPrompt,
-                metadata: result.metadata,
-              }],
-            },
-          }),
-        }],
-      };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return {
-        content: [{
-          type: 'text' as const,
-          text: JSON.stringify({
-            success: false,
-            error: message,
-            runId,
-            trace: {
-              nodes: [{
-                id: 'n1',
-                op,
-                provider,
-                error: message,
-                latencyMs: Date.now() - startedAt,
-              }],
-            },
-          }),
-        }],
-      };
-    }
-  }
+  handleImageOp,
 );
 
 } // end registerTools
+
+export interface ImageOpArgs {
+  op: string;
+  provider: string;
+  params: Record<string, unknown>;
+  outputPath?: string;
+  outputDir?: string;
+}
+
+export async function handleImageOp(args: ImageOpArgs): Promise<{
+  content: Array<{ type: 'text'; text: string }>;
+}> {
+  const { op, provider, params, outputPath, outputDir } = args;
+  const startedAt = Date.now();
+  const runId = createRunId();
+  let runDir: string;
+
+  try {
+    runDir = await resolveRunDir(runId);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify({
+          success: false,
+          error: `Failed to create run directory: ${message}`,
+          runId,
+          trace: { runId, nodes: [] },
+        }),
+      }],
+    };
+  }
+
+  const baseInvocation: RunManifest['invocation'] = {
+    tool: 'image_op',
+    op,
+    provider,
+    params,
+    outputPath,
+    outputDir,
+  };
+
+  await writeManifest(runDir, {
+    schemaVersion: 1,
+    runId,
+    startedAt: new Date(startedAt).toISOString(),
+    status: 'in_progress',
+    invocation: baseInvocation,
+    nodes: [],
+  });
+
+  const capability = capabilityRegistry.get(op as CapabilityOp, provider);
+  if (!capability) {
+    const endedAt = Date.now();
+    const error = `Capability not registered for op '${op}' and provider '${provider}'`;
+    const errorNode = buildTraceNode({
+      id: 'n1',
+      op,
+      provider,
+      startedAtMs: startedAt,
+      endedAtMs: endedAt,
+      outcome: 'error',
+      error,
+    });
+
+    await writeManifest(runDir, {
+      schemaVersion: 1,
+      runId,
+      startedAt: new Date(startedAt).toISOString(),
+      endedAt: new Date(endedAt).toISOString(),
+      status: 'error',
+      invocation: baseInvocation,
+      nodes: [{
+        id: errorNode.id,
+        op,
+        provider,
+        outcome: 'error',
+        error,
+        durationMs: errorNode.durationMs,
+      }],
+      totalDurationMs: errorNode.durationMs,
+      error,
+    });
+
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify({
+          success: false,
+          error,
+          available: capabilityRegistry.list(op as CapabilityOp).map((c) => c.provider),
+          runId,
+          trace: { runId, nodes: [errorNode] },
+        }),
+      }],
+    };
+  }
+
+  const nodeId = '1';
+  const artifactPath = nodeArtifactPath(runDir, nodeId);
+
+  try {
+    validateCapabilityParams(capability, params);
+    const nodeStartedAt = Date.now();
+    const result = await capability.invoke({ params, outputPath, outputDir });
+    const nodeEndedAt = Date.now();
+
+    await writeFileAtomic(artifactPath, result.buffer);
+
+    const filePath = await resolveOutputPath({
+      outputPath,
+      outputDir,
+      prompt: `${op}-${provider}`,
+      provider,
+    });
+    await saveImage(result.buffer, filePath);
+
+    const node = buildTraceNode({
+      id: `n${nodeId}`,
+      op,
+      provider,
+      model: result.model,
+      artifactPath,
+      output: filePath,
+      startedAtMs: nodeStartedAt,
+      endedAtMs: nodeEndedAt,
+      outcome: 'success',
+      revisedPrompt: result.revisedPrompt,
+      metadata: result.metadata,
+    });
+
+    const endedAt = Date.now();
+    await writeManifest(runDir, {
+      schemaVersion: 1,
+      runId,
+      startedAt: new Date(startedAt).toISOString(),
+      endedAt: new Date(endedAt).toISOString(),
+      status: 'success',
+      invocation: baseInvocation,
+      nodes: [{
+        id: node.id,
+        op,
+        provider,
+        model: result.model,
+        artifactPath,
+        durationMs: node.durationMs,
+        outcome: 'success',
+      }],
+      finalOutput: filePath,
+      totalDurationMs: endedAt - startedAt,
+    });
+
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify({
+          success: true,
+          output: filePath,
+          runId,
+          trace: { runId, nodes: [node] },
+        }),
+      }],
+    };
+  } catch (error) {
+    const endedAt = Date.now();
+    const message = error instanceof Error ? error.message : String(error);
+    const errorNode = buildTraceNode({
+      id: `n${nodeId}`,
+      op,
+      provider,
+      startedAtMs: startedAt,
+      endedAtMs: endedAt,
+      outcome: 'error',
+      error: message,
+    });
+
+    await writeManifest(runDir, {
+      schemaVersion: 1,
+      runId,
+      startedAt: new Date(startedAt).toISOString(),
+      endedAt: new Date(endedAt).toISOString(),
+      status: 'error',
+      invocation: baseInvocation,
+      nodes: [{
+        id: errorNode.id,
+        op,
+        provider,
+        outcome: 'error',
+        error: message,
+        durationMs: errorNode.durationMs,
+      }],
+      totalDurationMs: errorNode.durationMs,
+      error: message,
+    });
+
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify({
+          success: false,
+          error: message,
+          runId,
+          trace: { runId, nodes: [errorNode] },
+        }),
+      }],
+    };
+  }
+}
 
 // Determine SSE port from --sse flag or MCP_SSE_PORT env var.
 // Returns undefined when stdio mode should be used.
@@ -553,6 +699,20 @@ async function main() {
   console.error(`Capabilities: ${availableCapabilities.map((c) => `${c.op}:${c.provider}`).join(', ') || '(none)'}`);
   console.error(`Processing operations: resize, crop, aspectCrop, circleMask`);
   console.error(`Asset types: profile_pic, post_image, hero_photo, avatar, scene, avery_8293, avery_5160, avery_22830, avery_8164`);
+
+  // Phase 6: retention sweep — startup-only (no periodic timer).
+  // INVARIANT: this runs before MCP transport.connect, so no image_op call is in flight.
+  const retentionHours = parseRetentionHours(process.env.IMAGE_GEN_RUN_RETENTION_HOURS);
+  try {
+    const sweep = await sweepRunArtifacts(retentionHours);
+    console.error(
+      `Run retention: scanned=${sweep.scanned} deleted=${sweep.deleted} skipped=${sweep.skipped} retention=${retentionHours}h${sweep.errors.length ? ` errors=${sweep.errors.length}` : ''}`,
+    );
+  } catch (err) {
+    console.error(
+      `Run retention sweep failed (non-fatal): ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
 
   const ssePort = getSSEPort();
 
@@ -632,7 +792,12 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error('Fatal error:', error);
-  process.exit(1);
-});
+const isDirectInvocation =
+  import.meta.url === pathToFileURL(process.argv[1] ?? '').href;
+
+if (isDirectInvocation) {
+  main().catch((error) => {
+    console.error('Fatal error:', error);
+    process.exit(1);
+  });
+}

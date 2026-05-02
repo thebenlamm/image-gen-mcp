@@ -19,6 +19,10 @@ export class CapabilityRegistry {
     return this.capabilities.get(this.createKey(op, provider));
   }
 
+  unregister(op: CapabilityOp, provider: string): boolean {
+    return this.capabilities.delete(this.createKey(op, provider));
+  }
+
   list(op?: CapabilityOp): Capability[] {
     const capabilities = Array.from(this.capabilities.values());
 
