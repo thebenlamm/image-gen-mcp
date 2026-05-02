@@ -1,0 +1,42 @@
+[
+  {
+    "id": "extract-product-simple",
+    "op": "extract_subject",
+    "provider": "@imgly/local",
+    "fixtureId": "product-simple",
+    "params": { "input": "${fixture.path}" },
+    "scorers": ["alpha_coverage"]
+  },
+  {
+    "id": "extract-person-silhouette",
+    "op": "extract_subject",
+    "provider": "@imgly/local",
+    "fixtureId": "person-silhouette",
+    "params": { "input": "${fixture.path}" },
+    "scorers": ["alpha_coverage"]
+  },
+  {
+    "id": "extract-person-hair-edge",
+    "op": "extract_subject",
+    "provider": "@imgly/local",
+    "fixtureId": "person-hair-edge",
+    "params": { "input": "${fixture.path}" },
+    "scorers": ["alpha_coverage"]
+  },
+  {
+    "id": "extract-transparent-edge",
+    "op": "extract_subject",
+    "provider": "@imgly/local",
+    "fixtureId": "transparent-edge",
+    "params": { "input": "${fixture.path}" },
+    "scorers": ["alpha_coverage"]
+  },
+  {
+    "id": "extract-multi-object",
+    "op": "extract_subject",
+    "provider": "@imgly/local",
+    "fixtureId": "multi-object",
+    "params": { "input": "${fixture.path}" },
+    "scorers": ["alpha_coverage"]
+  }
+]

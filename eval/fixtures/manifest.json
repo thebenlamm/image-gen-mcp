@@ -1,0 +1,72 @@
+[
+  {
+    "id": "product-simple",
+    "path": "product-simple.png",
+    "category": "product",
+    "tags": ["product", "foreground"],
+    "description": "Off-white background with centered dark product rectangle and clear edges."
+  },
+  {
+    "id": "product-low-contrast",
+    "path": "product-low-contrast.png",
+    "category": "product",
+    "tags": ["product", "low-contrast"],
+    "description": "Light gray background with a slightly darker rounded product shape."
+  },
+  {
+    "id": "person-silhouette",
+    "path": "person-silhouette.png",
+    "category": "person",
+    "tags": ["person", "edge"],
+    "description": "Pale background with dark head-and-shoulders silhouette."
+  },
+  {
+    "id": "person-hair-edge",
+    "path": "person-hair-edge.png",
+    "category": "person",
+    "tags": ["person", "fine-edge"],
+    "description": "Pale background with a head shape and fine hair-like edge strokes."
+  },
+  {
+    "id": "text-label",
+    "path": "text-label.png",
+    "category": "text-heavy",
+    "tags": ["text", "label"],
+    "description": "White label image containing the text SALE 25."
+  },
+  {
+    "id": "text-poster",
+    "path": "text-poster.png",
+    "category": "text-heavy",
+    "tags": ["text", "poster"],
+    "description": "Colored poster image containing the text OPEN."
+  },
+  {
+    "id": "transparent-edge",
+    "path": "transparent-edge.png",
+    "category": "transparent-edge",
+    "tags": ["alpha", "edge"],
+    "description": "Transparent background with semi-transparent ring and edge detail."
+  },
+  {
+    "id": "low-contrast-shape",
+    "path": "low-contrast-shape.png",
+    "category": "low-contrast",
+    "tags": ["low-contrast", "shape"],
+    "description": "Low-contrast foreground shape on a similar background."
+  },
+  {
+    "id": "multi-object",
+    "path": "multi-object.png",
+    "category": "product",
+    "tags": ["product", "multi-object"],
+    "description": "Two distinct product-like shapes separated by whitespace."
+  },
+  {
+    "id": "small-icon",
+    "path": "small-icon.png",
+    "category": "transparent-edge",
+    "tags": ["alpha", "icon"],
+    "description": "Transparent background with a small opaque icon centered."
+  }
+]

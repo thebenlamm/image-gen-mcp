@@ -1,0 +1,38 @@
+[
+  {
+    "id": "edit-product-color",
+    "op": "edit_prompt",
+    "provider": "openai",
+    "fixtureId": "product-simple",
+    "params": {
+      "input": "${fixture.path}",
+      "prompt": "Change the product rectangle to a saturated blue while preserving the off-white background."
+    },
+    "scorers": ["pixel_delta"],
+    "requiredEnv": ["OPENAI_API_KEY"]
+  },
+  {
+    "id": "edit-text-label",
+    "op": "edit_prompt",
+    "provider": "openai",
+    "fixtureId": "text-label",
+    "params": {
+      "input": "${fixture.path}",
+      "prompt": "Change the label text from SALE 25 to SALE 50 while keeping the label style."
+    },
+    "scorers": ["pixel_delta", "ocr_text_presence"],
+    "requiredEnv": ["OPENAI_API_KEY"]
+  },
+  {
+    "id": "edit-text-poster",
+    "op": "edit_prompt",
+    "provider": "openai",
+    "fixtureId": "text-poster",
+    "params": {
+      "input": "${fixture.path}",
+      "prompt": "Change the poster text from OPEN to CLOSED while preserving the poster color blocks."
+    },
+    "scorers": ["pixel_delta", "ocr_text_presence"],
+    "requiredEnv": ["OPENAI_API_KEY"]
+  }
+]

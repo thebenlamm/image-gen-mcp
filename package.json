@@ -10,6 +10,7 @@
     "dev": "tsc --watch",
     "start": "node dist/index.js",
     "check-models": "tsx scripts/check-models.ts",
+    "eval": "tsx scripts/run-eval.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:runs": "vitest run tests/runs"
