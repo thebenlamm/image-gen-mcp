@@ -153,8 +153,13 @@ Plans:
   3. Eval results populate `quality.scores` on registered capabilities; `quality.scores` is `undefined` for any capability without an eval case
   4. Adding a second provider for an existing op without an eval case produces a registration error or a clear "unscored" warning that blocks production routing
   5. Programmatic scorers (pixelmatch ΔE for edits, alpha coverage for extract, OCR round-trip for text-bearing edits) run without manual intervention
-**Plans**: 2 plans
+**Plans**: 3 plans
 **UI hint**: no
+
+Plans:
+- [x] 07-01-PLAN.md — Eval harness golden fixtures, case definitions, scorer primitives, result JSON
+- [x] 07-02-PLAN.md — Eval results populate registry quality and enforce unscored-provider guardrails
+- [ ] 07-03-PLAN.md — Gap closure: alpha coverage semantics, tesseract-backed OCR scoring, expectedText validation
 
 ### Phase 8: Op Primitives Expansion
 **Goal**: Users can invoke composite, transform, upscale, and analyze operations via `image_op`, completing the op taxonomy needed by the planner

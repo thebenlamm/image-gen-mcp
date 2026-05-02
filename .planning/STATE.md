@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Goal-Shaped Image MCP
 status: verifying
-stopped_at: Completed 07-02-PLAN.md
-last_updated: "2026-05-02T21:00:22.307Z"
+stopped_at: Planned 07-03-PLAN.md gap closure
+last_updated: "2026-05-02T21:20:00.000Z"
 last_activity: 2026-05-02
 progress:
   total_phases: 11
   completed_phases: 6
-  total_plans: 15
+  total_plans: 16
   completed_plans: 13
-  percent: 87
+  percent: 81
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 ## Current Position
 
-Phase: 07 (eval-harness-golden-set) — EXECUTING
-Plan: 2 of 2
-Status: Phase complete — ready for verification
+Phase: 07 (eval-harness-golden-set) — PLANNING
+Plan: 3 of 3
+Status: Verification gaps found — 07-03 gap-closure plan ready for execution
 Last activity: 2026-05-02
 
 ## Performance Metrics
@@ -96,10 +96,11 @@ Recent decisions affecting current work:
 - [Phase 07]: Second providers for an existing op require non-empty quality.scores unless allowUnscoredProduction is explicitly passed.
 - [Phase 07]: Eval score application ignores skipped, errored, non-finite, and model-version-mismatched results.
 - [Phase 07]: runEval() writes result JSON first, then applies that result in-process so quality.evalResultPath points at the persisted artifact.
+- [Phase 07]: Gap closure will bring tesseract.js into the eval harness now so OCR scoring runs before Phase 8's user-facing analyze_ocr capability.
 
 ### Pending Todos
 
-- Add new deps before later execution: `pixelmatch` (P7), `tesseract.js` (P8), `@anthropic-ai/sdk` (P9)
+- Add new deps before later execution: `@anthropic-ai/sdk` (P9)
 - New env var documentation still needed: `ANTHROPIC_API_KEY` (P9)
 
 ### Blockers/Concerns
