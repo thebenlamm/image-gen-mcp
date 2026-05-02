@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Goal-Shaped Image MCP
-status: verifying
-stopped_at: Completed 06-02-PLAN.md
-last_updated: "2026-05-02T00:17:55.346Z"
+status: ready_to_plan
+stopped_at: Phase 6 complete: run/session artifact layer verified with restart UAT; Phase 7 ready to plan.
+last_updated: "2026-05-02T00:47:12Z"
 last_activity: 2026-05-02
 progress:
   total_phases: 11
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 13
-  completed_plans: 11
-  percent: 85
+  completed_plans: 13
+  percent: 55
 ---
 
 # Project State
@@ -21,20 +21,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-01)
 
 **Core value:** Two value props — guaranteed primitives (v1.0) and flexible goal handoff (v2.0).
-**Current focus:** Phase 06 — run-session-artifact-layer
+**Current focus:** Phase 7 — Eval Harness + Golden Set.
 
 ## Current Position
 
-Phase: 06 (run-session-artifact-layer) — EXECUTING
-Plan: 2 of 2
-Status: Phase complete — ready for verification
+Phase: 7
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-05-02
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 11
+- Total plans completed: 13
 - Average duration: 2.6 min
 - Total execution time: 0.5 hours
 
@@ -91,9 +91,8 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- Plan Phase 6 via `/gsd-plan-phase 6`
 - Add new deps before later execution: `pixelmatch` (P7), `tesseract.js` (P8), `@anthropic-ai/sdk` (P9)
-- New env var documentation still needed: `ANTHROPIC_API_KEY` (P9), `IMAGE_GEN_RUN_RETENTION_HOURS` (P6)
+- New env var documentation still needed: `ANTHROPIC_API_KEY` (P9)
 
 ### Blockers/Concerns
 
@@ -101,8 +100,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-05-02T00:17:55.342Z
-Stopped at: Completed 06-02-PLAN.md
+Last session: 2026-05-02T00:47:12Z
+Stopped at: Phase 6 complete; Phase 7 ready to plan
 Resume file: None
 
 ## Quick Tasks

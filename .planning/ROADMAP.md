@@ -24,7 +24,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 ### v2.0 — Goal-Shaped Image MCP
 
 - [x] **Phase 5: Capability Layer + image_op + first 2 caps** - Capability registry parallel to ImageProvider; `image_op` MCP tool; first capabilities (`extract_subject` via @imgly, `edit_prompt` via GPT Image)
-- [ ] **Phase 6: Run/Session Artifact Layer** - Persistent run artifacts under `.runs/<runId>/` with retention sweep
+- [x] **Phase 6: Run/Session Artifact Layer** - Persistent run artifacts under `.runs/<runId>/` with retention sweep
 - [ ] **Phase 7: Eval Harness + Golden Set** - Programmatic scoring populates capability quality scores so the planner routes on measurement
 - [ ] **Phase 8: Op Primitives Expansion** - composite, transform, upscale, analyze_* capabilities
 - [ ] **Phase 9: image_task Planner + DAG Executor** - Goal-shaped MCP tool with Haiku-planned DAG execution
@@ -138,6 +138,11 @@ Plans:
 - [x] 06-01-PLAN.md — runs module: id, dir, atomic write, manifest, retention sweep, trace types, vitest setup
 - [x] 06-02-PLAN.md — wire image_op + main() sweep, integration tests, trace snapshot, human UAT script
 
+**Completion artifacts**:
+- [x] 06-REVIEW.md — clean
+- [x] 06-VERIFICATION.md — passed after restart UAT
+- [x] 06-HUMAN-UAT.md — passed
+
 ### Phase 7: Eval Harness + Golden Set
 **Goal**: `npm run eval` produces measured quality scores for every registered capability, populating the registry so future planner routing is evidence-based
 **Depends on**: Phase 6 (uses run artifacts for eval outputs); can run in parallel with Phase 8
@@ -225,7 +230,7 @@ Phases execute in numeric order with one parallelization window:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 5. Capability Layer + image_op | 3/3 | ✓ Complete | 2026-05-01 |
-| 6. Run/Session Artifact Layer | 0/2 | Not started | - |
+| 6. Run/Session Artifact Layer | 2/2 | ✓ Complete | 2026-05-02 |
 | 7. Eval Harness + Golden Set | 0/2 | Not started (parallel with 8) | - |
 | 8. Op Primitives Expansion | 0/2-3 | Not started (parallel with 7) | - |
 | 9. image_task Planner + DAG Executor | 0/3 | Not started | - |

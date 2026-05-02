@@ -44,6 +44,7 @@ Two value props, one MCP:
 - ✓ Image post-processing (resize, crop, aspect crop, circle mask) via `process_image`
 - ✓ Asset type presets (profile_pic, post_image, hero_photo, avatar, scene, avery_*) via `generate_asset`
 - ✓ Combined generate + process pipeline (`generate_asset` tool)
+- ✓ `image_op` run/session artifact layer with unique run IDs, atomic intermediates under `.runs/<runId>/`, manifests, trace paths, and startup retention sweep (Phase 6)
 
 ### Active (v2.0)
 
@@ -107,7 +108,7 @@ See `.planning/REQUIREMENTS.md` for full requirement list with REQ-IDs. Categori
 | **Drop ProviderName enum at capability layer (use plain string)** | Closed unions break every provider add | v2.0 — Pending |
 | **Anthropic Claude Haiku as planner LLM** | Flexible enough for novel goals, $0.001-0.003/call | v2.0 — Pending |
 | **Templates seed from ASSET_PRESETS by reference (not forked)** | Fixes propagate; v1.0 + v2.0 stay in sync | v2.0 — Pending |
-| **Trace returns paths only, never base64** | MCP stdio response size bound | v2.0 — Pending |
+| **Trace returns paths only, never base64** | MCP stdio response size bound | v2.0 — Phase 6 validated for `image_op`; Phase 9 extends to `image_task` |
 | **Eval harness blocks second provider per op** | Without measured scores the planner picks on vibes | v2.0 — Pending |
 | **`generate_asset` is NOT deprecated** | Two value props: flexible (`image_task`) vs guaranteed (`generate_asset`) | v2.0 — Pending |
 
@@ -129,4 +130,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-01 — Started milestone v2.0 (Goal-Shaped Image MCP)*
+*Last updated: 2026-05-02 — Phase 6 run/session artifact layer validated with restart UAT*
