@@ -39,20 +39,29 @@ async function readResult(resultPath: string): Promise<any> {
   return JSON.parse(await fs.readFile(resultPath, 'utf8'));
 }
 
+async function removeEvalResults(): Promise<void> {
+  await fs.rm(EVAL_RESULTS_DIR, {
+    recursive: true,
+    force: true,
+    maxRetries: 5,
+    retryDelay: 20,
+  });
+}
+
 describe('eval runner', () => {
   const registered: Array<{ unregister: () => void }> = [];
   const previousOpenAiKey = process.env.OPENAI_API_KEY;
 
   beforeEach(async () => {
     delete process.env.OPENAI_API_KEY;
-    await fs.rm(EVAL_RESULTS_DIR, { recursive: true, force: true });
+    await removeEvalResults();
   });
 
   afterEach(async () => {
     while (registered.length) registered.pop()!.unregister();
     if (previousOpenAiKey === undefined) delete process.env.OPENAI_API_KEY;
     else process.env.OPENAI_API_KEY = previousOpenAiKey;
-    await fs.rm(EVAL_RESULTS_DIR, { recursive: true, force: true });
+    await removeEvalResults();
   });
 
   it('detects unresolved and missing environment variables', () => {

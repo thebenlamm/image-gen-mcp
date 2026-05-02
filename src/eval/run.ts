@@ -3,6 +3,7 @@ import * as path from 'path';
 import { capabilityRegistry } from '../capabilities/registry.js';
 import { writeFileAtomic } from '../runs/write.js';
 import { loadEvalCases } from './cases.js';
+import { applyEvalResultsToRegistry } from './apply-results.js';
 import { EVAL_RESULTS_DIR, writeEvalResults } from './results.js';
 import { runScorers } from './scorers.js';
 import type { EvalCase, EvalCaseResult, EvalRunResult } from './types.js';
@@ -130,5 +131,7 @@ export async function runEval(): Promise<string> {
     results,
   };
 
-  return writeEvalResults(runResult);
+  const resultPath = await writeEvalResults(runResult);
+  applyEvalResultsToRegistry(capabilityRegistry, runResult, resultPath);
+  return resultPath;
 }
