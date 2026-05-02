@@ -1,5 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import type { CapabilityOp } from '../capabilities/types.js';
 import type { EvalCase, EvalScorerId } from './types.js';
 import { loadFixtures } from './fixtures.js';
 
@@ -11,21 +12,36 @@ const SCORERS = new Set<EvalScorerId>([
   'ocr_text_presence',
 ]);
 
+const CAPABILITY_OPS = new Set<CapabilityOp>([
+  'extract_subject',
+  'edit_prompt',
+  'composite_layers',
+  'transform',
+  'enhance_upscale',
+  'analyze_dimensions',
+  'analyze_palette',
+  'analyze_ocr',
+  'generate',
+]);
+
 function isEvalCase(value: unknown): value is EvalCase {
-  const evalCase = value as EvalCase;
-  return (
-    typeof evalCase?.id === 'string' &&
-    typeof evalCase.op === 'string' &&
-    typeof evalCase.provider === 'string' &&
-    typeof evalCase.fixtureId === 'string' &&
-    typeof evalCase.params === 'object' &&
-    evalCase.params !== null &&
-    Array.isArray(evalCase.scorers) &&
-    evalCase.scorers.every((scorer) => SCORERS.has(scorer as EvalScorerId)) &&
-    (evalCase.requiredEnv === undefined ||
-      (Array.isArray(evalCase.requiredEnv) &&
-        evalCase.requiredEnv.every((envName) => typeof envName === 'string')))
-  );
+  if (typeof value !== 'object' || value === null) return false;
+  const v = value as Record<string, unknown>;
+  if (typeof v.id !== 'string' || !v.id.trim()) return false;
+  if (typeof v.op !== 'string' || !CAPABILITY_OPS.has(v.op as CapabilityOp)) return false;
+  if (typeof v.provider !== 'string' || !v.provider.trim()) return false;
+  if (typeof v.fixtureId !== 'string' || !v.fixtureId.trim()) return false;
+  if (typeof v.params !== 'object' || v.params === null) return false;
+  if (!Array.isArray(v.scorers) || !v.scorers.every((s) => SCORERS.has(s as EvalScorerId))) {
+    return false;
+  }
+  if (
+    v.requiredEnv !== undefined &&
+    (!Array.isArray(v.requiredEnv) || !v.requiredEnv.every((e) => typeof e === 'string'))
+  ) {
+    return false;
+  }
+  return true;
 }
 
 export async function loadEvalCases(): Promise<EvalCase[]> {
