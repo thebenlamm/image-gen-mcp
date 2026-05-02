@@ -70,10 +70,18 @@ export async function loadEvalCases(): Promise<EvalCase[]> {
       }
 
       if (
-        entry.scorers.includes('ocr_text_presence') &&
+        entry.params.expectedText !== undefined &&
         (typeof entry.params.expectedText !== 'string' || !entry.params.expectedText.trim())
       ) {
-        throw new Error(`Eval case ${entry.id} uses ocr_text_presence but is missing params.expectedText`);
+        throw new Error(
+          `Eval case ${entry.id} has invalid params.expectedText (must be non-empty string when provided)`,
+        );
+      }
+
+      if (entry.scorers.includes('ocr_text_presence') && entry.params.expectedText === undefined) {
+        throw new Error(
+          `Eval case ${entry.id} uses ocr_text_presence but is missing params.expectedText`,
+        );
       }
 
       const params = { ...entry.params };
