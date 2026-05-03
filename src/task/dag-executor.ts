@@ -11,6 +11,7 @@ import { buildTraceNode, type Trace, type TraceNode } from '../runs/trace.js';
 import { writeFileAtomic } from '../runs/write.js';
 import { selectBestPartial, type NodeOutcome } from './best-partial.js';
 import { resolveRefs, type NodeOutput, type ResolveCtx } from './ref-resolver.js';
+import { MAX_PARALLEL_NODES } from './sharp-config.js';
 import './sharp-config.js';
 
 export interface ExecPlan {
@@ -251,12 +252,11 @@ export async function executeDag(
   const skips: Array<{ nodeId: string; reason: string }> = [];
   const ready = plan.nodes.filter((node) => node.dependsOn.length === 0).map((node) => node.id);
 
-  while (ready.length > 0) {
-    const nodeId = ready.shift()!;
-    if (outcomes.has(nodeId)) continue;
+  async function processNode(nodeId: string): Promise<void> {
+    if (outcomes.has(nodeId)) return;
 
     const node = nodeById.get(nodeId);
-    if (!node) continue;
+    if (!node) return;
 
     const resolveCtx = buildResolveCtx(inputs, outcomes);
     let resolvedParams: Record<string, unknown>;
@@ -270,7 +270,7 @@ export async function executeDag(
       outcomes.set(node.id, { status: 'error' });
       traceNodes.push(traceNode);
       skipDownstream(node.id, adjacency, nodeById, outcomes, traceNodes, skips);
-      continue;
+      return;
     }
 
     const cap = registry.get(node.op as CapabilityOp, node.provider);
@@ -281,7 +281,7 @@ export async function executeDag(
       outcomes.set(node.id, { status: 'error' });
       traceNodes.push(traceNode);
       skipDownstream(node.id, adjacency, nodeById, outcomes, traceNodes, skips);
-      continue;
+      return;
     }
 
     try {
@@ -292,7 +292,7 @@ export async function executeDag(
       outcomes.set(node.id, { status: 'error' });
       traceNodes.push(traceNode);
       skipDownstream(node.id, adjacency, nodeById, outcomes, traceNodes, skips);
-      continue;
+      return;
     }
 
     const runResult = await runNodeWithRetry(cap, node, resolvedParams, ctx);
@@ -316,12 +316,26 @@ export async function executeDag(
         indegree.set(downstreamId, nextDegree);
         if (nextDegree === 0) ready.push(downstreamId);
       }
-      continue;
+      return;
     }
 
     outcomes.set(node.id, { status: 'error' });
     traceNodes.push(runResult.traceNode);
     skipDownstream(node.id, adjacency, nodeById, outcomes, traceNodes, skips);
+  }
+
+  while (ready.length > 0) {
+    const batch: string[] = [];
+    while (batch.length < MAX_PARALLEL_NODES && ready.length > 0) {
+      const id = ready.shift()!;
+      if (outcomes.has(id)) continue;
+      batch.push(id);
+    }
+    if (batch.length === 0) break;
+
+    // Mutations after awaits are still single-threaded in Node; indegree is what
+    // prevents ancestors and descendants from entering the same ready batch.
+    await Promise.all(batch.map((id) => processNode(id)));
   }
 
   const nodeOutputs = Object.fromEntries(
