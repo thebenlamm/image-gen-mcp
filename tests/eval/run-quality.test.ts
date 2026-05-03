@@ -20,7 +20,11 @@ async function fakePng(): Promise<Buffer> {
 function registerFakeCapability(
   op: CapabilityOp,
   provider: string,
-  invoke: Capability['invoke'] = async () => ({ buffer: await fakePng(), model: 'fake-model' }),
+  invoke: Capability['invoke'] = async () => ({
+    kind: 'image' as const,
+    buffer: await fakePng(),
+    model: 'fake-model',
+  }),
 ): { unregister: () => void } {
   capabilityRegistry.register({
     op,
@@ -28,6 +32,7 @@ function registerFakeCapability(
     modelVersion: 'fake-model-v1',
     constraints: { outputFormat: 'png' },
     cost: { perCallUsd: 0 },
+    quality: { unscoredJustification: 'test fake capability' },
     invoke,
   }, { allowUnscoredProduction: true });
 

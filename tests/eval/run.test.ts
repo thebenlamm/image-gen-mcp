@@ -21,7 +21,11 @@ async function fakePng(): Promise<Buffer> {
 function registerFakeCapability(
   op: CapabilityOp,
   provider: string,
-  invoke: Capability['invoke'] = async () => ({ buffer: await fakePng(), model: 'fake-model' }),
+  invoke: Capability['invoke'] = async () => ({
+    kind: 'image' as const,
+    buffer: await fakePng(),
+    model: 'fake-model',
+  }),
 ): { unregister: () => void } {
   capabilityRegistry.register({
     op,
@@ -116,7 +120,7 @@ describe('eval runner', () => {
       if (calls === 1) {
         throw new Error('scoring candidate failed');
       }
-      return { buffer: await fakePng(), model: 'fake-model' };
+      return { kind: 'image' as const, buffer: await fakePng(), model: 'fake-model' };
     }));
 
     const result = await readResult(await runEval());

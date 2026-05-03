@@ -29,7 +29,13 @@ describe('eval cases loader', () => {
   });
 
   it('no loaded case contains unsupported scorer ids', async () => {
-    const supportedScorers = new Set(['alpha_coverage', 'pixel_delta', 'ocr_text_presence']);
+    const supportedScorers = new Set([
+      'alpha_coverage',
+      'pixel_delta',
+      'ocr_text_presence',
+      'dimensions_exact',
+      'palette_exact',
+    ]);
     const cases = await loadEvalCases();
 
     for (const evalCase of cases) {
