@@ -31,7 +31,7 @@ function getErrorMessage(error: unknown): string {
 function getInputPath(evalCase: EvalCase): string | undefined {
   const input = evalCase.params.input;
   if (typeof input !== 'string' || !input.trim()) {
-    if (evalCase.op === 'generate') {
+    if (evalCase.op === 'generate' || !evalCase.scorers.includes('pixel_delta')) {
       return undefined;
     }
     throw new Error(`eval case ${evalCase.id} requires params.input`);
@@ -96,6 +96,30 @@ export async function runEval(): Promise<string> {
         status: 'error',
         scores: [],
         error: `capability not registered: ${evalCase.op}/${evalCase.provider}`,
+      });
+      continue;
+    }
+
+    // Case→adapter contract lint (D-12, CR-03 G3): refuse to invoke and score
+    // a case whose params shape does not match the resolved capability's
+    // declared constraints. Specifically, if the capability says it does not
+    // require a top-level input image (requiresInputImage=false), and the
+    // case nonetheless supplies one, the case is using a contract the adapter
+    // does not consume; any resulting score would be invalid for routing.
+    if (
+      capability.constraints.requiresInputImage === false &&
+      typeof evalCase.params.input === 'string' &&
+      evalCase.params.input.trim().length > 0
+    ) {
+      results.push({
+        caseId: evalCase.id,
+        op: evalCase.op,
+        provider: evalCase.provider,
+        modelVersion: capability.modelVersion,
+        fixtureId: evalCase.fixtureId,
+        status: 'error',
+        scores: [],
+        error: `eval case ${evalCase.id} supplies params.input but capability ${evalCase.op}:${evalCase.provider} declares requiresInputImage=false; case→adapter contract mismatch (will not invoke)`,
       });
       continue;
     }

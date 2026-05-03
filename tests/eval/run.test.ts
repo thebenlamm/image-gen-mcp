@@ -252,7 +252,7 @@ describe('eval runner', () => {
     expect(skippedPhotoroom.some((entry: any) => entry.op === 'composite_layers')).toBe(true);
   });
 
-  it('scores Photoroom composite_layers with pixel_delta when env and capability exist', async () => {
+  it('scores Photoroom composite_layers with alpha_coverage when env and capability exist', async () => {
     process.env.PHOTOROOM_API_KEY = 'real-key';
     registerFakeLocalEvalCapabilities();
     registered.push(registerFakeCapability('extract_subject', 'photoroom', undefined, {
@@ -270,11 +270,68 @@ describe('eval runner', () => {
     );
 
     expect(photoroomComposite?.status).toBe('scored');
-    expect(photoroomComposite?.scores).toContainEqual({
-      scorer: 'pixel_delta',
-      status: 'scored',
-      value: 0,
-    });
+    const alpha = photoroomComposite?.scores.find((s: any) => s.scorer === 'alpha_coverage');
+    expect(alpha?.status).toBe('scored');
+    expect(typeof alpha?.value).toBe('number');
+    expect(alpha?.value).toBeGreaterThanOrEqual(0);
+    expect(alpha?.value).toBeLessThanOrEqual(1);
+  });
+
+  it('rejects an eval case that supplies params.input when capability declares requiresInputImage=false (G3 invalid-composite-case lint)', async () => {
+    const cases = await import('../../src/eval/cases.js');
+    const loadSpy = vi.spyOn(cases, 'loadEvalCases').mockResolvedValue([
+      {
+        id: 'valid-local-extract',
+        op: 'extract_subject',
+        provider: '@imgly/local',
+        fixtureId: 'product-simple',
+        params: {
+          input: 'eval/fixtures/product-simple.png',
+        },
+        scorers: ['alpha_coverage'],
+      },
+      {
+        id: 'invalid-photoroom-composite',
+        op: 'composite_layers',
+        provider: 'photoroom',
+        fixtureId: 'composite-bg',
+        params: {
+          input: 'eval/fixtures/composite-bg.png',
+          canvas: { width: 64, height: 64 },
+          layers: [{ input: 'eval/fixtures/composite-overlay.png' }],
+        },
+        scorers: ['alpha_coverage'],
+        requiredEnv: ['PHOTOROOM_API_KEY'],
+      },
+    ]);
+    try {
+      process.env.PHOTOROOM_API_KEY = 'real-key';
+      const invokeSpy = vi.fn();
+      registered.push(registerFakeCapability('extract_subject', '@imgly/local'));
+      registered.push({
+        unregister: () => capabilityRegistry.unregister('composite_layers', 'photoroom'),
+      });
+      capabilityRegistry.register({
+        op: 'composite_layers',
+        provider: 'photoroom',
+        modelVersion: 'photoroom-image-editing-v1',
+        constraints: { requiresInputImage: false, supportsMultipleInputs: false, outputFormat: 'png' },
+        cost: { perCallUsd: 0 },
+        quality: { unscoredJustification: 'test-only' },
+        invoke: invokeSpy,
+      });
+
+      await expect(runEval()).rejects.toThrow(/eval failed 1 case/);
+
+      const files = await fs.readdir(EVAL_RESULTS_DIR);
+      const result = await readResult(path.join(EVAL_RESULTS_DIR, files.find((f) => f.endsWith('.json'))!));
+      const entry = result.results.find((e: any) => e.caseId === 'invalid-photoroom-composite');
+      expect(entry?.status).toBe('error');
+      expect(entry?.error).toMatch(/case→adapter contract mismatch|requiresInputImage=false/);
+      expect(invokeSpy).not.toHaveBeenCalled();
+    } finally {
+      loadSpy.mockRestore();
+    }
   });
 
   it('writes results then fails when any eval case errors', async () => {

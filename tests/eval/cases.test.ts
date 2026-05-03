@@ -76,6 +76,7 @@ describe('eval cases loader', () => {
     expect(composite?.op).toBe('composite_layers');
     expect(composite?.provider).toBe('photoroom');
     expect(composite?.params.shadow).toEqual({ enabled: true });
-    expect(composite?.scorers).toEqual(['pixel_delta']);
+    expect(composite?.params.input).toBeUndefined();
+    expect(composite?.scorers).toEqual(['alpha_coverage']);
   });
 });

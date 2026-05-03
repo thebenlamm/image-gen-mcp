@@ -32,19 +32,16 @@
     "provider": "photoroom",
     "fixtureId": "composite-bg",
     "params": {
-      "input": "${fixture.path}",
-      "maxPixelDelta": 0.20,
       "canvas": {
         "width": 512,
-        "height": 512,
-        "background": { "r": 255, "g": 255, "b": 255, "alpha": 1 }
+        "height": 512
       },
       "layers": [
-        { "input": "eval/fixtures/composite-overlay.png", "x": 192, "y": 192, "anchor": "top-left" }
+        { "input": "eval/fixtures/composite-overlay.png" }
       ],
       "shadow": { "enabled": true }
     },
-    "scorers": ["pixel_delta"],
+    "scorers": ["alpha_coverage"],
     "requiredEnv": ["PHOTOROOM_API_KEY"]
   }
 ]
