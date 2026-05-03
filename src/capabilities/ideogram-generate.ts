@@ -7,9 +7,9 @@ const MAX_PROMPT_LENGTH = 4000;
 const FETCH_TIMEOUT_MS = 30_000;
 const FETCH_RETRIES = 1;
 const ASPECT_MAP = {
-  square: 'ASPECT_1_1',
-  landscape: 'ASPECT_16_9',
-  portrait: 'ASPECT_9_16',
+  square: '1x1',
+  landscape: '16x9',
+  portrait: '9x16',
 } as const;
 
 interface IdeogramGenerateResponse {

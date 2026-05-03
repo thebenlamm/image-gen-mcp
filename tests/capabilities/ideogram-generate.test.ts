@@ -76,6 +76,7 @@ describe('ideogram generate capability', () => {
       qualityMeasured: false,
     });
     expect(fetchMock.mock.calls[0][1].headers).toEqual({ 'Api-Key': 'test-key' });
+    expect((fetchMock.mock.calls[0][1].body as FormData).get('aspect_ratio')).toBe('16x9');
   });
 
   it('maps HTTP non-OK generate responses to PROVIDER_FAILURE', async () => {
