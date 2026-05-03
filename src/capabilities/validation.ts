@@ -59,6 +59,16 @@ export function validateCapabilityParams(
     }
   }
 
+  if (capability.op === 'enhance_upscale') {
+    const scale = params.scale ?? 2;
+    if (typeof scale !== 'number' || (scale !== 2 && scale !== 4)) {
+      throw new Error('enhance_upscale scale must be 2 or 4');
+    }
+    if (params.face_enhance !== undefined && typeof params.face_enhance !== 'boolean') {
+      throw new Error('enhance_upscale face_enhance must be boolean');
+    }
+  }
+
   if (
     capability.constraints.maxPromptLength !== undefined &&
     typeof params.prompt === 'string' &&

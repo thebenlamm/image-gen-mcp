@@ -44,7 +44,7 @@ function setToken(value: string | undefined): void {
 beforeEach(async () => {
   originalToken = process.env.REPLICATE_API_TOKEN;
   tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'image-gen-upscale-'));
-  vi.restoreAllMocks();
+  vi.clearAllMocks();
   createMock.mockReset();
   waitMock.mockReset();
 });
