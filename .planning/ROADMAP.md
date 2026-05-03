@@ -241,6 +241,6 @@ Phases execute in numeric order with one parallelization window:
 | 6. Run/Session Artifact Layer | 2/2 | ✓ Complete | 2026-05-02 |
 | 7. Eval Harness + Golden Set | 0/2 | Not started (parallel with 8) | - |
 | 8. Op Primitives Expansion | 0/2-3 | Not started (parallel with 7) | - |
-| 9. image_task Planner + DAG Executor | 0/3 | Not started | - |
+| 9. image_task Planner + DAG Executor | 2/3 | In Progress | - |
 | 10. Template Fast-Paths + Parallelism | 0/2 | Not started | - |
 | 11. Provider Breadth (Post-Eval) | 0/2-3 | Not started | - |

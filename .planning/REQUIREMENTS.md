@@ -81,11 +81,11 @@
 - [x] **TASK-01**: User can call `image_task` MCP tool with `{goal, input_images?, constraints?}`
 - [x] **TASK-02**: `constraints` accepts `{output_size, output_format, quality_tier, budget_cap_usd, latency_cap_seconds, style_refs}`
 - [x] **TASK-03**: Planner (Anthropic Claude Haiku) emits a JSON Plan validated against the capability registry
-- [ ] **TASK-04**: `dry_run: true` returns the Plan without executing; user can preview estimated cost and provider choices
+- [x] **TASK-04**: `dry_run: true` returns the Plan without executing; user can preview estimated cost and provider choices
 - [x] **TASK-05**: `budget_cap_usd` is enforced at plan time; hard fail with clear error if estimated cost exceeds cap
-- [ ] **TASK-06**: DAG executor walks the plan; independent nodes run concurrently (libvips concurrency capped at 2)
-- [ ] **TASK-07**: Per-node try/catch; on failure, executor saves best partial result and surfaces error in trace
-- [ ] **TASK-08**: Response includes `{output, runId, trace, total_cost_usd, total_latency_ms}` with per-node detail
+- [x] **TASK-06**: DAG executor walks the plan; independent nodes run concurrently (libvips concurrency capped at 2)
+- [x] **TASK-07**: Per-node try/catch; on failure, executor saves best partial result and surfaces error in trace
+- [x] **TASK-08**: Response includes `{output, runId, trace, total_cost_usd, total_latency_ms}` with per-node detail
 - [ ] **TASK-09**: Trace returns paths only, never base64 image data
 - [x] **TASK-10**: `revisedPrompt` from any generate node surfaces in trace so multi-step plans show what models actually rendered
 
@@ -167,7 +167,7 @@ After Phase 9 (image_task ships):
 | RUN-01, RUN-02, RUN-03, RUN-04, RUN-05 | 6 | Pending (v2.0 P6) |
 | EVAL-01, EVAL-02, EVAL-03, EVAL-04, EVAL-05 | 7 | Pending (v2.0 P7) |
 | PRIM-03, PRIM-04, PRIM-05, PRIM-06, PRIM-07, PRIM-08 | 8 | Pending (v2.0 P8) |
-| TASK-01..TASK-10 | 9 | Pending (v2.0 P9) |
+| TASK-01..TASK-10 | 9 | Partial (9/10 complete; TASK-09 pending v2.0 P9) |
 | TMPL-01, TMPL-02, TMPL-03, TMPL-04 | 10 | Pending (v2.0 P10) |
 | PROV-01, PROV-02, PROV-03, PROV-04, PROV-05 | 11 | Pending (v2.0 P11) |
 
