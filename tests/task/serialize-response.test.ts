@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { TraceNode } from '../../src/runs/trace.js';
+import type { Trace, TraceNode } from '../../src/runs/trace.js';
 import { ResponseGuardError, serializeImageTaskResponse } from '../../src/task/serialize-response.js';
 import type { ExecResult } from '../../src/task/dag-executor.js';
 import type { Plan } from '../../src/task/plan-schema.js';
@@ -114,6 +114,46 @@ function captureGuardError(fn: () => unknown): ResponseGuardError {
 }
 
 describe('serializeImageTaskResponse', () => {
+  it('includes plannerMethod=template at the top level when provided', () => {
+    const result = serializeImageTaskResponse({
+      plan: makePlan(),
+      dagResult: makeDagResult(),
+      runId: 'run_123',
+      plannerMethod: 'template',
+    });
+
+    expect(result.plannerMethod).toBe('template');
+    expect(result.trace[0]).not.toHaveProperty('plannerMethod');
+  });
+
+  it('includes plannerMethod=llm at the top level when provided', () => {
+    const result = serializeImageTaskResponse({
+      plan: makePlan(),
+      dagResult: makeDagResult(),
+      runId: 'run_123',
+      plannerMethod: 'llm',
+    });
+
+    expect(result.plannerMethod).toBe('llm');
+    expect(result.trace[0]).not.toHaveProperty('plannerMethod');
+  });
+
+  it('omits plannerMethod when not provided', () => {
+    const result = serializeImageTaskResponse({
+      plan: makePlan(),
+      dagResult: makeDagResult(),
+      runId: 'run_123',
+    });
+
+    expect(result).not.toHaveProperty('plannerMethod');
+  });
+
+  it('does not carry plannerMethod on Trace objects', () => {
+    const trace: Trace = { runId: 'run_123', nodes: [] };
+
+    expect(Object.keys(trace)).not.toContain('plannerMethod');
+  });
+
   it('Test 1: happy path returns path-only output', () => {
     const result = serializeImageTaskResponse({
       plan: makePlan(),
