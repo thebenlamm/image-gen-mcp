@@ -4,6 +4,7 @@ import * as path from 'path';
 import sharp from 'sharp';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPhotoroomCompositeLayersCapability } from '../../src/capabilities/photoroom-composite-layers.js';
+import { validateCapabilityParams } from '../../src/capabilities/validation.js';
 
 let tmpDir: string;
 let originalKey: string | undefined;
@@ -80,6 +81,9 @@ describe('photoroom composite_layers capability', () => {
       qualityMeasured: false,
     });
     expect(fetchMock.mock.calls[0][1].headers).toEqual({ 'x-api-key': 'test-key' });
+    const formArg = fetchMock.mock.calls[0][1].body as FormData;
+    const formKeys = Array.from((formArg as any).keys?.() ?? []);
+    expect(formKeys.some((key) => String(key).startsWith('imageGenMcp.'))).toBe(false);
   });
 
   it('maps HTTP non-OK responses to retryable PROVIDER_FAILURE', async () => {
@@ -92,13 +96,15 @@ describe('photoroom composite_layers capability', () => {
     const capability = createPhotoroomCompositeLayersCapability();
     if (!capability) throw new Error('expected capability');
 
-    await expect(capability.invoke({
+    const error = await capability.invoke({
       params: { canvas: { width: 32, height: 32 }, layers: [{ input }] },
-    })).rejects.toMatchObject({
+    }).catch((e) => e);
+    expect(error).toMatchObject({
       code: 'PROVIDER_FAILURE',
       retryable: true,
       message: 'provider down',
     });
+    expect(error.message).not.toContain('test-key');
   });
 
   it('maps AbortError to retryable TIMEOUT', async () => {
@@ -115,5 +121,36 @@ describe('photoroom composite_layers capability', () => {
       code: 'TIMEOUT',
       retryable: true,
     });
+  });
+
+  it('rejects multi-layer composite_layers:photoroom calls before the network call (single-subject contract)', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const a = await writePng();
+    const b = await writePng();
+    const capability = createPhotoroomCompositeLayersCapability();
+    if (!capability) throw new Error('expected capability');
+
+    await expect(capability.invoke({
+      params: {
+        canvas: { width: 64, height: 64 },
+        layers: [{ input: a }, { input: b }],
+      },
+    })).rejects.toMatchObject({
+      code: 'CONSTRAINT_VIOLATION',
+      retryable: false,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('exposes the documented composite_layers:photoroom contract through validateCapabilityParams', () => {
+    const capability = createPhotoroomCompositeLayersCapability();
+    if (!capability) throw new Error('expected capability');
+    expect(capability.constraints.requiresInputImage).toBe(false);
+    expect(capability.constraints.supportsMultipleInputs).toBe(false);
+    expect(() => validateCapabilityParams(capability, {
+      canvas: { width: 100, height: 80 },
+      layers: [{ input: '/tmp/whatever.png' }],
+    })).not.toThrow();
   });
 });

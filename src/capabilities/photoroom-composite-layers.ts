@@ -79,6 +79,13 @@ async function validateParams(params: PhotoroomCompositeParams): Promise<{ canva
   if (!Array.isArray(layers) || layers.length === 0) {
     throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', 'composite_layers requires at least one layer', false);
   }
+  if (layers.length !== 1) {
+    throw new CapabilityInvokeError(
+      'CONSTRAINT_VIOLATION',
+      `composite_layers:photoroom currently supports exactly one subject layer (got ${layers.length}); Photoroom Image Editing API does not accept multi-layer composition. Use composite_layers:sharp for multi-layer local composition.`,
+      false,
+    );
+  }
   if (layers.length > MAX_LAYERS) {
     throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', `composite_layers layers exceed cap of ${MAX_LAYERS}`, false);
   }
@@ -124,8 +131,8 @@ export function createPhotoroomCompositeLayersCapability(): Capability | null {
     provider: 'photoroom',
     modelVersion: MODEL_VERSION,
     constraints: {
-      requiresInputImage: true,
-      supportsMultipleInputs: true,
+      requiresInputImage: false,
+      supportsMultipleInputs: false,
       outputFormat: 'png',
     },
     cost: { perCallUsd: 0.05 },
@@ -144,6 +151,12 @@ export function createPhotoroomCompositeLayersCapability(): Capability | null {
       form.set('export.format', 'png');
       form.set('outputSize', `${canvas.width}x${canvas.height}`);
       form.set('padding', '0');
+      // Note: layers[0].x, .y, .scale, .opacity, and .anchor are accepted at the
+      // schema level for forward compatibility with the sharp composite_layers
+      // adapter (D-28: same plan can target either provider). Photoroom's Image
+      // Editing API positions the subject via outputSize + padding + (optional)
+      // background; per-layer placement fields are intentionally NOT forwarded.
+      // If multi-layer placement is needed, route through composite_layers:sharp.
       if (params.shadow?.enabled) {
         form.set('shadow.mode', params.shadow.mode ?? 'ai.soft');
       }
@@ -153,7 +166,6 @@ export function createPhotoroomCompositeLayersCapability(): Capability | null {
       if (typeof params.background?.prompt === 'string') {
         form.set('background.prompt', params.background.prompt);
       }
-      form.set('imageGenMcp.layers', JSON.stringify(layers.map(({ input: _input, ...layer }) => layer)));
 
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
