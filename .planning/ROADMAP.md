@@ -203,6 +203,10 @@ Plans:
 **Plans**: 2 plans
 **UI hint**: no
 
+Plans:
+- [ ] 10-01-PLAN.md — Template registry + matcher (ASSET_PRESETS by reference, 3 new templates, plannerMethod field, planner short-circuit)
+- [ ] 10-02-PLAN.md — Budget gate (sub-cent cap requires template) + bounded executor parallelism (sharp.concurrency 2, MAX_PARALLEL_NODES 2)
+
 ### Phase 11: Provider Breadth (Post-Eval)
 **Goal**: Users can route through Photoroom, fal.ai, Flux Kontext, and Ideogram for capabilities where they measurably outperform existing providers
 **Depends on**: Phase 10 (proves template fast-paths route correctly when many providers exist)
