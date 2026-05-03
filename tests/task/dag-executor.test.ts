@@ -41,6 +41,22 @@ function makeMockCap(op: string, results: Array<CapabilityInvokeResult | Error> 
   } as unknown as Capability;
 }
 
+function makeQualityCap(
+  op: string,
+  provider: string,
+  scores?: Record<string, number>,
+  results: Array<CapabilityInvokeResult | Error> = [imageResult()],
+): Capability {
+  const cap = makeMockCap(op, results);
+  return {
+    ...cap,
+    provider,
+    quality: scores
+      ? { scores, evalResultPath: '/tmp/eval-result.json', lastEvaluatedAt: '2026-05-03T00:00:00Z' }
+      : undefined,
+  };
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -74,8 +90,13 @@ function makeDelayedCap(
 }
 
 function makeRegistry(capsByKey: Record<string, Capability>) {
+  const caps = Object.values(capsByKey);
   return {
     get: (op: string, provider: string) => capsByKey[`${op}:${provider}`],
+    list: (op?: string) => op === undefined ? caps : caps.filter((cap) => cap.op === op),
+    listScored: (op?: string) => (op === undefined ? caps : caps.filter((cap) => cap.op === op)).filter(
+      (cap) => cap.quality?.scores && Object.keys(cap.quality.scores).length > 0,
+    ),
   };
 }
 
@@ -293,6 +314,84 @@ describe('executeDag', () => {
       { runId, runDir, registry: makeRegistry({ 'extract_subject:mock': cap }) },
     );
     expect(cap.invoke).toHaveBeenCalledWith(expect.objectContaining({ idempotencyKey: `${runId}:A` }));
+  });
+
+  it('marks single-provider routes as having no incumbent comparison', async () => {
+    const result = await executeDag(
+      plan([{ id: 'A', op: 'generate', provider: 'ideogram', params: {}, dependsOn: [], outputKind: 'image' }], 'A'),
+      {},
+      { runId, runDir, registry: makeRegistry({
+        'generate:ideogram': makeQualityCap('generate', 'ideogram'),
+      }) },
+    );
+
+    expect(result.trace.nodes[0]!.metadata).toMatchObject({
+      qualityMeasured: false,
+      noIncumbentComparison: true,
+      qualityUnavailable: true,
+    });
+  });
+
+  it('marks unscored multi-provider routes as quality unavailable', async () => {
+    const result = await executeDag(
+      plan([{ id: 'A', op: 'extract_subject', provider: 'mock-a', params: {}, dependsOn: [], outputKind: 'image' }], 'A'),
+      {},
+      { runId, runDir, registry: makeRegistry({
+        'extract_subject:mock-a': makeQualityCap('extract_subject', 'mock-a'),
+        'extract_subject:mock-b': makeQualityCap('extract_subject', 'mock-b'),
+      }) },
+    );
+
+    expect(result.trace.nodes[0]!.metadata).toMatchObject({
+      qualityMeasured: false,
+      qualityUnavailable: true,
+    });
+    expect(result.trace.nodes[0]!.metadata?.noIncumbentComparison).toBeUndefined();
+  });
+
+  it('surfaces measured quality scores for selected routes', async () => {
+    const result = await executeDag(
+      plan([{ id: 'A', op: 'extract_subject', provider: 'mock-a', params: {}, dependsOn: [], outputKind: 'image' }], 'A'),
+      {},
+      { runId, runDir, registry: makeRegistry({
+        'extract_subject:mock-a': makeQualityCap('extract_subject', 'mock-a', { alpha_coverage: 0.91 }),
+        'extract_subject:mock-b': makeQualityCap('extract_subject', 'mock-b'),
+      }) },
+    );
+
+    expect(result.trace.nodes[0]!.metadata).toMatchObject({
+      qualityMeasured: true,
+      qualityScores: { alpha_coverage: 0.91 },
+    });
+    expect(result.trace.nodes[0]!.metadata?.qualityUnavailable).toBeUndefined();
+    expect(result.trace.nodes[0]!.metadata?.noIncumbentComparison).toBeUndefined();
+  });
+
+  it('does not silently fall back to another provider after provider failure', async () => {
+    const chosen = makeQualityCap('extract_subject', 'mock-a', undefined, [
+      new CapabilityInvokeError('PROVIDER_FAILURE', 'provider failed', false),
+    ]);
+    const alternate = makeQualityCap('extract_subject', 'mock-b');
+
+    const result = await executeDag(
+      plan([{ id: 'A', op: 'extract_subject', provider: 'mock-a', params: {}, dependsOn: [], outputKind: 'image' }], 'A'),
+      {},
+      { runId, runDir, registry: makeRegistry({
+        'extract_subject:mock-a': chosen,
+        'extract_subject:mock-b': alternate,
+      }) },
+    );
+
+    expect(result.trace.nodes[0]).toMatchObject({
+      outcome: 'error',
+      errorDetail: { code: 'PROVIDER_FAILURE', retryable: false },
+    });
+    expect(result.trace.nodes[0]!.metadata).toMatchObject({
+      qualityMeasured: false,
+      qualityUnavailable: true,
+    });
+    expect(chosen.invoke).toHaveBeenCalledTimes(1);
+    expect(alternate.invoke).not.toHaveBeenCalled();
   });
 
   it('passes data outputs into downstream refs without writing artifacts', async () => {

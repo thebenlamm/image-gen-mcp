@@ -178,4 +178,22 @@ describe('planImageTask', () => {
       system: expect.stringContaining('@imgly/local'),
     }));
   });
+
+  it('instructs routing notes to surface no incumbent and missing quality decisions', async () => {
+    mockParse.mockResolvedValue({
+      parsed_output: validPlan,
+      content: [],
+      usage: {},
+    });
+    const { planImageTask } = await import('../../src/task/planner.js');
+
+    await planImageTask({ goal: 'extract product' }, registry() as never);
+
+    expect(mockParse).toHaveBeenCalledWith(expect.objectContaining({
+      system: expect.stringContaining('no incumbent comparison'),
+    }));
+    expect(mockParse).toHaveBeenCalledWith(expect.objectContaining({
+      system: expect.stringContaining('routingNotes[i].measuredQuality'),
+    }));
+  });
 });
