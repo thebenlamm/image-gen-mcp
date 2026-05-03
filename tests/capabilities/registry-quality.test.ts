@@ -8,6 +8,7 @@ function capability(
     op?: CapabilityOp;
     modelVersion?: string;
     scores?: Record<string, number>;
+    unscoredJustification?: string;
   } = {},
 ): Capability {
   return {
@@ -16,7 +17,14 @@ function capability(
     modelVersion: options.modelVersion ?? 'model-v1',
     constraints: { outputFormat: 'png' },
     cost: { perCallUsd: 0 },
-    quality: options.scores ? { scores: options.scores } : undefined,
+    quality: options.scores || options.unscoredJustification
+      ? {
+          ...(options.scores ? { scores: options.scores } : {}),
+          ...(options.unscoredJustification
+            ? { unscoredJustification: options.unscoredJustification }
+            : {}),
+        }
+      : undefined,
     invoke: async () => ({ buffer: Buffer.alloc(0), model: 'fake-model' }),
   };
 }
@@ -52,7 +60,30 @@ describe('CapabilityRegistry quality guardrails', () => {
     const registry = new CapabilityRegistry();
     registry.register(capability('provider-a'));
 
-    registry.register(capability('provider-b'), { allowUnscoredProduction: true });
+    registry.register(capability('provider-b', {
+      scores: undefined,
+      unscoredJustification: 'intentional local capability without deterministic scorer',
+    }), { allowUnscoredProduction: true });
+
+    expect(registry.get('extract_subject', 'provider-b')).toBeDefined();
+  });
+
+  it('rejects explicit unscored production registrations without justification', () => {
+    const registry = new CapabilityRegistry();
+    registry.register(capability('provider-a'));
+
+    expect(() =>
+      registry.register(capability('provider-b'), { allowUnscoredProduction: true }),
+    ).toThrow(/unscoredJustification/);
+  });
+
+  it('allows explicit unscored production registrations with justification', () => {
+    const registry = new CapabilityRegistry();
+    registry.register(capability('provider-a'));
+
+    registry.register(capability('provider-b', {
+      unscoredJustification: 'provider intentionally unscored in this phase',
+    }), { allowUnscoredProduction: true });
 
     expect(registry.get('extract_subject', 'provider-b')).toBeDefined();
   });
@@ -72,6 +103,7 @@ describe('CapabilityRegistry quality guardrails', () => {
     registry.register(capability('provider-b', {
       modelVersion: 'model-v2',
       scores: { alpha_coverage: 0.9 },
+      unscoredJustification: 'model changed; quality invalidation intentionally bypassed',
     }), { allowUnscoredProduction: true });
 
     expect(registry.get('extract_subject', 'provider-b')?.quality).toBeUndefined();
