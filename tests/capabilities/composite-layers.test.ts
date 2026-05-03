@@ -107,6 +107,11 @@ describe('composite_layers capability', () => {
       canvas: { width: 8000, height: 8000 },
       layers: [{ input: 'layer.png' }],
     })).toThrow(/canvas exceeds 16MP cap/);
+
+    expect(() => validateCapabilityParams(capability, {
+      canvas: { width: 512.5, height: 512 },
+      layers: [{ input: 'layer.png' }],
+    })).toThrow(/integer pixels/);
   });
 
   it('rejects scale outside the allowed range', async () => {
@@ -156,6 +161,21 @@ describe('composite_layers capability', () => {
     })).rejects.toMatchObject({
       code: 'CONSTRAINT_VIOLATION',
       message: expect.stringContaining('zero-sized layer'),
+    });
+  });
+
+  it('rejects scaled layers over the layer pixel cap before buffering output', async () => {
+    const overlay = await writeSolidPng('large-layer.png', 2000, 2000, { r: 255, g: 0, b: 0, alpha: 1 });
+    const capability = createCompositeLayersCapability();
+
+    await expect(capability.invoke({
+      params: {
+        canvas: { width: 16, height: 16 },
+        layers: [{ input: overlay, scale: 3 }],
+      },
+    })).rejects.toMatchObject({
+      code: 'INPUT_TOO_LARGE',
+      message: expect.stringContaining('layer cap'),
     });
   });
 

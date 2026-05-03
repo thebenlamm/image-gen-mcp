@@ -44,6 +44,9 @@ export function validateCapabilityParams(
     if (!canvas || !isFiniteNumber(canvas.width) || !isFiniteNumber(canvas.height)) {
       throw new Error('composite_layers requires canvas.width and canvas.height (numbers)');
     }
+    if (!Number.isInteger(canvas.width) || !Number.isInteger(canvas.height)) {
+      throw new Error('composite_layers canvas dimensions must be integer pixels');
+    }
     if (canvas.width <= 0 || canvas.height <= 0) {
       throw new Error('composite_layers canvas dimensions must be positive');
     }

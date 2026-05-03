@@ -6,6 +6,7 @@ import { CapabilityInvokeError } from './types.js';
 const MODEL_VERSION = 'sharp-composite@1';
 const MAX_LAYERS = 16;
 const MAX_CANVAS_PIXELS = 16_000_000;
+const MAX_LAYER_PIXELS = 16_000_000;
 const MIN_SCALE = 0.05;
 const MAX_SCALE = 10;
 const ANCHORS = new Set(['top-left', 'center', 'top-right', 'bottom-left', 'bottom-right']);
@@ -103,6 +104,9 @@ export function createCompositeLayersCapability(): Capability {
       }
       finiteNumber(canvas.width, 'composite_layers.canvas.width');
       finiteNumber(canvas.height, 'composite_layers.canvas.height');
+      if (!Number.isInteger(canvas.width) || !Number.isInteger(canvas.height)) {
+        throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', 'composite_layers canvas dimensions must be integer pixels', false);
+      }
       if (canvas.width <= 0 || canvas.height <= 0) {
         throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', 'composite_layers canvas dimensions must be positive', false);
       }
@@ -145,25 +149,33 @@ export function createCompositeLayersCapability(): Capability {
         const y = optionalFiniteNumber(layer.y, `composite_layers.layers[${index}].y`, 0);
 
         const layerBuffer = await fs.promises.readFile(layer.input);
-        let pipeline = sharp(layerBuffer);
+        const meta = await sharp(layerBuffer, { limitInputPixels: MAX_LAYER_PIXELS }).metadata();
+        if (!meta.width || !meta.height) {
+          throw new CapabilityInvokeError(
+            'PROVIDER_FAILURE',
+            `composite_layers.layers[${index}] has invalid dimensions`,
+            false,
+          );
+        }
+        const width = Math.round(meta.width * scale);
+        const height = Math.round(meta.height * scale);
+        if (width < 1 || height < 1) {
+          throw new CapabilityInvokeError(
+            'CONSTRAINT_VIOLATION',
+            `composite_layers.layers[${index}].scale produces a zero-sized layer`,
+            false,
+          );
+        }
+        if (width * height > MAX_LAYER_PIXELS) {
+          throw new CapabilityInvokeError(
+            'INPUT_TOO_LARGE',
+            `composite_layers.layers[${index}] exceeds 16MP layer cap after scaling`,
+            false,
+          );
+        }
+
+        let pipeline = sharp(layerBuffer, { limitInputPixels: MAX_LAYER_PIXELS });
         if (scale !== 1) {
-          const meta = await sharp(layerBuffer).metadata();
-          if (!meta.width || !meta.height) {
-            throw new CapabilityInvokeError(
-              'PROVIDER_FAILURE',
-              `composite_layers.layers[${index}] has invalid dimensions`,
-              false,
-            );
-          }
-          const width = Math.round(meta.width * scale);
-          const height = Math.round(meta.height * scale);
-          if (width < 1 || height < 1) {
-            throw new CapabilityInvokeError(
-              'CONSTRAINT_VIOLATION',
-              `composite_layers.layers[${index}].scale produces a zero-sized layer`,
-              false,
-            );
-          }
           pipeline = pipeline.resize(width, height, { fit: 'fill' });
         }
 

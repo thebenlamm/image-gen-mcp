@@ -4,6 +4,7 @@ import type { Capability } from './types.js';
 import { CapabilityInvokeError } from './types.js';
 
 const MAX_PROMPT_LENGTH = 4000;
+const FETCH_TIMEOUT_MS = 30_000;
 const SIZE_MAP = {
   square: '1024x1024',
   landscape: '1536x1024',
@@ -15,6 +16,25 @@ interface OpenAIImageEditResponse {
     b64_json?: string;
     revised_prompt?: string;
   }>;
+}
+
+async function parseJsonResponse(response: Response): Promise<OpenAIImageEditResponse & {
+  error?: { message?: string };
+}> {
+  const rawBody = await response.text();
+  if (!rawBody.trim()) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(rawBody) as OpenAIImageEditResponse & { error?: { message?: string } };
+  } catch {
+    return {
+      error: {
+        message: `OpenAI edit returned non-JSON response: ${rawBody.slice(0, 500)}`,
+      },
+    };
+  }
 }
 
 function resolveOptionalEnv(value: string | undefined): string | undefined {
@@ -84,26 +104,37 @@ export function createEditPromptCapability(): Capability | null {
 
       const source = await fs.promises.readFile(filePath);
       const mimeType = await imageMimeType(source);
-      const response = await fetch('https://api.openai.com/v1/images/edits', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model,
-          images: [{
-            image_url: `data:${mimeType};base64,${source.toString('base64')}`,
-          }],
-          prompt,
-          n: 1,
-          size,
-        }),
-      });
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+      let response: Response;
+      try {
+        response = await fetch('https://api.openai.com/v1/images/edits', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model,
+            images: [{
+              image_url: `data:${mimeType};base64,${source.toString('base64')}`,
+            }],
+            prompt,
+            n: 1,
+            size,
+          }),
+        });
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw new CapabilityInvokeError('TIMEOUT', 'OpenAI edit timed out after 30s', true);
+        }
+        throw error;
+      } finally {
+        clearTimeout(timer);
+      }
 
-      const responseBody = await response.json() as OpenAIImageEditResponse & {
-        error?: { message?: string };
-      };
+      const responseBody = await parseJsonResponse(response);
       if (!response.ok) {
         throw new CapabilityInvokeError(
           'PROVIDER_FAILURE',
