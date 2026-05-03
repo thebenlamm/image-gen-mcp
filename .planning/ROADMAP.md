@@ -224,7 +224,7 @@ Plans:
 **UI hint**: no
 
 Plans:
-- [ ] 11-01-PLAN.md — Provider capability adapters (Photoroom, fal Flux Kontext, Ideogram), `generate` op wiring across types/schema/validator/enums, register.ts wiring with unscored-second-provider gates preserved
+- [ ] 11-01-PLAN.md — Wave-0 `generate` enum pre-flight + provider capability adapters (Photoroom extract_subject AND composite_layers (with shadow per D-15/PROV-01), fal Flux Kontext, Ideogram), register.ts wiring with unscored-second-provider gates preserved
 - [ ] 11-02-PLAN.md — Phase 11 eval cases populating quality.scores, dag-executor trace transparency (qualityMeasured/noIncumbentComparison/qualityUnavailable), planner system-prompt routing-notes alignment, README routing-transparency docs
 
 ## Progress
