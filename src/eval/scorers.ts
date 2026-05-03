@@ -204,7 +204,7 @@ export function scorePaletteExact(
 }
 
 export async function runScorers(
-  inputPath: string,
+  inputPath: string | undefined,
   outputPath: string | undefined,
   scorerIds: EvalScorerId[],
   params: Record<string, unknown>,
@@ -222,6 +222,10 @@ export async function runScorers(
     } else if (scorerId === 'pixel_delta') {
       if (!outputPath) {
         scores.push({ scorer: 'pixel_delta', status: 'error', reason: 'outputPath required' });
+        continue;
+      }
+      if (!inputPath) {
+        scores.push({ scorer: 'pixel_delta', status: 'error', reason: 'inputPath required' });
         continue;
       }
       scores.push(await scorePixelDelta(inputPath, outputPath));

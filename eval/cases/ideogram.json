@@ -1,0 +1,26 @@
+[
+  {
+    "id": "generate-ideogram-text-fresh-roast",
+    "op": "generate",
+    "provider": "ideogram",
+    "fixtureId": "text-label",
+    "params": {
+      "prompt": "A product label reading FRESH ROAST in large bold letters on a cream background.",
+      "expectedText": "FRESH ROAST"
+    },
+    "scorers": ["ocr_text_presence"],
+    "requiredEnv": ["IDEOGRAM_API_KEY"]
+  },
+  {
+    "id": "generate-ideogram-text-poster-open",
+    "op": "generate",
+    "provider": "ideogram",
+    "fixtureId": "text-poster",
+    "params": {
+      "prompt": "A vintage poster reading OPEN in large block letters across the top half.",
+      "expectedText": "OPEN"
+    },
+    "scorers": ["ocr_text_presence"],
+    "requiredEnv": ["IDEOGRAM_API_KEY"]
+  }
+]

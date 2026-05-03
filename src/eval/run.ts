@@ -28,9 +28,12 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function getInputPath(evalCase: EvalCase): string {
+function getInputPath(evalCase: EvalCase): string | undefined {
   const input = evalCase.params.input;
   if (typeof input !== 'string' || !input.trim()) {
+    if (evalCase.op === 'generate') {
+      return undefined;
+    }
     throw new Error(`eval case ${evalCase.id} requires params.input`);
   }
   return input;

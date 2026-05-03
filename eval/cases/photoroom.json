@@ -1,0 +1,50 @@
+[
+  {
+    "id": "extract-photoroom-product-simple",
+    "op": "extract_subject",
+    "provider": "photoroom",
+    "fixtureId": "product-simple",
+    "params": { "input": "${fixture.path}" },
+    "scorers": ["alpha_coverage", "pixel_delta"],
+    "requiredEnv": ["PHOTOROOM_API_KEY"]
+  },
+  {
+    "id": "extract-photoroom-person-hair-edge",
+    "op": "extract_subject",
+    "provider": "photoroom",
+    "fixtureId": "person-hair-edge",
+    "params": { "input": "${fixture.path}" },
+    "scorers": ["alpha_coverage"],
+    "requiredEnv": ["PHOTOROOM_API_KEY"]
+  },
+  {
+    "id": "extract-photoroom-low-contrast",
+    "op": "extract_subject",
+    "provider": "photoroom",
+    "fixtureId": "low-contrast-shape",
+    "params": { "input": "${fixture.path}" },
+    "scorers": ["alpha_coverage"],
+    "requiredEnv": ["PHOTOROOM_API_KEY"]
+  },
+  {
+    "id": "composite-photoroom-product-with-shadow",
+    "op": "composite_layers",
+    "provider": "photoroom",
+    "fixtureId": "composite-bg",
+    "params": {
+      "input": "${fixture.path}",
+      "maxPixelDelta": 0.20,
+      "canvas": {
+        "width": 512,
+        "height": 512,
+        "background": { "r": 255, "g": 255, "b": 255, "alpha": 1 }
+      },
+      "layers": [
+        { "input": "eval/fixtures/composite-overlay.png", "x": 192, "y": 192, "anchor": "top-left" }
+      ],
+      "shadow": { "enabled": true }
+    },
+    "scorers": ["pixel_delta"],
+    "requiredEnv": ["PHOTOROOM_API_KEY"]
+  }
+]

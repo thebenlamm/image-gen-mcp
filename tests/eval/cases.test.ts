@@ -51,4 +51,31 @@ describe('eval cases loader', () => {
 
     expect(new Set(ids).size).toBe(ids.length);
   });
+
+  it('loads Phase 11 provider breadth eval cases', async () => {
+    const cases = await loadEvalCases();
+    const photoroomCases = cases.filter((c) => c.provider === 'photoroom');
+    const falCases = cases.filter((c) => c.provider === 'fal');
+    const ideogramCases = cases.filter((c) => c.provider === 'ideogram');
+
+    expect(photoroomCases).toHaveLength(4);
+    expect(photoroomCases.filter((c) => c.op === 'extract_subject')).toHaveLength(3);
+    expect(photoroomCases.filter((c) => c.op === 'composite_layers')).toHaveLength(1);
+    expect(photoroomCases.every((c) => c.requiredEnv?.includes('PHOTOROOM_API_KEY'))).toBe(true);
+    expect(falCases).toHaveLength(2);
+    expect(falCases.every((c) => c.requiredEnv?.includes('FAL_KEY'))).toBe(true);
+    expect(ideogramCases).toHaveLength(2);
+    expect(ideogramCases.every((c) => c.op === 'generate')).toBe(true);
+    expect(ideogramCases.every((c) => c.requiredEnv?.includes('IDEOGRAM_API_KEY'))).toBe(true);
+  });
+
+  it('engages the Photoroom composite shadow eval path', async () => {
+    const cases = await loadEvalCases();
+    const composite = cases.find((c) => c.id === 'composite-photoroom-product-with-shadow');
+
+    expect(composite?.op).toBe('composite_layers');
+    expect(composite?.provider).toBe('photoroom');
+    expect(composite?.params.shadow).toEqual({ enabled: true });
+    expect(composite?.scorers).toEqual(['pixel_delta']);
+  });
 });

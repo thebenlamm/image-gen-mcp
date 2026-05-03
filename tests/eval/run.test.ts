@@ -1,11 +1,16 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import sharp from 'sharp';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { capabilityRegistry } from '../../src/capabilities/registry.js';
+import type { CapabilityRegistrationOptions } from '../../src/capabilities/types.js';
 import type { Capability, CapabilityOp } from '../../src/capabilities/types.js';
 import { EVAL_RESULTS_DIR } from '../../src/eval/results.js';
 import { hasUsableEnv, runEval, scorePassed } from '../../src/eval/run.js';
+
+vi.mock('../../src/utils/ocr.js', () => ({
+  recognizeOnce: vi.fn(async () => ({ text: 'FRESH ROAST OPEN SALE 50', confidence: 95 })),
+}));
 
 const registered: Array<{ unregister: () => void }> = [];
 
@@ -28,6 +33,7 @@ function registerFakeCapability(
     buffer: await fakePng(),
     model: 'fake-model',
   }),
+  options: CapabilityRegistrationOptions = {},
 ): { unregister: () => void } {
   capabilityRegistry.register({
     op,
@@ -35,8 +41,11 @@ function registerFakeCapability(
     modelVersion: 'fake-model-v1',
     constraints: { outputFormat: 'png' },
     cost: { perCallUsd: 0 },
+    quality: options.allowUnscoredProduction
+      ? { unscoredJustification: 'test-only second provider registration' }
+      : undefined,
     invoke,
-  });
+  }, options);
 
   return { unregister: () => capabilityRegistry.unregister(op, provider) };
 }
@@ -89,9 +98,15 @@ async function removeEvalResults(): Promise<void> {
 
 describe('eval runner', () => {
   const previousOpenAiKey = process.env.OPENAI_API_KEY;
+  const previousPhotoroomKey = process.env.PHOTOROOM_API_KEY;
+  const previousFalKey = process.env.FAL_KEY;
+  const previousIdeogramKey = process.env.IDEOGRAM_API_KEY;
 
   beforeEach(async () => {
     delete process.env.OPENAI_API_KEY;
+    delete process.env.PHOTOROOM_API_KEY;
+    delete process.env.FAL_KEY;
+    delete process.env.IDEOGRAM_API_KEY;
     await removeEvalResults();
   });
 
@@ -99,6 +114,12 @@ describe('eval runner', () => {
     while (registered.length) registered.pop()!.unregister();
     if (previousOpenAiKey === undefined) delete process.env.OPENAI_API_KEY;
     else process.env.OPENAI_API_KEY = previousOpenAiKey;
+    if (previousPhotoroomKey === undefined) delete process.env.PHOTOROOM_API_KEY;
+    else process.env.PHOTOROOM_API_KEY = previousPhotoroomKey;
+    if (previousFalKey === undefined) delete process.env.FAL_KEY;
+    else process.env.FAL_KEY = previousFalKey;
+    if (previousIdeogramKey === undefined) delete process.env.IDEOGRAM_API_KEY;
+    else process.env.IDEOGRAM_API_KEY = previousIdeogramKey;
     await removeEvalResults();
   });
 
@@ -179,6 +200,81 @@ describe('eval runner', () => {
         .filter((entry: any) => entry.op === 'edit_prompt' && entry.provider === 'openai')
         .every((entry: any) => entry.status === 'skipped'),
     ).toBe(true);
+  });
+
+  it('skips Ideogram generate cases without input when env is missing', async () => {
+    registerFakeLocalEvalCapabilities();
+    const result = await readResult(await runEval());
+
+    const skippedIdeogram = result.results.filter((entry: any) => entry.provider === 'ideogram');
+
+    expect(skippedIdeogram).toHaveLength(2);
+    expect(skippedIdeogram.every((entry: any) => entry.status === 'skipped')).toBe(true);
+    expect(
+      skippedIdeogram.every((entry: any) => entry.error === 'missing required env: IDEOGRAM_API_KEY'),
+    ).toBe(true);
+  });
+
+  it('scores Ideogram generate cases without requiring params.input', async () => {
+    process.env.IDEOGRAM_API_KEY = 'real-key';
+    registerFakeLocalEvalCapabilities();
+    registered.push(registerFakeCapability('generate', 'ideogram', async () => ({
+      kind: 'image' as const,
+      buffer: await fakePng(),
+      model: 'fake-model',
+    })));
+
+    const result = await readResult(await runEval());
+    const ideogramFreshRoast = result.results.find(
+      (entry: any) => entry.caseId === 'generate-ideogram-text-fresh-roast',
+    );
+
+    expect(ideogramFreshRoast?.status).toBe('scored');
+    expect(ideogramFreshRoast?.scores).toContainEqual({
+      scorer: 'ocr_text_presence',
+      status: 'scored',
+      value: 1,
+    });
+  });
+
+  it('skips both Photoroom op kinds when env is missing', async () => {
+    registerFakeLocalEvalCapabilities();
+    const result = await readResult(await runEval());
+
+    const skippedPhotoroom = result.results.filter((entry: any) => entry.provider === 'photoroom');
+
+    expect(skippedPhotoroom).toHaveLength(4);
+    expect(skippedPhotoroom.every((entry: any) => entry.status === 'skipped')).toBe(true);
+    expect(skippedPhotoroom.every(
+      (entry: any) => entry.error === 'missing required env: PHOTOROOM_API_KEY',
+    )).toBe(true);
+    expect(skippedPhotoroom.some((entry: any) => entry.op === 'extract_subject')).toBe(true);
+    expect(skippedPhotoroom.some((entry: any) => entry.op === 'composite_layers')).toBe(true);
+  });
+
+  it('scores Photoroom composite_layers with pixel_delta when env and capability exist', async () => {
+    process.env.PHOTOROOM_API_KEY = 'real-key';
+    registerFakeLocalEvalCapabilities();
+    registered.push(registerFakeCapability('extract_subject', 'photoroom', undefined, {
+      allowUnscoredProduction: true,
+    }));
+    registered.push(registerFakeCapability('composite_layers', 'photoroom', async () => ({
+      kind: 'image' as const,
+      buffer: await fs.readFile('eval/fixtures/composite-bg.png'),
+      model: 'fake-model',
+    }), { allowUnscoredProduction: true }));
+
+    const result = await readResult(await runEval());
+    const photoroomComposite = result.results.find(
+      (entry: any) => entry.caseId === 'composite-photoroom-product-with-shadow',
+    );
+
+    expect(photoroomComposite?.status).toBe('scored');
+    expect(photoroomComposite?.scores).toContainEqual({
+      scorer: 'pixel_delta',
+      status: 'scored',
+      value: 0,
+    });
   });
 
   it('writes results then fails when any eval case errors', async () => {
