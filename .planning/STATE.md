@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Goal-Shaped Image MCP
-status: executing
-stopped_at: Completed 09-02-PLAN.md
-last_updated: "2026-05-03T16:13:27.967Z"
+status: verifying
+stopped_at: Completed 09-03-PLAN.md
+last_updated: "2026-05-03T16:26:32.544Z"
 last_activity: 2026-05-03
 progress:
   total_phases: 11
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 21
-  completed_plans: 18
-  percent: 86
+  completed_plans: 19
+  percent: 90
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 Phase: 09 (image-task-planner-dag-executor) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-05-03
 
 ## Performance Metrics
@@ -61,6 +61,7 @@ Last activity: 2026-05-03
 | Phase 07-eval-harness-golden-set P02 | 11min | 4 tasks | 12 files |
 | Phase 09-image-task-planner-dag-executor P01 | 9min | 10 tasks | 18 files |
 | Phase 09-image-task-planner-dag-executor P02 | 10min | 11 tasks | 11 files |
+| Phase 09-image-task-planner-dag-executor P03 | 9min | 5 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -104,11 +105,13 @@ Recent decisions affecting current work:
 - [Phase 09]: Plan validation gates budget caps on recomputed node costs before provider calls — Matches 09-01 success criteria and prevents Haiku self-reported estimate drift from bypassing constraints.
 - [Phase 09]: DAG execution is sequential Kahn-order with ready-queue shape preserved for Phase 10 bounded parallelism.
 - [Phase 09]: Best partial selection is image-only BFS from terminalNodeId over dependsOn, preserving dependency order for ties.
+- [Phase 09-image-task-planner-dag-executor]: [Phase 09]: image_task dry_run returns compact validated plan and estimated totals without provider invocation.
+- [Phase 09-image-task-planner-dag-executor]: [Phase 09]: image_task response serialization rejects Buffers, typed arrays, data URLs, and long base64-looking strings at the MCP boundary.
+- [Phase 09-image-task-planner-dag-executor]: [Phase 09]: budget-cap validation responses round estimated_cost_usd to six decimals to match executor totals.
 
 ### Pending Todos
 
-- Add new deps before later execution: `@anthropic-ai/sdk` (P9)
-- New env var documentation still needed: `ANTHROPIC_API_KEY` (P9)
+None currently.
 
 ### Blockers/Concerns
 
@@ -116,8 +119,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-05-03T16:13:27.963Z
-Stopped at: Completed 09-02-PLAN.md
+Last session: 2026-05-03T16:26:20.556Z
+Stopped at: Completed 09-03-PLAN.md
 Resume file: None
 
 ## Quick Tasks

@@ -27,7 +27,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 6: Run/Session Artifact Layer** - Persistent run artifacts under `.runs/<runId>/` with retention sweep
 - [x] **Phase 7: Eval Harness + Golden Set** - Programmatic scoring populates capability quality scores so the planner routes on measurement
 - [x] **Phase 8: Op Primitives Expansion** - composite, transform, upscale, analyze_* capabilities
-- [ ] **Phase 9: image_task Planner + DAG Executor** - Goal-shaped MCP tool with Haiku-planned DAG execution
+- [x] **Phase 9: image_task Planner + DAG Executor** - Goal-shaped MCP tool with Haiku-planned DAG execution
 - [ ] **Phase 10: Template Fast-Paths + Executor Parallelism** - Skip planner LLM for matching template signatures; concurrent DAG node execution
 - [ ] **Phase 11: Provider Breadth (Post-Eval)** - Photoroom, fal.ai, Flux Kontext, Ideogram added against measured registry
 
@@ -241,6 +241,6 @@ Phases execute in numeric order with one parallelization window:
 | 6. Run/Session Artifact Layer | 2/2 | ✓ Complete | 2026-05-02 |
 | 7. Eval Harness + Golden Set | 0/2 | Not started (parallel with 8) | - |
 | 8. Op Primitives Expansion | 0/2-3 | Not started (parallel with 7) | - |
-| 9. image_task Planner + DAG Executor | 2/3 | In Progress | - |
+| 9. image_task Planner + DAG Executor | 3/3 | ✓ Complete | 2026-05-03 |
 | 10. Template Fast-Paths + Parallelism | 0/2 | Not started | - |
 | 11. Provider Breadth (Post-Eval) | 0/2-3 | Not started | - |
