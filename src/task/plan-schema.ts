@@ -23,6 +23,7 @@ export const PlanNodeSchema = z.object({
     'analyze_dimensions',
     'analyze_palette',
     'analyze_ocr',
+    'generate',
   ]),
   provider: z.string().min(1),
   params: PlanNodeParamsSchema,

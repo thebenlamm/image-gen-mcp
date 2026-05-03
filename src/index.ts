@@ -451,10 +451,10 @@ server.tool(
 
 server.tool(
   'image_op',
-  'Invoke a registered image capability directly by operation and provider. Image-returning ops (extract_subject, edit_prompt, transform, composite_layers, enhance_upscale) save PNG output through standard output path rules and return {success, output, runId, trace}. Data-returning ops (analyze_dimensions, analyze_palette, analyze_ocr) ignore outputPath/outputDir and return {success, data, runId, trace}. Use list_capabilities to discover registered (op, provider) pairs.',
+  'Invoke a registered image capability directly by operation and provider. Image-returning ops (extract_subject, edit_prompt, transform, composite_layers, enhance_upscale, generate) save PNG output through standard output path rules and return {success, output, runId, trace}. Data-returning ops (analyze_dimensions, analyze_palette, analyze_ocr) ignore outputPath/outputDir and return {success, data, runId, trace}. Use list_capabilities to discover registered (op, provider) pairs.',
   {
     op: z
-      .enum(['extract_subject', 'edit_prompt', 'composite_layers', 'transform', 'enhance_upscale', 'analyze_dimensions', 'analyze_palette', 'analyze_ocr'])
+      .enum(['extract_subject', 'edit_prompt', 'composite_layers', 'transform', 'enhance_upscale', 'analyze_dimensions', 'analyze_palette', 'analyze_ocr', 'generate'])
       .describe('Capability operation. Use list_capabilities to see currently-registered ops.'),
     provider: z
       .string()

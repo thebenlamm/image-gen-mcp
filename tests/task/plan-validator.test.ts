@@ -58,6 +58,7 @@ const registry = mockRegistry([
   capability('edit_prompt', 'openai'),
   capability('analyze_dimensions', 'sharp'),
   capability('analyze_ocr', 'tesseract'),
+  capability('generate', 'ideogram', false),
 ]);
 
 async function validate(plan: Plan, inputImages: Record<string, string> = { product: '/tmp/product.png' }) {
@@ -149,6 +150,53 @@ describe('validatePlan', () => {
         nodeId: 'n1',
         field: 'outputKind',
         message: expect.stringContaining("must declare outputKind 'data'"),
+      }));
+    }
+  });
+
+  it('returns a validated plan for generate image nodes', async () => {
+    const result = await validate(makePlan({
+      nodes: [{
+        id: 'generate',
+        op: 'generate',
+        provider: 'ideogram',
+        params: { prompt: 'poster with legible text' },
+        dependsOn: [],
+        outputKind: 'image',
+        costUsd: 0.08,
+        latencyMs: 8000,
+      }],
+      terminalNodeId: 'generate',
+      estimatedTotalCostUsd: 0.08,
+      estimatedTotalLatencyMs: 8000,
+    }));
+
+    expect(result.ok).toBe(true);
+  });
+
+  it('returns PLAN_OUTPUT_KIND_MISMATCH when generate declares data output', async () => {
+    const result = await validate(makePlan({
+      nodes: [{
+        id: 'generate',
+        op: 'generate',
+        provider: 'ideogram',
+        params: { prompt: 'poster with legible text' },
+        dependsOn: [],
+        outputKind: 'data',
+        costUsd: 0.08,
+        latencyMs: 8000,
+      }, baseNode],
+      terminalNodeId: 'n1',
+      estimatedTotalCostUsd: 0.09,
+      estimatedTotalLatencyMs: 8100,
+    }));
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContainEqual(expect.objectContaining({
+        code: 'PLAN_OUTPUT_KIND_MISMATCH',
+        nodeId: 'generate',
+        field: 'outputKind',
       }));
     }
   });

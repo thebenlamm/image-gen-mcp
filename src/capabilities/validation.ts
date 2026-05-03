@@ -22,6 +22,12 @@ export function validateCapabilityParams(
     }
   }
 
+  if (capability.op === 'generate') {
+    if (typeof params.prompt !== 'string' || params.prompt.trim().length === 0) {
+      throw new Error('generate requires params.prompt');
+    }
+  }
+
   if (capability.op === 'transform') {
     const ops = params.operations;
     if (!Array.isArray(ops)) {

@@ -6,7 +6,8 @@ export type CapabilityOp =
   | 'enhance_upscale'
   | 'analyze_dimensions'
   | 'analyze_palette'
-  | 'analyze_ocr';
+  | 'analyze_ocr'
+  | 'generate';
 
 export interface CapabilityConstraints {
   maxPromptLength?: number;

@@ -51,6 +51,7 @@ const EXPECTED_OUTPUT_KIND = {
   analyze_dimensions: 'data',
   analyze_palette: 'data',
   analyze_ocr: 'data',
+  generate: 'image',
 } as const satisfies Record<PlanNode['op'], 'image' | 'data'>;
 
 interface StringParam {

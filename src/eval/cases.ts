@@ -23,6 +23,7 @@ const CAPABILITY_OPS = new Set<CapabilityOp>([
   'analyze_dimensions',
   'analyze_palette',
   'analyze_ocr',
+  'generate',
 ]);
 
 function isEvalCase(value: unknown): value is EvalCase {
