@@ -47,6 +47,7 @@ import {
   type TaskConstraints,
 } from './task/index.js';
 import { ResponseGuardError, serializeImageTaskResponse } from './task/serialize-response.js';
+import { matchTemplate } from './task/templates.js';
 
 // Register available providers
 const providers = [
@@ -886,7 +887,11 @@ function inputImagesByRef(inputImages: string[] | undefined): Record<string, str
   return Object.fromEntries((inputImages ?? []).map((imagePath, index) => [`image_${index}`, imagePath]));
 }
 
-function dryRunResponse(plan: Plan, runId: string): { content: Array<{ type: 'text'; text: string }> } {
+function dryRunResponse(
+  plan: Plan,
+  runId: string,
+  plannerMethod: 'llm' | 'template',
+): { content: Array<{ type: 'text'; text: string }> } {
   const response = serializeImageTaskResponse({
     plan,
     dagResult: {
@@ -896,6 +901,7 @@ function dryRunResponse(plan: Plan, runId: string): { content: Array<{ type: 'te
       bestPartial: null,
     },
     runId,
+    plannerMethod,
   });
   return {
     content: [{
@@ -973,16 +979,41 @@ export async function handleImageTask(args: ImageTaskArgs): Promise<{
   }
 
   let plan: Plan;
-  let planner: Awaited<ReturnType<typeof planImageTask>>;
-  try {
-    planner = await planImageTask({
-      goal: args.goal,
-      inputImages,
-      constraints: args.constraints,
-    }, capabilityRegistry, { seed: args.seed } as never);
-    plan = planner.plan;
-  } catch (err) {
-    return imageTaskPlannerErrorResponse(runId, err);
+  let plannerMethod: 'llm' | 'template' = 'llm';
+  let plannerInfo: {
+    model: string;
+    tokens: { input?: number; output?: number };
+    latency_ms: number;
+  };
+  const templateMatch = matchTemplate({
+    goal: args.goal,
+    inputImages,
+    constraints: args.constraints,
+  }, capabilityRegistry);
+
+  if (templateMatch) {
+    plannerMethod = 'template';
+    plan = templateMatch.plan;
+    plannerInfo = { model: `template:${templateMatch.templateId}`, tokens: {}, latency_ms: 0 };
+  } else {
+    try {
+      const planner = await planImageTask({
+        goal: args.goal,
+        inputImages,
+        constraints: args.constraints,
+      }, capabilityRegistry, { seed: args.seed } as never);
+      plan = planner.plan;
+      plannerInfo = {
+        model: 'claude-haiku-4-5',
+        tokens: {
+          input: planner.usage.promptTokens,
+          output: planner.usage.completionTokens,
+        },
+        latency_ms: planner.latencyMs,
+      };
+    } catch (err) {
+      return imageTaskPlannerErrorResponse(runId, err);
+    }
   }
 
   const validation = await validatePlan(plan, {
@@ -995,7 +1026,7 @@ export async function handleImageTask(args: ImageTaskArgs): Promise<{
   }
 
   if (args.dry_run === true) {
-    return dryRunResponse(plan, runId);
+    return dryRunResponse(plan, runId, plannerMethod);
   }
 
   let dagResult: ExecResult;
@@ -1033,14 +1064,7 @@ export async function handleImageTask(args: ImageTaskArgs): Promise<{
         error: node.error,
       })),
       plan,
-      planner: {
-        model: 'claude-haiku-4-5',
-        tokens: {
-          input: planner.usage.promptTokens,
-          output: planner.usage.completionTokens,
-        },
-        latency_ms: planner.latencyMs,
-      },
+      planner: plannerInfo,
       totals: dagResult.totals,
       bestPartial: dagResult.bestPartial,
       finalOutput: finalOutput?.kind === 'image' ? finalOutput.artifactPath : undefined,
@@ -1054,7 +1078,7 @@ export async function handleImageTask(args: ImageTaskArgs): Promise<{
   }
 
   try {
-    const response = serializeImageTaskResponse({ plan, dagResult, runId });
+    const response = serializeImageTaskResponse({ plan, dagResult, runId, plannerMethod });
     return { content: [{ type: 'text' as const, text: JSON.stringify(response) }] };
   } catch (err) {
     if (err instanceof ResponseGuardError) {

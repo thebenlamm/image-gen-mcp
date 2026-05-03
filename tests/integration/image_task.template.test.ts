@@ -1,11 +1,11 @@
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
+import sharp from 'sharp';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   cleanupMocks,
   importHandleImageTaskWithPlanner,
-  make1pxPng,
   makePlan,
   registerMockCapabilities,
 } from './__helpers__/image-task-mocks.js';
@@ -24,7 +24,14 @@ beforeEach(async () => {
   outputRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'image-task-template-output-'));
   inputRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'image-task-template-input-'));
   inputPath = path.join(inputRoot, 'source.png');
-  await fs.writeFile(inputPath, make1pxPng());
+  await sharp({
+    create: {
+      width: 16,
+      height: 16,
+      channels: 4,
+      background: { r: 255, g: 0, b: 0, alpha: 1 },
+    },
+  }).png().toFile(inputPath);
   process.env.IMAGE_GEN_OUTPUT_DIR = outputRoot;
   process.env.IMAGE_GEN_INPUT_ROOT = inputRoot;
   delete process.env.ANTHROPIC_API_KEY;
@@ -92,7 +99,14 @@ describe('image_task template fast path', () => {
 
   it('validates template plans before dry_run success', async () => {
     const outsideRoot = path.join(os.tmpdir(), `outside-template-${Date.now()}.png`);
-    await fs.writeFile(outsideRoot, make1pxPng());
+    await sharp({
+      create: {
+        width: 16,
+        height: 16,
+        channels: 4,
+        background: { r: 0, g: 0, b: 255, alpha: 1 },
+      },
+    }).png().toFile(outsideRoot);
     const handleImageTask = await importHandleImageTask();
 
     const parsed = parseResponse(await handleImageTask({
