@@ -39,7 +39,7 @@ async function callImageOp(args: Parameters<typeof handleImageOp>[0]): Promise<{
   output?: string;
   runId?: string;
   trace?: any;
-  error?: string;
+  error?: string | { message: string; code?: string; retryable?: boolean; suggestion?: string };
   available?: string[];
 }> {
   const result = await handleImageOp(args);
@@ -107,7 +107,8 @@ describe('image_op runs integration', () => {
     });
 
     expect(res.success).toBe(false);
-    expect(res.error).toContain('Capability not registered');
+    expect(res.error).toHaveProperty('message');
+    expect((res.error as { message: string }).message).toContain('Capability not registered');
     expect(res.runId).toMatch(RUN_ID_REGEX);
     expect(Array.isArray(res.available)).toBe(true);
     expect(res.trace?.runId).toBe(res.runId);
@@ -134,7 +135,8 @@ describe('image_op runs integration', () => {
     });
 
     expect(res.success).toBe(false);
-    expect(res.error).toContain('upstream 500');
+    expect(res.error).toHaveProperty('message');
+    expect((res.error as { message: string }).message).toContain('upstream 500');
     expect(res.trace.nodes[0].outcome).toBe('error');
 
     const runDir = path.join(tmp.dir, '.runs', res.runId!);

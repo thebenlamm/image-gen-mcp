@@ -439,22 +439,29 @@ server.tool(
 
 server.tool(
   'image_op',
-  'Invoke a registered image capability directly by operation and provider. Current capabilities: extract_subject with provider @imgly/local removes a background from params.input with no API key; edit_prompt with provider openai edits params.input using params.prompt and optional params.size through GPT Image. Saves PNG output through standard output path rules and returns {success, output, runId, trace}.',
+  'Invoke a registered image capability directly by operation and provider. Image-returning ops (extract_subject, edit_prompt, transform, composite_layers, enhance_upscale) save PNG output through standard output path rules and return {success, output, runId, trace}. Data-returning ops (analyze_dimensions, analyze_palette, analyze_ocr) ignore outputPath/outputDir and return {success, data, runId, trace}. Use list_capabilities to discover registered (op, provider) pairs.',
   {
     op: z
       .enum(['extract_subject', 'edit_prompt', 'composite_layers', 'transform', 'enhance_upscale', 'analyze_dimensions', 'analyze_palette', 'analyze_ocr'])
-      .describe('Capability operation. Currently supported: extract_subject, edit_prompt. Other values are reserved for future capabilities.'),
+      .describe('Capability operation. Use list_capabilities to see currently-registered ops.'),
     provider: z
       .string()
-      .describe('Capability provider. Use @imgly/local for extract_subject, or openai for edit_prompt.'),
+      .describe('Capability provider (e.g., @imgly/local, openai, sharp, replicate, tesseract).'),
     params: z
       .record(z.unknown())
       .default({})
-      .describe('Operation parameters. extract_subject requires {input: string}. edit_prompt requires {input: string, prompt: string} and accepts size: square | landscape | portrait.'),
-    outputPath: z.string().optional().describe('Exact output file path (must end in .png)'),
-    outputDir: z.string().optional().describe('Output directory (filename auto-generated)'),
+      .describe('Operation parameters. See list_capabilities and per-cap docs for required shape.'),
+    outputPath: z.string().optional().describe('Exact output file path (must end in .png). IGNORED for analyze_* ops.'),
+    outputDir: z.string().optional().describe('Output directory (filename auto-generated). IGNORED for analyze_* ops.'),
   },
   handleImageOp,
+);
+
+server.tool(
+  'list_capabilities',
+  'List all registered capabilities (op, provider, modelVersion, constraints, cost, latencyMsP50, quality). Use this before calling image_op to discover available routes and pick a provider by cost or quality. The Phase 9 planner consumes this to make routing decisions.',
+  {},
+  handleListCapabilities,
 );
 
 } // end registerTools
@@ -465,6 +472,29 @@ export interface ImageOpArgs {
   params: Record<string, unknown>;
   outputPath?: string;
   outputDir?: string;
+}
+
+export async function handleListCapabilities(): Promise<{
+  content: Array<{ type: 'text'; text: string }>;
+}> {
+  const caps = capabilityRegistry.list().map((capability) => ({
+    op: capability.op,
+    provider: capability.provider,
+    modelVersion: capability.modelVersion,
+    constraints: capability.constraints,
+    cost: capability.cost,
+    ...(capability.latencyMsP50 !== undefined
+      ? { latencyMsP50: capability.latencyMsP50 }
+      : {}),
+    ...(capability.quality !== undefined ? { quality: capability.quality } : {}),
+  }));
+
+  return {
+    content: [{
+      type: 'text' as const,
+      text: JSON.stringify({ capabilities: caps }),
+    }],
+  };
 }
 
 function imageOpErrorResponse(
@@ -653,47 +683,51 @@ export async function handleImageOp(args: ImageOpArgs): Promise<{
       };
     }
 
-    const dataNode = buildTraceNode({
-      id: `n${nodeId}`,
-      op,
-      provider,
-      model: result.model,
-      startedAtMs: nodeStartedAt,
-      endedAtMs: nodeEndedAt,
-      outcome: 'success',
-      metadata: result.metadata,
-    });
-
-    const dataEndedAt = Date.now();
-    await writeManifest(runDir, {
-      schemaVersion: 1,
-      runId,
-      startedAt: new Date(startedAt).toISOString(),
-      endedAt: new Date(dataEndedAt).toISOString(),
-      status: 'success',
-      invocation: baseInvocation,
-      nodes: [{
-        id: dataNode.id,
+    if (result.kind === 'data') {
+      const dataNode = buildTraceNode({
+        id: `n${nodeId}`,
         op,
         provider,
         model: result.model,
-        durationMs: dataNode.durationMs,
+        startedAtMs: nodeStartedAt,
+        endedAtMs: nodeEndedAt,
         outcome: 'success',
-      }],
-      totalDurationMs: dataEndedAt - startedAt,
-    });
+        metadata: result.metadata,
+      });
 
-    return {
-      content: [{
-        type: 'text' as const,
-        text: JSON.stringify({
-          success: true,
-          data: result.data,
-          runId,
-          trace: { runId, nodes: [dataNode] },
-        }),
-      }],
-    };
+      const dataEndedAt = Date.now();
+      await writeManifest(runDir, {
+        schemaVersion: 1,
+        runId,
+        startedAt: new Date(startedAt).toISOString(),
+        endedAt: new Date(dataEndedAt).toISOString(),
+        status: 'success',
+        invocation: baseInvocation,
+        nodes: [{
+          id: dataNode.id,
+          op,
+          provider,
+          model: result.model,
+          durationMs: dataNode.durationMs,
+          outcome: 'success',
+        }],
+        totalDurationMs: dataEndedAt - startedAt,
+      });
+
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify({
+            success: true,
+            data: result.data,
+            runId,
+            trace: { runId, nodes: [dataNode] },
+          }),
+        }],
+      };
+    }
+
+    throw new Error(`Unsupported capability result kind: ${(result as { kind?: string }).kind}`);
   } catch (error) {
     const endedAt = Date.now();
     const message = error instanceof Error ? error.message : String(error);
