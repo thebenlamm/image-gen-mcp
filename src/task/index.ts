@@ -5,3 +5,4 @@ export * from './plan-validator.js';
 export * from './planner.js';
 export * from './ref-resolver.js';
 export * from './serialize-response.js';
+export * from './templates.js';
