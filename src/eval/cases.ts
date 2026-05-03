@@ -10,6 +10,8 @@ const SCORERS = new Set<EvalScorerId>([
   'alpha_coverage',
   'pixel_delta',
   'ocr_text_presence',
+  'dimensions_exact',
+  'palette_exact',
 ]);
 
 const CAPABILITY_OPS = new Set<CapabilityOp>([

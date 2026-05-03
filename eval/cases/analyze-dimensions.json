@@ -1,0 +1,19 @@
+[
+  {
+    "id": "dims-256x128",
+    "op": "analyze_dimensions",
+    "provider": "sharp",
+    "fixtureId": "dims-256x128",
+    "params": {
+      "input": "${fixture.path}",
+      "expectedDimensions": {
+        "width": 256,
+        "height": 128,
+        "format": "png",
+        "channels": 4,
+        "hasAlpha": true
+      }
+    },
+    "scorers": ["dimensions_exact"]
+  }
+]

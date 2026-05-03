@@ -1,0 +1,14 @@
+[
+  {
+    "id": "palette-three-bands",
+    "op": "analyze_palette",
+    "provider": "sharp",
+    "fixtureId": "palette-three-bands",
+    "params": {
+      "input": "${fixture.path}",
+      "count": 3,
+      "expectedPalette": ["#ff0000", "#00ff00", "#0000ff"]
+    },
+    "scorers": ["palette_exact"]
+  }
+]

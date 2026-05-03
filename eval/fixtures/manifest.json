@@ -68,5 +68,19 @@
     "category": "transparent-edge",
     "tags": ["alpha", "icon"],
     "description": "Transparent background with a small opaque icon centered."
+  },
+  {
+    "id": "dims-256x128",
+    "path": "dims-256x128.png",
+    "category": "product",
+    "tags": ["dimensions", "synthetic"],
+    "description": "256x128 RGBA PNG with solid blue fill (channels=4, hasAlpha=true)."
+  },
+  {
+    "id": "palette-three-bands",
+    "path": "palette-three-bands.png",
+    "category": "product",
+    "tags": ["palette", "synthetic"],
+    "description": "96x96 PNG with three equal vertical bands: pure red, green, blue."
   }
 ]

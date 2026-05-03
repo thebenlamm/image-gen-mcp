@@ -8,8 +8,8 @@ describe('fixture manifest', () => {
     const raw = await fs.readFile('eval/fixtures/manifest.json', 'utf8');
     const fixtures = JSON.parse(raw) as Array<{ id: string; category: string }>;
 
-    expect(fixtures).toHaveLength(10);
-    expect(new Set(fixtures.map((fixture) => fixture.id)).size).toBe(10);
+    expect(fixtures).toHaveLength(12);
+    expect(new Set(fixtures.map((fixture) => fixture.id)).size).toBe(12);
     expect(new Set(fixtures.map((fixture) => fixture.category))).toEqual(
       new Set(['product', 'person', 'text-heavy', 'transparent-edge', 'low-contrast'])
     );
@@ -18,7 +18,7 @@ describe('fixture manifest', () => {
   it('loads existing PNG fixture files', async () => {
     const fixtures = await loadFixtures();
 
-    expect(fixtures).toHaveLength(10);
+    expect(fixtures).toHaveLength(12);
     for (const fixture of fixtures) {
       await expect(fs.access(fixture.path)).resolves.toBeUndefined();
       const metadata = await sharp(fixture.path).metadata();

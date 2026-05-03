@@ -28,10 +28,10 @@ function capability(
 }
 
 describe('Phase 7 acceptance: eval harness routing preconditions', () => {
-  it('EVAL-01 fixture manifest contains exactly 10 fixtures across required categories', async () => {
+  it('EVAL-01 fixture manifest contains exactly 12 fixtures across required categories', async () => {
     const fixtures = await loadFixtures();
 
-    expect(fixtures).toHaveLength(10);
+    expect(fixtures).toHaveLength(12);
     expect(new Set(fixtures.map((fixture) => fixture.category))).toEqual(new Set([
       'product',
       'person',

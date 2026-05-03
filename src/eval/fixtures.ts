@@ -47,8 +47,8 @@ export async function loadFixtures(): Promise<EvalFixture[]> {
     throw new Error('Fixture manifest must be an array');
   }
 
-  if (parsed.length !== 10) {
-    throw new Error(`Fixture manifest must contain exactly 10 entries, found ${parsed.length}`);
+  if (parsed.length !== 12) {
+    throw new Error(`Fixture manifest must contain exactly 12 entries, found ${parsed.length}`);
   }
 
   const categories = new Set<EvalFixture['category']>();
