@@ -8,7 +8,7 @@ last_updated: "2026-05-03T17:49:56.209Z"
 last_activity: 2026-05-03 -- Phase 09 marked complete
 progress:
   total_phases: 11
-  completed_phases: 10
+  completed_phases: 8
   total_plans: 22
   completed_plans: 20
   percent: 91
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-01)
 
 **Core value:** Two value props — guaranteed primitives (v1.0) and flexible goal handoff (v2.0).
-**Current focus:** Phase 09 — image-task-planner-dag-executor
+**Current focus:** Phase 10 — template-fast-paths-+-executor-parallelism
 
 ## Current Position
 
