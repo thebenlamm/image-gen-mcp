@@ -877,7 +877,7 @@ function imageTaskValidationErrorResponse(
     message: first?.message ?? 'Plan validation failed',
     code: first?.code,
     suggestion: first?.suggestion,
-    ...(failure.estimated_cost_usd !== undefined ? { estimated_cost_usd: failure.estimated_cost_usd } : {}),
+    ...(failure.estimated_cost_usd !== undefined ? { estimated_cost_usd: Number(failure.estimated_cost_usd.toFixed(6)) } : {}),
     ...(failure.budget_cap_usd !== undefined ? { cap_usd: failure.budget_cap_usd } : {}),
   });
 }
