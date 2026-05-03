@@ -63,6 +63,9 @@ export function validateCapabilityParams(
     if (!Array.isArray(layers) || layers.length === 0) {
       throw new Error('composite_layers requires non-empty layers array');
     }
+    if (capability.constraints.supportsMultipleInputs === false && layers.length !== 1) {
+      throw new Error(`composite_layers provider supports exactly one layer (got ${layers.length})`);
+    }
     if (layers.length > 16) {
       throw new Error(`composite_layers layers exceed cap of 16 (got ${layers.length})`);
     }

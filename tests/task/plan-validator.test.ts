@@ -6,12 +6,16 @@ import type { Capability, CapabilityOp } from '../../src/capabilities/types.js';
 import type { Plan, PlanNode } from '../../src/task/plan-schema.js';
 import { validatePlan } from '../../src/task/plan-validator.js';
 
-function capability(op: CapabilityOp, provider: string, requiresInputImage = true): Capability {
+function capability(
+  op: CapabilityOp,
+  provider: string,
+  constraints: Capability['constraints'] = { requiresInputImage: true },
+): Capability {
   return {
     op,
     provider,
     modelVersion: `${provider}@test`,
-    constraints: { requiresInputImage },
+    constraints,
     cost: { perCallUsd: 0 },
     async invoke() {
       throw new Error('not invoked');
@@ -58,7 +62,11 @@ const registry = mockRegistry([
   capability('edit_prompt', 'openai'),
   capability('analyze_dimensions', 'sharp'),
   capability('analyze_ocr', 'tesseract'),
-  capability('generate', 'ideogram', false),
+  capability('generate', 'ideogram', { requiresInputImage: false }),
+  capability('composite_layers', 'photoroom', {
+    requiresInputImage: false,
+    supportsMultipleInputs: false,
+  }),
 ]);
 
 async function validate(plan: Plan, inputImages: Record<string, string> = { product: '/tmp/product.png' }) {
@@ -276,6 +284,39 @@ describe('validatePlan', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.errors.some((error) => error.code === 'PARAM_INVALID' && /prompt/.test(error.message))).toBe(true);
+    }
+  });
+
+  it('rejects provider-specific multi-layer composite plans before execution', async () => {
+    const result = await validate(makePlan({
+      nodes: [{
+        id: 'composite',
+        op: 'composite_layers',
+        provider: 'photoroom',
+        params: {
+          canvas: { width: 512, height: 512 },
+          layers: [
+            { input: '$inputs.product' },
+            { input: '$inputs.product', x: 10, y: 10 },
+          ],
+        },
+        dependsOn: [],
+        outputKind: 'image',
+        costUsd: 0.05,
+        latencyMs: 4000,
+      }],
+      terminalNodeId: 'composite',
+      estimatedTotalCostUsd: 0.05,
+      estimatedTotalLatencyMs: 4000,
+    }));
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContainEqual(expect.objectContaining({
+        code: 'PARAM_INVALID',
+        nodeId: 'composite',
+        message: expect.stringContaining('supports exactly one layer'),
+      }));
     }
   });
 
