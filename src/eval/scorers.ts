@@ -1,11 +1,11 @@
 import pixelmatch from 'pixelmatch';
 import sharp from 'sharp';
-import { createWorker } from 'tesseract.js';
 import type {
   AnalyzeDimensionsResult,
   AnalyzeOcrResult,
   AnalyzePaletteResult,
 } from '../capabilities/types.js';
+import { recognizeOnce } from '../utils/ocr.js';
 import type { EvalScore, EvalScorerId } from './types.js';
 
 const SCORE_SIZE = 256;
@@ -78,11 +78,9 @@ export async function scoreOcrTextPresence(
     };
   }
 
-  let worker: Awaited<ReturnType<typeof createWorker>> | undefined;
   try {
-    worker = await createWorker('eng');
-    const result = await worker.recognize(outputPath);
-    const recognizedText = normalizeOcrText(result.data.text);
+    const data = await recognizeOnce(outputPath, 'eng');
+    const recognizedText = normalizeOcrText(data.text);
     const needle = normalizeOcrText(expectedText);
     if (recognizedText.includes(needle)) {
       return {
@@ -103,10 +101,6 @@ export async function scoreOcrTextPresence(
       status: 'error',
       reason: error instanceof Error ? error.message : String(error),
     };
-  } finally {
-    if (worker) {
-      await worker.terminate().catch(() => undefined);
-    }
   }
 }
 
