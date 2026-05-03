@@ -33,6 +33,32 @@ export function validateCapabilityParams(
     }
   }
 
+  if (capability.op === 'composite_layers') {
+    const canvas = params.canvas as Record<string, unknown> | undefined;
+    if (!canvas || typeof canvas.width !== 'number' || typeof canvas.height !== 'number') {
+      throw new Error('composite_layers requires canvas.width and canvas.height (numbers)');
+    }
+    if (canvas.width <= 0 || canvas.height <= 0) {
+      throw new Error('composite_layers canvas dimensions must be positive');
+    }
+    if (canvas.width * canvas.height > 16_000_000) {
+      throw new Error(`composite_layers canvas exceeds 16MP cap (got ${(canvas.width * canvas.height) / 1e6}MP)`);
+    }
+    const layers = params.layers;
+    if (!Array.isArray(layers) || layers.length === 0) {
+      throw new Error('composite_layers requires non-empty layers array');
+    }
+    if (layers.length > 16) {
+      throw new Error(`composite_layers layers exceed cap of 16 (got ${layers.length})`);
+    }
+    for (let index = 0; index < layers.length; index += 1) {
+      const layer = layers[index] as Record<string, unknown>;
+      if (typeof layer.input !== 'string' || layer.input.trim() === '') {
+        throw new Error(`composite_layers.layers[${index}].input must be a non-empty string`);
+      }
+    }
+  }
+
   if (
     capability.constraints.maxPromptLength !== undefined &&
     typeof params.prompt === 'string' &&

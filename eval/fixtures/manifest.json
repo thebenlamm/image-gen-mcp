@@ -82,5 +82,26 @@
     "category": "product",
     "tags": ["palette", "synthetic"],
     "description": "96x96 PNG with three equal vertical bands: pure red, green, blue."
+  },
+  {
+    "id": "composite-bg",
+    "path": "composite-bg.png",
+    "category": "product",
+    "tags": ["composite", "synthetic"],
+    "description": "512x512 opaque white canvas reference for composite_layers eval."
+  },
+  {
+    "id": "composite-overlay",
+    "path": "composite-overlay.png",
+    "category": "product",
+    "tags": ["composite", "synthetic"],
+    "description": "128x128 opaque red square layer for composite_layers eval."
+  },
+  {
+    "id": "composite-golden",
+    "path": "composite-golden.png",
+    "category": "product",
+    "tags": ["composite", "synthetic", "golden"],
+    "description": "512x512 white background with 128x128 red square centered at (192,192) -- golden output for composite-golden-overlay eval case."
   }
 ]

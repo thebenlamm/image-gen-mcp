@@ -1,0 +1,16 @@
+[
+  {
+    "id": "composite-golden-overlay",
+    "op": "composite_layers",
+    "provider": "sharp",
+    "fixtureId": "composite-golden",
+    "params": {
+      "input": "${fixture.path}",
+      "canvas": { "width": 512, "height": 512, "background": { "r": 255, "g": 255, "b": 255, "alpha": 1 } },
+      "layers": [
+        { "input": "eval/fixtures/composite-overlay.png", "x": 192, "y": 192, "anchor": "top-left" }
+      ]
+    },
+    "scorers": ["pixel_delta"]
+  }
+]
