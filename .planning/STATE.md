@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Goal-Shaped Image MCP
 status: executing
-stopped_at: Phase 9 context gathered
-last_updated: "2026-05-03T04:20:42.584Z"
-last_activity: 2026-05-03 -- Phase 9 planning complete
+stopped_at: Completed 09-01-PLAN.md
+last_updated: "2026-05-03T16:00:18.311Z"
+last_activity: 2026-05-03
 progress:
   total_phases: 11
   completed_phases: 7
   total_plans: 21
-  completed_plans: 16
-  percent: 76
+  completed_plans: 17
+  percent: 81
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-01)
 
 **Core value:** Two value props — guaranteed primitives (v1.0) and flexible goal handoff (v2.0).
-**Current focus:** Phase 08 — op-primitives-expansion
+**Current focus:** Phase 09 — image-task-planner-dag-executor
 
 ## Current Position
 
-Phase: 9
-Plan: Not started
+Phase: 09 (image-task-planner-dag-executor) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-05-03 -- Phase 9 planning complete
+Last activity: 2026-05-03
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Last activity: 2026-05-03 -- Phase 9 planning complete
 *Updated after each plan completion*
 | Phase 07-eval-harness-golden-set P01 | 11min | 4 tasks | 28 files |
 | Phase 07-eval-harness-golden-set P02 | 11min | 4 tasks | 12 files |
+| Phase 09-image-task-planner-dag-executor P01 | 9min | 10 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -99,6 +100,7 @@ Recent decisions affecting current work:
 - [Phase 07]: Eval score application ignores skipped, errored, non-finite, and model-version-mismatched results.
 - [Phase 07]: runEval() writes result JSON first, then applies that result in-process so quality.evalResultPath points at the persisted artifact.
 - [Phase 07]: Gap closure will bring tesseract.js into the eval harness now so OCR scoring runs before Phase 8's user-facing analyze_ocr capability.
+- [Phase 09]: Plan validation gates budget caps on recomputed node costs before provider calls — Matches 09-01 success criteria and prevents Haiku self-reported estimate drift from bypassing constraints.
 
 ### Pending Todos
 
@@ -111,9 +113,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-05-03T02:29:45.707Z
-Stopped at: Phase 9 context gathered
-Resume file: .planning/phases/09-image-task-planner-dag-executor/09-CONTEXT.md
+Last session: 2026-05-03T16:00:05.451Z
+Stopped at: Completed 09-01-PLAN.md
+Resume file: None
 
 ## Quick Tasks
 
