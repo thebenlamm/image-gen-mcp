@@ -5,7 +5,8 @@ An MCP (Model Context Protocol) server for multi-provider image generation. Work
 ## Features
 
 - **5 providers** — OpenAI, Google Gemini, Replicate, Together AI, xAI Grok
-- **4 tools** — `generate_image`, `process_image`, `generate_asset`, `image_op`
+- **5 tools** — `generate_image`, `process_image`, `generate_asset`, `image_op`, `image_task`
+- **Goal-shaped MCP tool** — `image_task`: hand off a natural-language image goal, receive the final image plus a structured DAG trace
 - **Capability operations** — Directly invoke `extract_subject` and `edit_prompt` through `image_op`
 - **Asset presets** — One-call generation of profile pics, post images, hero photos, avatars, and scenes
 - **Image processing** — Resize, crop, aspect crop, and circle mask operations
@@ -78,6 +79,7 @@ Add to `~/.claude/settings.json`:
         "IMAGE_GEN_OUTPUT_DIR": "~/Downloads/generated-images",
         "OPENAI_API_KEY": "sk-...",
         "OPENAI_EDIT_MODEL": "gpt-image-1.5",
+        "ANTHROPIC_API_KEY": "sk-ant-...",
         "GEMINI_API_KEY": "...",
         "REPLICATE_API_TOKEN": "...",
         "TOGETHER_API_KEY": "...",
@@ -118,6 +120,8 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 | `OPENAI_API_KEY` | OpenAI API key | - |
 | `OPENAI_DEFAULT_MODEL` | OpenAI model used when `model` param is omitted | `gpt-image-1` |
 | `OPENAI_EDIT_MODEL` | OpenAI GPT Image model used by `image_op` `edit_prompt` | `gpt-image-1.5` |
+| `ANTHROPIC_API_KEY` | Required for `image_task`. API key for Anthropic Claude Haiku planning. Get one from https://console.anthropic.com/. Calls fail clearly when unset. | - |
+| `IMAGE_GEN_INPUT_ROOT` | Optional path-validation root for capability input paths. When set, input paths for `extract_subject`, `edit_prompt`, `composite_layers.layers[].input`, `transform`, `enhance_upscale`, and `analyze_*` must resolve under this root; `..` traversal and symlinks outside the root are rejected before invocation. Recommended for `image_task` because the planner can emit paths the user did not type. | unset |
 | `GEMINI_API_KEY` | Google AI Studio API key | - |
 | `REPLICATE_API_TOKEN` | Replicate API token | - |
 | `TOGETHER_API_KEY` | Together AI API key | - |
@@ -216,6 +220,12 @@ Extract the subject from /path/to/photo.png using image_op
 
 ```
 Use image_op to edit /path/to/photo.png with OpenAI: change the background to a clean white studio backdrop
+```
+
+### Hand Off a Goal to image_task
+
+```
+Use image_task with goal "remove the background and place this product on a clean white studio surface, 2000px square" and input_images ["/path/to/product.jpg"]
 ```
 
 ## Tool Reference
@@ -464,6 +474,70 @@ Example:
   }
 }
 ```
+
+---
+
+### `image_task`
+
+Hand off a natural-language image goal and receive a final image plus a structured trace. The MCP plans a DAG of capability invocations using Anthropic Claude Haiku, validates it, executes it, and returns paths only — never base64.
+
+**Requires `ANTHROPIC_API_KEY`.**
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `goal` | string | Yes | Natural-language description of the desired image outcome |
+| `input_images` | string[] | No | Absolute paths to input images. Validated against `IMAGE_GEN_INPUT_ROOT` when set |
+| `constraints` | object | No | `{output_size, output_format, quality_tier, budget_cap_usd, latency_cap_seconds, style_refs}` |
+| `dry_run` | boolean | No | When true, return the validated plan and estimated totals without invoking any provider |
+| `runId` | string | No | Reuse an existing runId; otherwise auto-generated |
+| `seed` | number | No | Optional planner seed for reproducible plan choice |
+| `outputDir` / `outputPath` | string | No | Standard output rules apply |
+
+#### Dry-Run Preview
+
+Set `dry_run: true` to see the validated plan without paying for any provider call. This is useful for checking provider routing and estimated cost before execution.
+
+#### Budget Cap
+
+Set `constraints.budget_cap_usd` to enforce a maximum estimated cost. If the plan exceeds the cap, the call returns `BUDGET_CAP_EXCEEDED` before any provider is called. The error includes `estimated_cost_usd` and `cap_usd`.
+
+#### Response Shape
+
+```json
+{
+  "success": true,
+  "output": { "path": "/path/to/final.png", "mimeType": "image/png" },
+  "runId": "run_20260503_120000_abcdef",
+  "total_cost_usd": 0.04,
+  "total_latency_ms": 8200,
+  "plan": {
+    "goal": "...",
+    "terminalNodeId": "transform",
+    "steps": [
+      { "id": "extract", "op": "extract_subject", "provider": "@imgly/local", "dependsOn": [] }
+    ]
+  },
+  "trace": [
+    {
+      "id": "nextract",
+      "op": "extract_subject",
+      "provider": "@imgly/local",
+      "status": "success",
+      "output_path": "/path/to/.runs/run_.../nextract.png",
+      "cost_usd": 0,
+      "latency_ms": 1100
+    }
+  ]
+}
+```
+
+The trace always returns filesystem paths only — never base64 image data. Intermediate artifacts live under `<outputDir>/.runs/<runId>/`.
+
+#### Best-Partial on Failure
+
+If a node fails mid-execution, downstream nodes whose dependencies cannot be satisfied are skipped. The response includes `bestPartial: {nodeId, path}` for the latest successful image-producing node, `failedNodeId` for the failed node, and a structured `error: {message, code, retryable, suggestion}` on that trace entry.
 
 ## Output Files
 
