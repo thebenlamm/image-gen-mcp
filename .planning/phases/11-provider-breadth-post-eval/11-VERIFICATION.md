@@ -1,50 +1,40 @@
 ---
 phase: 11-provider-breadth-post-eval
-verified: 2026-05-03T21:11:11Z
-status: gaps_found
-score: 15/19 must-haves verified
+verified: 2026-05-03T23:16:43Z
+status: human_needed
+score: 19/19 must-haves verified
 overrides_applied: 0
-gaps:
-  - truth: "`image_task` with `{goal: \"...\", constraints: {quality_tier: 'best'}}` for a product-photography goal routes to Photoroom (verifiable in trace)"
-    status: failed
-    reason: "The Photoroom composite_layers adapter is the planned product-photography/shadow path, but it does not implement the advertised composite contract: it requires top-level params.input through shared validation, uploads only layers[0].input, and ignores layer placement/opacity by sending them in a custom field the provider will not apply."
-    artifacts:
-      - path: "src/capabilities/photoroom-composite-layers.ts"
-        issue: "constraints.requiresInputImage=true conflicts with README-documented params.canvas + params.layers[] contract; invoke reads only layers[0].input and sends imageGenMcp.layers rather than applying documented composition semantics."
-      - path: "src/capabilities/validation.ts"
-        issue: "requiresInputImage gate rejects documented composite_layers:photoroom calls that omit params.input."
-    missing:
-      - "Align Photoroom composite_layers capability constraints and invocation with the supported production contract."
-      - "Either implement real background + layer composition before/through Photoroom, or narrow the capability and docs/evals to the single-subject edit contract."
-      - "Add regression coverage through image_op or validated image_task plan for the documented Photoroom composite call shape."
-  - truth: "Each new provider has at least one eval case before its `quality.score` is populated; provider registration fails or warns if no eval case exists"
-    status: failed
-    reason: "The Photoroom composite_layers eval case can populate quality scores from invalid semantics: it compares output against composite-bg while the adapter uploads/edits composite-overlay and ignores params.input. The resulting score is not valid routing evidence for PROV-01."
-    artifacts:
-      - path: "eval/cases/photoroom.json"
-        issue: "composite-photoroom-product-with-shadow sets params.input to composite-bg but production adapter ignores params.input and uploads layers[0].input."
-      - path: "src/eval/run.ts"
-        issue: "pixel_delta uses params.input as the baseline, so this case scores against a different image than the adapter edits."
-      - path: "tests/eval/run.test.ts"
-        issue: "test returns composite-bg from a fake Photoroom capability, so it proves score plumbing but not production Photoroom composite semantics."
-    missing:
-      - "Fix the Photoroom composite eval to invoke and score the same semantics production uses."
-      - "Ensure applyEvalResultsToRegistry can only assign composite_layers:photoroom quality from a semantically valid Photoroom composite case."
+re_verification:
+  previous_status: gaps_found
+  previous_score: 15/19
+  gaps_closed:
+    - "Photoroom composite_layers no longer requires top-level params.input and can pass shared validation with params.canvas + params.layers[]."
+    - "Photoroom composite_layers rejects multi-layer and placement-field calls before network execution instead of silently dropping unsupported semantics."
+    - "Photoroom composite eval case no longer supplies orphan params.input and now scores the adapter's actual single-subject shadow path with alpha_coverage."
+    - "runEval rejects eval cases whose params.input contradicts a resolved capability declaring requiresInputImage=false before invocation/scoring."
+  gaps_remaining: []
+  regressions: []
 human_verification:
-  - test: "Run live Phase 11 evals with PHOTOROOM_API_KEY, FAL_KEY, and IDEOGRAM_API_KEY set."
-    expected: "`npm run eval` writes scored results for extract_subject:photoroom, composite_layers:photoroom, edit_prompt:fal, and generate:ideogram, then list_capabilities shows quality.scores for all four."
-    why_human: "External provider credentials and live API behavior are required; automated tests use mocked providers."
-  - test: "After fixing the Photoroom composite contract, run image_task product-photography best-tier routing against a scored registry."
-    expected: "Trace shows Photoroom selected for the product/shadow composite route with metadata.qualityMeasured=true and relevant qualityScores."
-    why_human: "Requires live eval output plus planner/runtime behavior with real capability scores."
+  - test: "Run live Phase 11 provider evals with PHOTOROOM_API_KEY, FAL_KEY, and IDEOGRAM_API_KEY set."
+    expected: "npm run eval exits 0 and produces scored results for extract_subject:photoroom, composite_layers:photoroom, edit_prompt:fal, and generate:ideogram; list_capabilities then shows non-empty quality.scores for all four."
+    why_human: "External provider credentials and live API behavior are required; automated tests use mocked providers or synthetic eval results."
+  - test: "Run a best-tier product-photography image_task with a real product image."
+    expected: "Trace shows composite_layers provider=photoroom with metadata.api='image-editing', metadata.shadowApplied=true, metadata.qualityMeasured=true, and non-empty metadata.qualityScores."
+    why_human: "The final product-photography route depends on live eval scores plus LLM planner behavior against the scored registry."
+  - test: "Run a fast-tier Replicate-class/edit task after live evals."
+    expected: "Trace selects edit_prompt:fal when fal.ai's measured latency/cost edge wins above the quality floor, with quality metadata visible."
+    why_human: "Requires live fal.ai timing/results and planner route selection; no live credentials are available to this verifier."
+  - test: "Run a text-heavy generation task after live evals."
+    expected: "Trace selects generate:ideogram for text-heavy generation and exposes ocr_text_presence quality scores."
+    why_human: "Ideogram live generation and OCR-scored eval output are external-service dependent."
 ---
 
 # Phase 11: Provider Breadth (Post-Eval) Verification Report
 
 **Phase Goal:** Users can route through Photoroom, fal.ai, Flux Kontext, and Ideogram for capabilities where they measurably outperform existing providers
-**Verified:** 2026-05-03T21:11:11Z
-**Status:** gaps_found
-**Re-verification:** No - initial verification
+**Verified:** 2026-05-03T23:16:43Z
+**Status:** human_needed
+**Re-verification:** Yes - after gap closure and review fixes
 
 ## Goal Achievement
 
@@ -52,80 +42,83 @@ human_verification:
 
 | # | Truth | Status | Evidence |
 |---|---|---|---|
-| 1 | Product-photography `image_task` best-tier routes to Photoroom with trace evidence | FAILED | Photoroom composite path exists, but `src/capabilities/photoroom-composite-layers.ts:127-156` requires top-level input, uploads only `layers[0].input`, and does not apply layer placement. This invalidates the product/shadow route. |
-| 2 | Fast-tier Replicate-class route can select a fal.ai mirror when measured cost/latency wins | VERIFIED | fal Flux Kontext registers as `edit_prompt:fal` in `src/capabilities/register.ts:44-47`, has eval cases in `eval/cases/fal-flux-kontext.json`, and trace metadata exposes scored/unscored state in `src/task/dag-executor.ts:157-177`. Planner prompt includes cost/latency fallback guidance in `src/task/planner.ts:73-80`. |
-| 3 | Flux Kontext is registered for `edit_prompt` and selectable when measured edit score exceeds OpenAI | VERIFIED | `src/capabilities/fal-edit-prompt.ts:133-225` implements `edit_prompt:fal`; registration uses `allowUnscoredProduction` at `src/capabilities/register.ts:44-47`; `tests/eval/apply-results.test.ts:172-205` proves fal eval results populate scores. |
-| 4 | Ideogram is registered for `generate` with measured text-fidelity scoring for text-heavy goals | VERIFIED | `generate` is in `CapabilityOp` at `src/capabilities/types.ts:1-10`, Ideogram implements `generate` in `src/capabilities/ideogram-generate.ts:88-156`, eval cases use `ocr_text_presence` in `eval/cases/ideogram.json`, and apply-results coverage verifies `generate:ideogram` scores in `tests/eval/apply-results.test.ts:184-208`. |
-| 5 | Each new provider has eval coverage before quality scores are populated | FAILED | Photoroom extract, fal, and Ideogram have valid case plumbing. The Photoroom composite case is not valid evidence because `eval/cases/photoroom.json:35-47` scores `params.input` while the adapter ignores it and edits `layers[0].input` (`src/capabilities/photoroom-composite-layers.ts:139`). |
-| 6 | Photoroom extract_subject is capability-only, API-key gated, and unscored-second-provider guarded | VERIFIED | Factory returns null without key at `src/capabilities/photoroom-extract-subject.ts:27-31`; registration uses `allowUnscoredProduction` at `src/capabilities/register.ts:34-37`; metadata includes provider/modelVersion at `src/capabilities/photoroom-extract-subject.ts:93-103`. |
-| 7 | Photoroom composite_layers is capability-only, API-key gated, and intended as shadow/relighting path | FAILED | Adapter and registration exist, endpoint is `image-api.photoroom.com/v2/edit` at `src/capabilities/photoroom-composite-layers.ts:7-9`, and metadata marks `shadowApplied`; implementation semantics are blocking as above. |
-| 8 | fal registers through `allowUnscoredProduction` without loosening the registry gate | VERIFIED | Registry still throws for unscored second providers unless explicitly allowed at `src/capabilities/registry.ts:31-47`; fal registration passes the option at `src/capabilities/register.ts:44-47` with a non-empty justification in `src/capabilities/fal-edit-prompt.ts:152-154`. |
-| 9 | Ideogram sole-provider `generate` registration does not require unscored second-provider override | VERIFIED | `src/capabilities/register.ts:49-52` registers Ideogram without `allowUnscoredProduction`; registry gate only applies when same-op providers already exist. |
-| 10 | `generate` validation is wired through capability, plan, eval, and image_op surfaces | VERIFIED | `src/capabilities/types.ts:1-10`, `src/capabilities/validation.ts:25-29`, `src/task/plan-schema.ts:17-26`, `src/task/plan-validator.ts:54`, `src/eval/cases.ts:26`, and `src/index.ts:453-457` include `generate`. |
-| 11 | New provider invoke returns expose provider/modelVersion metadata | VERIFIED | Photoroom extract lines `97-103`, Photoroom composite lines `186-196`, fal lines `211-222`, and Ideogram lines `142-152` include provider/modelVersion metadata. |
-| 12 | Phase 11 eval cases use deterministic scorers only | VERIFIED | Photoroom uses `alpha_coverage`/`pixel_delta`; fal uses `pixel_delta`/`ocr_text_presence`; Ideogram uses `ocr_text_presence`. No human scorer appears in new case files. |
-| 13 | fal cases mirror OpenAI fixtures/prompts for head-to-head comparison | VERIFIED | `eval/cases/fal-flux-kontext.json:3-27` matches `eval/cases/edit-prompt.json:3-27` for product color and SALE 50 cases. |
-| 14 | Trace enriches every resolved route with qualityMeasured and optional quality fields | VERIFIED | `computeRoutingTransparency` in `src/task/dag-executor.ts:157-177` emits `qualityMeasured`, `qualityScores`, `noIncumbentComparison`, and `qualityUnavailable`; success/error paths merge it at lines `212` and `227-328`. |
-| 15 | Serialized response preserves trace metadata | VERIFIED | `src/task/serialize-response.ts:102-130` copies `traceNode.metadata` into response trace and guards only binary/base64 payloads. |
-| 16 | Provider failure does not silently fallback | VERIFIED | `executeDag` resolves the planned capability once at `src/task/dag-executor.ts:312-336`; tests assert alternate provider is not invoked at `tests/task/dag-executor.test.ts:370-395`. |
-| 17 | `applyEvalResultsToRegistry` populates scores by op/provider/modelVersion, including new providers | VERIFIED | `src/eval/apply-results.ts:51-77` iterates registry capabilities and keys by op/provider/modelVersion; `tests/eval/apply-results.test.ts:146-209` covers all Phase 11 providers. |
-| 18 | Code review findings do not block phase goal | FAILED | CR-01, CR-02, and CR-03 are real blockers for PROV-01/PROV-05. They prevent valid Photoroom composite routing evidence. |
-| 19 | Automated test/build baseline is green | VERIFIED | Orchestrator context reports `npm test` passed: 48 files, 292 tests; schema drift check `drift_detected=false`. |
+| 1 | Product-photography `image_task` best-tier can route to Photoroom with trace evidence | VERIFIED automated; HUMAN live route | `src/capabilities/photoroom-composite-layers.ts:146-149` sets `requiresInputImage:false` and `supportsMultipleInputs:false`; `src/capabilities/validation.ts:66-76` validates the documented single-layer contract; `README.md:608-615` documents the live route check. |
+| 2 | Fast-tier Replicate-class route can select a fal.ai mirror when measured cost/latency wins | VERIFIED automated; HUMAN live route | `src/capabilities/fal-edit-prompt.ts:133-225` implements `edit_prompt:fal`; eval cases exist in `eval/cases/fal-flux-kontext.json`; planner prompt exposes quality/cost/latency policy at `src/task/planner.ts:73-80`. |
+| 3 | Flux Kontext is registered for `edit_prompt` and selectable when measured edit score exceeds OpenAI | VERIFIED automated; HUMAN live route | Registration in `src/capabilities/register.ts:44-47`; synthetic score application coverage in `tests/eval/apply-results.test.ts:172-205`. |
+| 4 | Ideogram is registered for `generate` with measured text-fidelity scoring for text-heavy goals | VERIFIED automated; HUMAN live route | `generate` is in `src/capabilities/types.ts:1-10`, `src/task/plan-schema.ts:17-27`, and `src/index.ts:452-458`; Ideogram uses documented `1x1`, `16x9`, `9x16` aspect ratios in `src/capabilities/ideogram-generate.ts:9-13`; OCR eval cases exist in `eval/cases/ideogram.json`. |
+| 5 | Each new provider has at least one valid eval case before quality scores are populated | VERIFIED | Photoroom, fal, and Ideogram cases exist with `requiredEnv`; `src/eval/run.ts:103-125` blocks mismatched cases before invocation; `src/eval/apply-results.ts:51-77` only applies scored results by `(op, provider, modelVersion)`. |
+| 6 | Photoroom extract_subject is capability-only, API-key gated, and guarded as an unscored second provider | VERIFIED | Factory returns null without `PHOTOROOM_API_KEY` in `src/capabilities/photoroom-extract-subject.ts:27-31`; registration uses `allowUnscoredProduction` in `src/capabilities/register.ts:34-37`. |
+| 7 | Photoroom composite_layers is capability-only, API-key gated, and delivers the shadow/relighting path | VERIFIED | Adapter posts to Image Editing API at `src/capabilities/photoroom-composite-layers.ts:9`; `shadow.mode` is sent when enabled at lines `171-173`; metadata includes `api` and `shadowApplied` at lines `213-218`. |
+| 8 | fal registers through `allowUnscoredProduction` without loosening the registry gate | VERIFIED | fal registration uses the explicit gate at `src/capabilities/register.ts:44-47`; registry guard remains covered by `tests/capabilities/registry-quality.test.ts`. |
+| 9 | Ideogram sole-provider `generate` registration does not require unscored second-provider override | VERIFIED | `src/capabilities/register.ts:49-52` registers Ideogram without `allowUnscoredProduction`; registry only requires the override for second providers. |
+| 10 | `generate` validation is wired through capability, plan, eval, and image_op surfaces | VERIFIED | Verified in `src/capabilities/validation.ts:25-29`, `src/task/plan-schema.ts:17-27`, `src/task/plan-validator.ts:45-55`, `src/eval/cases.ts`, and `src/index.ts:452-458`. |
+| 11 | New provider invoke returns expose provider/modelVersion metadata | VERIFIED | Photoroom extract lines `97-103`, Photoroom composite lines `213-218`, fal lines `216-222`, Ideogram lines `146-152`. |
+| 12 | Phase 11 eval cases use deterministic scorers only | VERIFIED | Photoroom uses `alpha_coverage`/`pixel_delta`, fal uses `pixel_delta`/`ocr_text_presence`, Ideogram uses `ocr_text_presence`; no human scorer in `eval/cases/*.json`. |
+| 13 | fal cases mirror OpenAI fixtures/prompts for head-to-head comparison | VERIFIED | `eval/cases/fal-flux-kontext.json` mirrors the OpenAI edit prompts and fixtures for product color and SALE 50 text edits. |
+| 14 | Trace enriches every resolved route with qualityMeasured and optional quality fields | VERIFIED | `computeRoutingTransparency` in `src/task/dag-executor.ts:157-177`; merged into success/error traces at lines `212` and `227-328`. |
+| 15 | Serialized response preserves trace metadata | VERIFIED | `src/task/serialize-response.ts:102-130` copies `traceNode.metadata` into serialized trace nodes. |
+| 16 | Provider failure does not silently fallback | VERIFIED | `executeDag` resolves one planned capability at `src/task/dag-executor.ts:312-336`; test coverage asserts no alternate provider invocation in `tests/task/dag-executor.test.ts`. |
+| 17 | `applyEvalResultsToRegistry` populates scores by op/provider/modelVersion, including new providers | VERIFIED | `src/eval/apply-results.ts:51-77`; Phase 11 synthetic result test verifies all four providers in `tests/eval/apply-results.test.ts:146-209`. |
+| 18 | Code review findings do not block phase goal | VERIFIED with warnings | Current `11-REVIEW.md` has 0 critical and 3 warnings. WR-01/WR-02/WR-03 are robustness/contract warnings, not observed blockers for the verified Phase 11 route surfaces. |
+| 19 | Automated test/build baseline is green | VERIFIED | I ran `npm run build` and targeted Vitest suites: 4 files, 47 tests passed. Orchestrator also reports `npm test` passed: 48 files, 298 tests, 0 failed, and schema drift `drift_detected=false`. |
 
-**Score:** 15/19 truths verified
+**Score:** 19/19 truths verified automatically; live provider UAT still required.
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |---|---|---|---|
-| `src/capabilities/photoroom-extract-subject.ts` | Photoroom Remove Background `extract_subject` | VERIFIED | Exists, substantive, registered, API-key gated. |
-| `src/capabilities/photoroom-composite-layers.ts` | Photoroom Image Editing `composite_layers` with shadow | FAILED | Exists and registered, but production contract is misaligned: top-level input gate, single uploaded layer, ignored placement/opacity. |
-| `src/capabilities/fal-edit-prompt.ts` | fal Flux Kontext `edit_prompt` | VERIFIED | Exists, registered, API-key gated, metadata emitted. Warning remains: queue poll fetches lack per-request abort. |
-| `src/capabilities/ideogram-generate.ts` | Ideogram `generate` | VERIFIED | Exists, registered, API-key gated, metadata emitted. Warning remains: initial generate fetch lacks timeout. |
-| `eval/cases/photoroom.json` | Photoroom extract + composite eval coverage | FAILED | Extract cases are valid; composite case scores the wrong input semantics. |
-| `eval/cases/fal-flux-kontext.json` | fal eval cases | VERIFIED | Two cases mirror OpenAI fixtures/prompts; text case includes OCR expectedText. |
-| `eval/cases/ideogram.json` | Ideogram text-fidelity eval cases | VERIFIED | Two `generate` cases use `ocr_text_presence` and `expectedText`. |
-| `src/task/dag-executor.ts` | Trace routing metadata | VERIFIED | Metadata computed from registry and emitted on success/error traces. |
+| `src/capabilities/photoroom-extract-subject.ts` | Photoroom Remove Background `extract_subject` | VERIFIED | Substantive, API-key gated, registered, returns provider/modelVersion metadata. |
+| `src/capabilities/photoroom-composite-layers.ts` | Photoroom Image Editing `composite_layers` with shadow | VERIFIED | Single-subject contract, no top-level input requirement, rejects multi-layer and placement fields, no `imageGenMcp.layers` field. |
+| `src/capabilities/fal-edit-prompt.ts` | fal Flux Kontext `edit_prompt` | VERIFIED | Substantive adapter and registration. Review warning remains: poll/result fetches lack per-request abort. |
+| `src/capabilities/ideogram-generate.ts` | Ideogram `generate` | VERIFIED | Substantive adapter and registration; aspect ratios are documented `1x1`, `16x9`, `9x16`. Review warning remains: initial generate POST lacks timeout. |
+| `eval/cases/photoroom.json` | Photoroom extract + composite eval coverage | VERIFIED | Composite case has no `params.input`, uses one layer with `shadow.enabled`, and scores `alpha_coverage`. |
+| `eval/cases/fal-flux-kontext.json` | fal eval cases | VERIFIED | Two cases with deterministic scorers and `FAL_KEY` gate. |
+| `eval/cases/ideogram.json` | Ideogram text-fidelity eval cases | VERIFIED | Two `generate` cases use OCR text presence and `IDEOGRAM_API_KEY` gate. |
+| `src/eval/run.ts` | Eval case execution and contract lint | VERIFIED | Rejects params/input mismatches before invocation/scoring. |
+| `src/task/dag-executor.ts` | Trace routing metadata | VERIFIED | Computes and emits quality metadata from the resolved registry. |
+| `README.md` | Provider breadth and live verification docs | VERIFIED | Documents single-subject Photoroom contract and live eval/image_task checks. |
+
+`gsd-sdk verify.artifacts` reported one pattern miss because 11-03 PLAN listed `invalid-composite-case` under `tests/eval/apply-results.test.ts`; the regression exists in `tests/eval/run.test.ts:280-331`, matching the PLAN truth's "apply-results or run.test" wording. This is not a gap.
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |---|---|---|---|---|
-| `src/capabilities/register.ts` | New provider factories | Factory invocation + registry.register | VERIFIED | Imports and invokes all four factories at lines `8-11` and `34-52`. |
-| `src/capabilities/validation.ts` | `generate` param check | `capability.op === 'generate'` | VERIFIED | Lines `25-29` require non-empty prompt. |
-| `src/index.ts` | `image_op` zod enum | `z.enum([...,'generate'])` | VERIFIED | Lines `453-457` include `generate` in description and enum. |
-| `eval/cases/*.json` | `src/eval/run.ts` / `applyEvalResultsToRegistry` | `runEval` loads cases, invokes capability, scores, applies results | VERIFIED | `src/eval/run.ts:68-180` loads/runs cases and calls `applyEvalResultsToRegistry` after writing results. |
-| `eval/cases/photoroom.json` composite case | Photoroom composite adapter and quality scores | Image Editing API + scorer + apply-results | FAILED | Case and adapter are connected, but they do not share the same input semantics. |
-| `src/task/dag-executor.ts` | Trace quality metadata | Registry list/listScored | VERIFIED | Lines `157-177`, `212`, `227`, and `328`. |
-| `src/task/serialize-response.ts` | Response trace | metadata copy | VERIFIED | Lines `102-130`. |
+| `src/capabilities/register.ts` | New provider factories | Factory invocation + registry.register | VERIFIED | Imports/invokes Photoroom, fal, and Ideogram factories at lines `8-11` and `34-52`. |
+| `src/capabilities/validation.ts` | Photoroom composite contract | `requiresInputImage:false`, single-layer and placement rejection | VERIFIED | `validateCapabilityParams` accepts no top-level input and rejects unsupported placement fields for single-input providers. |
+| `eval/cases/photoroom.json` | Photoroom composite adapter | Case params match consumed shape | VERIFIED | Case supplies `canvas`, exactly one `layers[0].input`, and `shadow.enabled`; adapter consumes those fields. |
+| `src/eval/run.ts` | Registry quality population | Contract lint before invoke, then apply results | VERIFIED | Invalid cases become `status:'error'`; `applyEvalResultsToRegistry` only runs after successful eval with scored cases. |
+| `src/task/dag-executor.ts` | Response trace | `qualityMeasured`, `qualityScores`, `noIncumbentComparison`, `qualityUnavailable` | VERIFIED | Trace metadata is computed from registry and serialized unchanged. |
 
 ### Data-Flow Trace (Level 4)
 
 | Artifact | Data Variable | Source | Produces Real Data | Status |
 |---|---|---|---|---|
-| `src/eval/apply-results.ts` | `quality.scores` | Scored eval result entries matched by op/provider/modelVersion | Yes for valid results | VERIFIED |
-| `src/task/dag-executor.ts` | `trace.nodes[].metadata.qualityScores` | Resolved capability registry quality | Yes when registry has scores | VERIFIED |
-| `src/task/planner.ts` | capability snapshot quality | `registry.list()` serialized into system prompt | Yes | VERIFIED |
-| `eval/cases/photoroom.json` composite score | `pixel_delta` baseline | `params.input` in `src/eval/run.ts` | No for production semantics | FAILED |
+| `src/eval/apply-results.ts` | `quality.scores` | Scored eval result entries matched by op/provider/modelVersion | Yes, for valid scored eval entries | VERIFIED |
+| `src/eval/run.ts` | Photoroom composite score input | `eval/cases/photoroom.json` plus live adapter output | Yes after live eval; automated guard prevents invalid semantic scoring | VERIFIED automated; HUMAN live data |
+| `src/task/dag-executor.ts` | `trace.nodes[].metadata.qualityScores` | Resolved capability registry quality | Yes when registry has eval-populated scores | VERIFIED |
+| `src/task/planner.ts` | Capability snapshot quality | `registry.list()` serialized into system prompt | Yes | VERIFIED |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 |---|---|---|---|
-| Full automated baseline | `npm test` | Orchestrator reports 48 files, 292 tests passed | PASS |
+| Build | `npm run build` | Exit 0 | PASS |
+| Targeted Phase 11 regressions | `npx vitest run tests/capabilities/photoroom-composite-layers.test.ts tests/eval/run.test.ts tests/eval/apply-results.test.ts tests/task/dag-executor.test.ts` | 4 files, 47 tests passed | PASS |
+| Full test suite | `npm test` | Orchestrator reports 48 files, 298 tests, 0 failed | PASS |
 | Schema drift | schema drift check | Orchestrator reports `drift_detected=false` | PASS |
-| Codebase drift | codebase drift check | Orchestrator reports warning-only README/eval remapping note | PASS |
-| Live provider evals | `npm run eval` with provider keys | Not run in this environment | HUMAN |
+| Live provider evals | `npm run eval` with real provider keys | Not run by verifier | HUMAN |
 
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
 |---|---|---|---|---|
-| PROV-01 | 11-01, 11-02 | Photoroom registered for `extract_subject` (with shadow) and `composite_layers` product photography | BLOCKED | Extract provider is registered. Composite/shadow route is not goal-achieving due CR-01/CR-02/CR-03 evidence. |
-| PROV-02 | 11-01, 11-02 | fal.ai registered as faster/cheaper mirror for Replicate-class capabilities | SATISFIED | `edit_prompt:fal` capability, registration, eval cases, scoring plumbing, and trace fields exist. |
-| PROV-03 | 11-01, 11-02 | Flux Kontext registered for `edit_prompt` | SATISFIED | `src/capabilities/fal-edit-prompt.ts` and registration/eval coverage verified. |
-| PROV-04 | 11-01, 11-02 | Ideogram registered for `generate` with measured text-fidelity score | SATISFIED | `generate` op, Ideogram adapter, OCR eval cases, and score application test verified. |
-| PROV-05 | 11-02 | Each new provider has at least one eval case before `quality.score` is populated | BLOCKED | Score application gate exists, but Photoroom composite eval is semantically invalid and can populate an invalid quality score. |
+| PROV-01 | 11-01, 11-02, 11-03 | Photoroom registered for `extract_subject` and `composite_layers` product photography | VERIFIED automated; HUMAN live route | Both adapters are implemented/registered; composite shadow route and valid eval case are aligned. Live image_task route still needs credential-backed confirmation. |
+| PROV-02 | 11-01, 11-02 | fal.ai registered as faster/cheaper mirror for Replicate-class capabilities | VERIFIED automated; HUMAN live route | `edit_prompt:fal`, eval coverage, score application, and trace transparency exist. Live latency/cost displacement needs real fal eval. |
+| PROV-03 | 11-01, 11-02 | Flux Kontext registered for `edit_prompt` | VERIFIED automated; HUMAN live route | fal adapter uses `fal-ai/flux-pro/kontext` and is registered as `edit_prompt:fal`. |
+| PROV-04 | 11-01, 11-02 | Ideogram registered for `generate` with measured text-fidelity score | VERIFIED automated; HUMAN live route | `generate:ideogram`, OCR eval cases, and score application are wired. |
+| PROV-05 | 11-02, 11-03 | Each new provider has at least one eval case before `quality.score` is populated | VERIFIED automated; HUMAN live eval | Valid eval cases exist and the run-time contract lint prevents known invalid score population. Live scores require provider keys. |
 
 No orphaned Phase 11 requirements were found beyond PROV-01 through PROV-05 in `.planning/REQUIREMENTS.md`.
 
@@ -133,12 +126,11 @@ No orphaned Phase 11 requirements were found beyond PROV-01 through PROV-05 in `
 
 | File | Line | Pattern | Severity | Impact |
 |---|---:|---|---|---|
-| `src/capabilities/photoroom-composite-layers.ts` | 127 | Misleading `requiresInputImage: true` | BLOCKER | Rejects documented Photoroom composite calls that provide canvas/layers only. |
-| `src/capabilities/photoroom-composite-layers.ts` | 139 | Reads only `layers[0].input` | BLOCKER | Silently drops additional layers and top-level input. |
-| `src/capabilities/photoroom-composite-layers.ts` | 156 | Custom `imageGenMcp.layers` form field | BLOCKER | Placement/opacity metadata is not applied to provider output. |
-| `eval/cases/photoroom.json` | 35 | Eval baseline not used by adapter | BLOCKER | Quality score can be populated from invalid product/shadow semantics. |
-| `src/capabilities/ideogram-generate.ts` | 122 | Fetch without abort timeout | WARNING | Can hang live generate calls. Does not by itself disprove provider breadth. |
-| `src/capabilities/fal-edit-prompt.ts` | 90 | Queue poll fetch without per-request timeout | WARNING | Can hang live polling despite overall timeout intent. |
+| `src/capabilities/photoroom-composite-layers.ts` | 174 | Ignores canonical `canvas.background` while accepting it in shared shape | WARNING | Current review WR-01. A plan using `canvas.background` may get default/transparent provider output unless it uses `params.background.color`. Does not block the verified single-subject shadow path. |
+| `src/capabilities/ideogram-generate.ts` | 122 | Initial provider POST has no timeout | WARNING | Current review WR-02. A stalled request can hang live calls. |
+| `src/capabilities/fal-edit-prompt.ts` | 90 | fal status/result fetches have no per-request timeout | WARNING | Current review WR-02. Poll loop timeout does not cover a stuck individual fetch. |
+| `src/capabilities/photoroom-composite-layers.ts` | 105 | Non-object layer entries can throw raw TypeError | WARNING | Current review WR-03. Malformed callers get inconsistent errors; existing valid route is unaffected. |
+| `src/capabilities/validation.ts` | 82 | Non-object layer entries can throw raw TypeError | WARNING | Current review WR-03. Should be hardened in follow-up. |
 
 ### Human Verification Required
 
@@ -146,19 +138,31 @@ No orphaned Phase 11 requirements were found beyond PROV-01 through PROV-05 in `
 
 **Test:** Set `PHOTOROOM_API_KEY`, `FAL_KEY`, and `IDEOGRAM_API_KEY`, then run `npm run eval`.
 **Expected:** Results include scored entries for `extract_subject:photoroom`, `composite_layers:photoroom`, `edit_prompt:fal`, and `generate:ideogram`; `list_capabilities` shows quality scores for all four.
-**Why human:** Requires external credentials and live provider APIs.
+**Why human:** Requires external provider credentials and live provider APIs.
 
-#### 2. Product-Photography Routing After Composite Fix
+#### 2. Product-Photography Best-Tier Routing
 
-**Test:** After fixing the Photoroom composite contract, run `image_task` with a best-tier product/shadow goal against a scored registry.
-**Expected:** Trace shows Photoroom selected for product/shadow work with `metadata.qualityMeasured: true` and relevant `qualityScores`.
-**Why human:** Requires live eval-derived scores and planner/runtime behavior with real provider credentials.
+**Test:** Call `image_task` with `{ goal: "product photo on a clean white surface with soft shadow", input_images: ["/path/to/product.jpg"], constraints: { quality_tier: "best" } }` after live evals.
+**Expected:** Trace shows `composite_layers` selected with `provider=photoroom`, `metadata.api="image-editing"`, `metadata.shadowApplied=true`, `metadata.qualityMeasured=true`, and non-empty `metadata.qualityScores`.
+**Why human:** Requires live eval-derived scores plus planner/runtime behavior with real credentials.
+
+#### 3. fal.ai Fast-Tier Routing
+
+**Test:** Run a fast-tier edit task matching the Replicate-class/Flux Kontext route after live evals.
+**Expected:** Trace selects `edit_prompt:fal` when fal.ai's measured latency/cost wins above the quality floor.
+**Why human:** Requires live fal.ai latency/cost/quality evidence.
+
+#### 4. Ideogram Text-Heavy Routing
+
+**Test:** Run a text-heavy generation task after live evals.
+**Expected:** Trace selects `generate:ideogram` and surfaces `ocr_text_presence` in `metadata.qualityScores`.
+**Why human:** Requires live Ideogram generation and OCR-scored eval results.
 
 ### Gaps Summary
 
-Phase 11 is not ready to pass. Most provider breadth plumbing exists: `generate` is wired, fal and Ideogram have deterministic eval coverage, score application works, and trace metadata is visible. The blocker is Photoroom `composite_layers`, which is the planned PROV-01 product-photography shadow route. The adapter and eval case disagree about what image is being edited/scored, and the adapter does not implement the documented composite layer contract. Because that path can produce invalid quality scores, PROV-01 and PROV-05 are not achieved.
+No automated blockers remain. The previous Photoroom composite gaps are closed in code and tests. The phase cannot be marked `passed` yet because the goal is explicitly about routing through live external providers where they measurably outperform incumbents, and that requires credential-backed evals plus live `image_task` route checks.
 
 ---
 
-_Verified: 2026-05-03T21:11:11Z_
+_Verified: 2026-05-03T23:16:43Z_
 _Verifier: the agent (gsd-verifier)_
