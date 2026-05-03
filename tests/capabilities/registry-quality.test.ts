@@ -17,10 +17,10 @@ function capability(
     modelVersion: options.modelVersion ?? 'model-v1',
     constraints: { outputFormat: 'png' },
     cost: { perCallUsd: 0 },
-    quality: options.scores || options.unscoredJustification
+    quality: options.scores || Object.prototype.hasOwnProperty.call(options, 'unscoredJustification')
       ? {
           ...(options.scores ? { scores: options.scores } : {}),
-          ...(options.unscoredJustification
+          ...(Object.prototype.hasOwnProperty.call(options, 'unscoredJustification')
             ? { unscoredJustification: options.unscoredJustification }
             : {}),
         }
@@ -118,4 +118,45 @@ describe('CapabilityRegistry quality guardrails', () => {
       'provider-b',
     ]);
   });
+});
+
+describe('Phase 11 second-provider gate', () => {
+  const scenarios = [
+    { op: 'extract_subject' as const, incumbent: 'fake-imgly', second: 'photoroom' },
+    { op: 'composite_layers' as const, incumbent: 'fake-sharp', second: 'photoroom' },
+    { op: 'edit_prompt' as const, incumbent: 'fake-openai', second: 'fal' },
+  ];
+
+  for (const scenario of scenarios) {
+    it(`rejects unscored ${scenario.op}/${scenario.second} without explicit bypass`, () => {
+      const registry = new CapabilityRegistry();
+      registry.register(capability(scenario.incumbent, { op: scenario.op }));
+
+      expect(() => registry.register(capability(scenario.second, { op: scenario.op }))).toThrow(/unscored/);
+    });
+
+    it(`rejects ${scenario.op}/${scenario.second} bypass with empty justification`, () => {
+      const registry = new CapabilityRegistry();
+      registry.register(capability(scenario.incumbent, { op: scenario.op }));
+
+      expect(() =>
+        registry.register(capability(scenario.second, {
+          op: scenario.op,
+          unscoredJustification: '',
+        }), { allowUnscoredProduction: true }),
+      ).toThrow(/unscoredJustification/);
+    });
+
+    it(`allows ${scenario.op}/${scenario.second} bypass with justification`, () => {
+      const registry = new CapabilityRegistry();
+      registry.register(capability(scenario.incumbent, { op: scenario.op }));
+
+      registry.register(capability(scenario.second, {
+        op: scenario.op,
+        unscoredJustification: 'Phase 11 eval scores pending',
+      }), { allowUnscoredProduction: true });
+
+      expect(registry.get(scenario.op, scenario.second)).toBeDefined();
+    });
+  }
 });

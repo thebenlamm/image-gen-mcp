@@ -34,6 +34,28 @@ function makeRegistry(includeUpscale = true) {
   };
 }
 
+function makeExpandedRegistry() {
+  const registry = makeRegistry();
+  const capabilities = [
+    makeCapability('extract_subject', 'photoroom'),
+    makeCapability('composite_layers', 'photoroom'),
+    makeCapability('edit_prompt', 'fal'),
+    makeCapability('generate', 'ideogram'),
+  ];
+
+  return {
+    get(op: CapabilityOp, provider: string) {
+      return registry.get(op, provider) ?? capabilities.find((cap) => cap.op === op && cap.provider === provider);
+    },
+    list(op?: CapabilityOp) {
+      return [
+        ...registry.list(op),
+        ...capabilities.filter((cap) => op === undefined || cap.op === op),
+      ];
+    },
+  };
+}
+
 function expectValidPlan(plan: Plan): Plan {
   return PlanSchema.parse(plan);
 }
@@ -83,6 +105,18 @@ describe('matchTemplate', () => {
     expect(match!.plan.nodes[1]!.params.canvas).toMatchObject({
       background: { r: 255, g: 255, b: 255, alpha: 1 },
     });
+  });
+
+  it('still validates product-on-white with Phase 11 providers present', () => {
+    const match = matchTemplate({
+      goal: 'product-on-white',
+      inputImages: { input_0: '/abs/path/img.png' },
+    }, makeExpandedRegistry());
+
+    expect(match).not.toBeNull();
+    for (const node of match!.plan.nodes) {
+      expect(makeExpandedRegistry().get(node.op, node.provider)).toBeDefined();
+    }
   });
 
   it('maps product-on-white output_size constraints to canvas dimensions', () => {

@@ -7,7 +7,7 @@ An MCP (Model Context Protocol) server for multi-provider image generation. Work
 - **5 providers** — OpenAI, Google Gemini, Replicate, Together AI, xAI Grok
 - **5 tools** — `generate_image`, `process_image`, `generate_asset`, `image_op`, `image_task`
 - **Goal-shaped MCP tool** — `image_task`: hand off a natural-language image goal, receive the final image plus a structured DAG trace
-- **Capability operations** — Directly invoke `extract_subject` and `edit_prompt` through `image_op`
+- **Capability operations** — Directly invoke `extract_subject`, `edit_prompt`, `composite_layers`, `generate`, transform, upscale, and analysis ops through `image_op`
 - **Asset presets** — One-call generation of profile pics, post images, hero photos, avatars, and scenes
 - **Image processing** — Resize, crop, aspect crop, and circle mask operations
 - **Style modifiers** — Prepend style directives (e.g., "watercolor painting") to any prompt
@@ -23,6 +23,9 @@ An MCP (Model Context Protocol) server for multi-provider image generation. Work
 | **Replicate** | `black-forest-labs/flux-1.1-pro` (default), any Replicate model | Huge model variety |
 | **Together AI** | `black-forest-labs/FLUX.1-schnell` (default) | Fast, affordable |
 | **xAI Grok** | `grok-imagine-image` (default), `grok-imagine-image-pro`, `grok-2-image` | Aurora image generation |
+| **Photoroom** | Remove Background API; Image Editing API | Capability-only provider for `extract_subject` and `composite_layers` with Image Editing shadows/relighting. Requires `PHOTOROOM_API_KEY`. |
+| **fal.ai** | `fal-ai/flux-pro/kontext` | Capability-only `edit_prompt` mirror for Flux Kontext. Requires `FAL_KEY`. |
+| **Ideogram** | `ideogram-v3-0` | Capability-only `generate` provider for text-fidelity generation. Requires `IDEOGRAM_API_KEY`. |
 
 ## Installation
 
@@ -46,6 +49,9 @@ export GEMINI_API_KEY=...
 export REPLICATE_API_TOKEN=...
 export TOGETHER_API_KEY=...
 export XAI_API_KEY=...
+export PHOTOROOM_API_KEY=...
+export FAL_KEY=...
+export IDEOGRAM_API_KEY=...
 ```
 
 Restart Claude Code and the tools will be available.
@@ -126,6 +132,9 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 | `REPLICATE_API_TOKEN` | Replicate API token | - |
 | `TOGETHER_API_KEY` | Together AI API key | - |
 | `XAI_API_KEY` | xAI API key | - |
+| `PHOTOROOM_API_KEY` | Photoroom API key. Enables `extract_subject` through the Remove Background API and `composite_layers` through the Image Editing API with shadow/relighting via `photoroom`. | - |
+| `FAL_KEY` | fal.ai API key. Enables `edit_prompt` via `fal` using Flux Kontext as a faster/cheaper mirror to `openai`. | - |
+| `IDEOGRAM_API_KEY` | Ideogram Developer API key. Enables `generate` via `ideogram` for text-fidelity generation. | - |
 
 Only configure API keys for providers you want to use. Providers without keys are automatically disabled.
 
@@ -397,16 +406,21 @@ Invoke a registered image capability directly by operation and provider. This is
 | Operation | Provider | Requires | Description |
 |-----------|----------|----------|-------------|
 | `extract_subject` | `@imgly/local` | `params.input` | Removes the background from a local image using `@imgly/background-removal-node`. No API key required. |
+| `extract_subject` | `photoroom` | `PHOTOROOM_API_KEY`, `params.input` | Removes the background using Photoroom Remove Background API. Produces a flat alpha cutout; shadow output is handled by `composite_layers:photoroom`. |
 | `edit_prompt` | `openai` | `OPENAI_API_KEY`, `params.input`, `params.prompt` | Edits a local image using OpenAI GPT Image through the JSON Images API. Defaults to `OPENAI_EDIT_MODEL=gpt-image-1.5`. |
+| `edit_prompt` | `fal` | `FAL_KEY`, `params.input`, `params.prompt` | Edits a local image using fal.ai Flux Kontext (`fal-ai/flux-pro/kontext`). |
+| `composite_layers` | `sharp` | `params.canvas`, `params.layers[]` | Deterministic local PNG composition using sharp. |
+| `composite_layers` | `photoroom` | `PHOTOROOM_API_KEY`, `params.canvas`, `params.layers[]` | Uses Photoroom Image Editing API for product composition. This adapter delivers the `(with shadow)` qualifier through Image Editing API shadow/relighting. |
+| `generate` | `ideogram` | `IDEOGRAM_API_KEY`, `params.prompt` | Generates a PNG through Ideogram 3.0 and downloads the ephemeral image URL. |
 
-Future operations are reserved in the schema: `composite_layers`, `transform`, `enhance_upscale`, `analyze_dimensions`, `analyze_palette`, `analyze_ocr`, and `generate`.
+Photoroom, fal, and Ideogram are exposed through `image_op` once their API keys are present. `image_task` will only prefer them once Phase 11 eval cases populate quality scores. The Photoroom `composite_layers` adapter delivers the `(with shadow)` qualifier through the Image Editing API; the `extract_subject` adapter uses the simpler Remove Background API and produces a flat alpha cutout.
 
 #### Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `op` | string | Yes | Operation name. Currently `extract_subject` or `edit_prompt`. |
-| `provider` | string | Yes | Capability provider. Use `@imgly/local` for `extract_subject`, `openai` for `edit_prompt`. |
+| `provider` | string | Yes | Capability provider. Use `list_capabilities` to see registered pairs such as `@imgly/local`, `openai`, `sharp`, `replicate`, `tesseract`, `photoroom`, `fal`, or `ideogram`. |
 | `params` | object | No | Operation-specific parameters. |
 | `outputPath` | string | No | Exact output file path (must end in `.png`). |
 | `outputDir` | string | No | Output directory (filename auto-generated). |
@@ -568,6 +582,7 @@ The requested provider doesn't have an API key configured. Either:
 `image_op` could not find the requested `(op, provider)` pair. Check the provider name exactly:
 - `extract_subject` uses `@imgly/local`
 - `edit_prompt` uses `openai` and requires `OPENAI_API_KEY`
+- Phase 11 provider-breadth capabilities require their own API keys: `PHOTOROOM_API_KEY`, `FAL_KEY`, or `IDEOGRAM_API_KEY`
 
 ### "The model '${OPENAI_EDIT_MODEL}' does not exist"
 
