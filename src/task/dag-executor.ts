@@ -35,7 +35,11 @@ export interface ExecPlan {
 export interface ExecCtx {
   runId: string;
   runDir: string;
-  registry?: { get: (op: string, provider: string) => Capability | undefined };
+  registry?: {
+    get: (op: CapabilityOp, provider: string) => Capability | undefined;
+    list?: (op?: CapabilityOp) => Capability[];
+    listScored?: (op?: CapabilityOp) => Capability[];
+  };
 }
 
 export interface ExecResult {
@@ -49,6 +53,12 @@ const INPUT_REF_RE = /^\$inputs\.([A-Za-z_][A-Za-z0-9_]*)$/;
 const NODE_REF_RE = /^\$nodes\.([A-Za-z_][A-Za-z0-9_]*)\.output$/;
 
 type ExecNode = ExecPlan['nodes'][number];
+type RoutingTransparency = {
+  qualityMeasured: boolean;
+  qualityScores?: Record<string, number>;
+  noIncumbentComparison?: true;
+  qualityUnavailable?: true;
+};
 
 function buildResolveCtx(inputs: Record<string, string>, outcomes: Map<string, NodeOutcome>): ResolveCtx {
   return {
@@ -126,6 +136,7 @@ function makeErrorTraceNode(
   startedAtMs: number,
   error: unknown,
   attempts?: number,
+  metadata?: Record<string, unknown>,
 ): TraceNode {
   const message = error instanceof Error ? error.message : String(error);
   return buildTraceNode({
@@ -139,7 +150,31 @@ function makeErrorTraceNode(
     errorDetail: errorDetailFrom(error),
     cost_usd: 0,
     attempts,
+    metadata,
   });
+}
+
+function computeRoutingTransparency(
+  registry: NonNullable<ExecCtx['registry']>,
+  cap: Capability,
+): RoutingTransparency {
+  const qualityScores = cap.quality?.scores;
+  const qualityMeasured = Boolean(qualityScores && Object.keys(qualityScores).length > 0);
+  const sameOpProviders = registry.list?.(cap.op) ?? [cap];
+  const scoredCount = registry.listScored?.(cap.op).length ?? (qualityMeasured ? 1 : 0);
+  const routingTransparency: RoutingTransparency = { qualityMeasured };
+
+  if (qualityMeasured) {
+    routingTransparency.qualityScores = qualityScores;
+  }
+  if (sameOpProviders.length === 1) {
+    routingTransparency.noIncumbentComparison = true;
+  }
+  if (scoredCount === 0) {
+    routingTransparency.qualityUnavailable = true;
+  }
+
+  return routingTransparency;
 }
 
 async function runNodeWithRetry(
@@ -147,6 +182,7 @@ async function runNodeWithRetry(
   node: ExecNode,
   resolvedParams: Record<string, unknown>,
   ctx: ExecCtx,
+  routingTransparency: RoutingTransparency,
 ): Promise<
   | { status: 'success'; result: CapabilityInvokeResult; traceNode: TraceNode; attempts: number }
   | { status: 'error'; traceNode: TraceNode; attempts: number }
@@ -173,7 +209,7 @@ async function runNodeWithRetry(
         outcome: 'success',
         revisedPrompt: result.kind === 'image' ? result.revisedPrompt : undefined,
         cost_usd: node.costUsd ?? 0,
-        metadata: sanitizedMetadata(result.metadata),
+        metadata: { ...(sanitizedMetadata(result.metadata) ?? {}), ...routingTransparency },
         attempts,
       });
       return { status: 'success', result, traceNode, attempts };
@@ -188,7 +224,7 @@ async function runNodeWithRetry(
 
   return {
     status: 'error',
-    traceNode: makeErrorTraceNode(node, startedAtMs, lastError, attempts),
+    traceNode: makeErrorTraceNode(node, startedAtMs, lastError, attempts, routingTransparency),
     attempts,
   };
 }
@@ -284,10 +320,12 @@ export async function executeDag(
       return;
     }
 
+    const routingTransparency = computeRoutingTransparency(registry, cap);
+
     try {
       validateCapabilityParams(cap, resolvedParams);
     } catch (err) {
-      const traceNode = makeErrorTraceNode(node, Date.now(), err, 0);
+      const traceNode = makeErrorTraceNode(node, Date.now(), err, 0, routingTransparency);
       traceNode.inputRefs = inputRefs;
       outcomes.set(node.id, { status: 'error' });
       traceNodesByNodeId.set(node.id, traceNode);
@@ -295,7 +333,7 @@ export async function executeDag(
       return;
     }
 
-    const runResult = await runNodeWithRetry(cap, node, resolvedParams, ctx);
+    const runResult = await runNodeWithRetry(cap, node, resolvedParams, ctx, routingTransparency);
     runResult.traceNode.inputRefs = inputRefs;
 
     if (runResult.status === 'success') {

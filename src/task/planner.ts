@@ -76,7 +76,7 @@ function buildSystemPrompt(registry: CapabilityRegistry): string {
     'Use only explicit refs of the form $inputs.<name> or $nodes.<id>.output.',
     'Choose only registered capabilities from this capability snapshot:',
     JSON.stringify(capabilitySnapshot, null, 2),
-    'Routing policy: prefer measured quality when present, then lower cost, then lower latency, then deterministic/local providers.',
+    'Routing policy: prefer measured quality when present, then lower cost, then lower latency, then deterministic/local providers. When you choose a provider that is the only registered provider for its op, set the corresponding routingNotes[i].rationale to include "no incumbent comparison". When no providers for an op have measured quality, set routingNotes[i].measuredQuality to false and explain that routing used cost/latency only.',
     'Honor budget, latency, output size, and quality constraints. Set node.reason with concise per-node rationale when useful.',
   ].join('\n');
 }
