@@ -10,6 +10,7 @@ const ENDPOINT = 'https://image-api.photoroom.com/v2/edit';
 const MAX_LAYERS = 16;
 const MAX_CANVAS_PIXELS = 16_000_000;
 const ANCHORS = new Set(['top-left', 'center', 'top-right', 'bottom-left', 'bottom-right']);
+const UNSUPPORTED_PLACEMENT_FIELDS = ['x', 'y', 'scale', 'opacity', 'anchor'] as const;
 
 interface PhotoroomCompositeLayer {
   input: string;
@@ -50,6 +51,17 @@ function finiteNumber(value: unknown, name: string): number {
     throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', `${name} must be a finite number`, false);
   }
   return value;
+}
+
+function rejectUnsupportedPlacement(layer: PhotoroomCompositeLayer): void {
+  const fields = UNSUPPORTED_PLACEMENT_FIELDS.filter((field) => layer[field] !== undefined);
+  if (fields.length > 0) {
+    throw new CapabilityInvokeError(
+      'CONSTRAINT_VIOLATION',
+      `composite_layers:photoroom does not support layer placement fields (${fields.join(', ')}); use composite_layers:sharp for x/y/scale/opacity/anchor`,
+      false,
+    );
+  }
 }
 
 async function imageMimeType(buffer: Buffer): Promise<string> {
@@ -99,6 +111,7 @@ async function validateParams(params: PhotoroomCompositeParams): Promise<{ canva
     } catch (error) {
       throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', error instanceof Error ? error.message : String(error), false);
     }
+    rejectUnsupportedPlacement(layer);
     if (layer.x !== undefined) finiteNumber(layer.x, `composite_layers.layers[${index}].x`);
     if (layer.y !== undefined) finiteNumber(layer.y, `composite_layers.layers[${index}].y`);
     if (layer.scale !== undefined) {
@@ -151,12 +164,10 @@ export function createPhotoroomCompositeLayersCapability(): Capability | null {
       form.set('export.format', 'png');
       form.set('outputSize', `${canvas.width}x${canvas.height}`);
       form.set('padding', '0');
-      // Note: layers[0].x, .y, .scale, .opacity, and .anchor are accepted at the
-      // schema level for forward compatibility with the sharp composite_layers
-      // adapter (D-28: same plan can target either provider). Photoroom's Image
-      // Editing API positions the subject via outputSize + padding + (optional)
-      // background; per-layer placement fields are intentionally NOT forwarded.
-      // If multi-layer placement is needed, route through composite_layers:sharp.
+      // Photoroom's Image Editing API positions the subject via outputSize,
+      // padding, and optional background fields. Per-layer placement is rejected
+      // during validation so callers do not get a successful response that ignored
+      // x/y/scale/opacity/anchor. Use composite_layers:sharp for placement.
       if (params.shadow?.enabled) {
         form.set('shadow.mode', params.shadow.mode ?? 'ai.soft');
       }

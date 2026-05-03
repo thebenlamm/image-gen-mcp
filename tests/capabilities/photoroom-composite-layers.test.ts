@@ -64,7 +64,7 @@ describe('photoroom composite_layers capability', () => {
     const result = await capability.invoke({
       params: {
         canvas: { width: 100, height: 80 },
-        layers: [{ input, x: 0, y: 0, anchor: 'top-left' }],
+        layers: [{ input }],
         shadow: { enabled: true },
         background: { color: '#ffffff' },
       },
@@ -143,6 +143,26 @@ describe('photoroom composite_layers capability', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('rejects layer placement fields before the network call', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const input = await writePng();
+    const capability = createPhotoroomCompositeLayersCapability();
+    if (!capability) throw new Error('expected capability');
+
+    await expect(capability.invoke({
+      params: {
+        canvas: { width: 64, height: 64 },
+        layers: [{ input, x: 0, anchor: 'center' }],
+      },
+    })).rejects.toMatchObject({
+      code: 'CONSTRAINT_VIOLATION',
+      retryable: false,
+      message: expect.stringContaining('does not support layer placement fields'),
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('exposes the documented composite_layers:photoroom contract through validateCapabilityParams', () => {
     const capability = createPhotoroomCompositeLayersCapability();
     if (!capability) throw new Error('expected capability');
@@ -152,5 +172,9 @@ describe('photoroom composite_layers capability', () => {
       canvas: { width: 100, height: 80 },
       layers: [{ input: '/tmp/whatever.png' }],
     })).not.toThrow();
+    expect(() => validateCapabilityParams(capability, {
+      canvas: { width: 100, height: 80 },
+      layers: [{ input: '/tmp/whatever.png', x: 0 }],
+    })).toThrow(/placement fields/);
   });
 });

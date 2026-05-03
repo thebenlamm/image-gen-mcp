@@ -320,6 +320,36 @@ describe('validatePlan', () => {
     }
   });
 
+  it('rejects provider-specific composite placement fields before execution', async () => {
+    const result = await validate(makePlan({
+      nodes: [{
+        id: 'composite',
+        op: 'composite_layers',
+        provider: 'photoroom',
+        params: {
+          canvas: { width: 512, height: 512 },
+          layers: [{ input: '$inputs.product', anchor: 'center', scale: 0.5 }],
+        },
+        dependsOn: [],
+        outputKind: 'image',
+        costUsd: 0.05,
+        latencyMs: 4000,
+      }],
+      terminalNodeId: 'composite',
+      estimatedTotalCostUsd: 0.05,
+      estimatedTotalLatencyMs: 4000,
+    }));
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContainEqual(expect.objectContaining({
+        code: 'PARAM_INVALID',
+        nodeId: 'composite',
+        message: expect.stringContaining('placement fields'),
+      }));
+    }
+  });
+
   it('collects INPUT_PATH_OUTSIDE_ROOT for literal paths outside the root', async () => {
     const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'validator-root-'));
     const root = path.join(tmp, 'root');

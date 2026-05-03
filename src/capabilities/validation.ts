@@ -66,6 +66,15 @@ export function validateCapabilityParams(
     if (capability.constraints.supportsMultipleInputs === false && layers.length !== 1) {
       throw new Error(`composite_layers provider supports exactly one layer (got ${layers.length})`);
     }
+    if (capability.constraints.supportsMultipleInputs === false) {
+      const layer = layers[0] as Record<string, unknown>;
+      const placementFields = ['x', 'y', 'scale', 'opacity', 'anchor'].filter((field) => layer[field] !== undefined);
+      if (placementFields.length > 0) {
+        throw new Error(
+          `composite_layers provider does not support layer placement fields: ${placementFields.join(', ')}`
+        );
+      }
+    }
     if (layers.length > 16) {
       throw new Error(`composite_layers layers exceed cap of 16 (got ${layers.length})`);
     }
