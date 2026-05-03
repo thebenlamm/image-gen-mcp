@@ -1,0 +1,13 @@
+[
+  {
+    "id": "ocr-text-label",
+    "op": "analyze_ocr",
+    "provider": "tesseract",
+    "fixtureId": "text-label",
+    "params": {
+      "input": "${fixture.path}",
+      "expectedText": "SALE"
+    },
+    "scorers": ["ocr_text_presence"]
+  }
+]

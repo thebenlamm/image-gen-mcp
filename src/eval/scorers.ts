@@ -104,6 +104,43 @@ export async function scoreOcrTextPresence(
   }
 }
 
+export function scoreOcrTextPresenceInText(
+  text: string | undefined,
+  expectedText?: string,
+): EvalScore {
+  if (!expectedText || !expectedText.trim()) {
+    return {
+      scorer: 'ocr_text_presence',
+      status: 'error',
+      reason: 'expectedText is required for OCR scoring',
+    };
+  }
+  if (typeof text !== 'string') {
+    return {
+      scorer: 'ocr_text_presence',
+      status: 'error',
+      reason: 'OCR text is required for OCR scoring',
+    };
+  }
+
+  const recognizedText = normalizeOcrText(text);
+  const needle = normalizeOcrText(expectedText);
+  if (recognizedText.includes(needle)) {
+    return {
+      scorer: 'ocr_text_presence',
+      status: 'scored',
+      value: 1,
+    };
+  }
+
+  return {
+    scorer: 'ocr_text_presence',
+    status: 'scored',
+    value: 0,
+    reason: 'expected text not found in OCR data',
+  };
+}
+
 export function scoreDimensionsExact(
   data: {
     width: number;
@@ -189,11 +226,18 @@ export async function runScorers(
       }
       scores.push(await scorePixelDelta(inputPath, outputPath));
     } else if (scorerId === 'ocr_text_presence') {
+      const expectedText = params.expectedText;
+      if (data?.type === 'ocr') {
+        scores.push(scoreOcrTextPresenceInText(
+          data.text,
+          typeof expectedText === 'string' ? expectedText : undefined,
+        ));
+        continue;
+      }
       if (!outputPath) {
         scores.push({ scorer: 'ocr_text_presence', status: 'error', reason: 'outputPath required' });
         continue;
       }
-      const expectedText = params.expectedText;
       scores.push(await scoreOcrTextPresence(
         outputPath,
         typeof expectedText === 'string' ? expectedText : undefined,

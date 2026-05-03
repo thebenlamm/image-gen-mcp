@@ -1,4 +1,5 @@
 import { createAnalyzeDimensionsCapability } from './analyze-dimensions.js';
+import { createAnalyzeOcrCapability } from './analyze-ocr.js';
 import { createAnalyzePaletteCapability } from './analyze-palette.js';
 import { createCompositeLayersCapability } from './composite-layers.js';
 import { createEditPromptCapability } from './edit-prompt.js';
@@ -24,6 +25,7 @@ export function registerBuiltInCapabilities() {
   if (upscale) {
     capabilityRegistry.register(upscale, { allowUnscoredProduction: true });
   }
+  capabilityRegistry.register(createAnalyzeOcrCapability());
 
   return capabilityRegistry;
 }
