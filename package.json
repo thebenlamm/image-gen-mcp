@@ -27,6 +27,7 @@
   "author": "Ben Lamm",
   "license": "MIT",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.92.0",
     "@google/genai": "^1.0.0",
     "@imgly/background-removal-node": "^1.4.5",
     "@modelcontextprotocol/sdk": "^1.0.0",
