@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Goal-Shaped Image MCP
-status: gaps_found
-stopped_at: Phase 11 verification found gaps
-last_updated: "2026-05-03T21:13:41Z"
-last_activity: 2026-05-03 -- Phase 11 verification found gaps
+status: complete
+stopped_at: Completed 11-03-PLAN.md
+last_updated: "2026-05-03T22:55:35.479Z"
+last_activity: 2026-05-03
 progress:
   total_phases: 11
-  completed_phases: 9
-  total_plans: 26
-  completed_plans: 22
-  percent: 85
+  completed_phases: 10
+  total_plans: 27
+  completed_plans: 25
+  percent: 93
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 ## Current Position
 
-Phase: 11 (provider-breadth-post-eval) — GAPS FOUND
-Plan: 2 of 2 complete; verification failed
-Status: Gap closure needed
-Last activity: 2026-05-03 -- Phase 11 verification found gaps
+Phase: 11 (provider-breadth-post-eval) — COMPLETE
+Plan: 3 of 3
+Status: Completed Phase 11 gap closure
+Last activity: 2026-05-03
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Last activity: 2026-05-03 -- Phase 11 verification found gaps
 | Phase 09-image-task-planner-dag-executor P04 | 4min | 4 tasks | 4 files |
 | Phase 10-template-fast-paths-executor-parallelism P01 | 7min 15s | 3 tasks | 7 files |
 | Phase 10-template-fast-paths-executor-parallelism P02 | 7min 50s | 3 tasks | 11 files |
+| Phase 11-provider-breadth-post-eval P03 | 7m 16s | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -122,6 +123,9 @@ Recent decisions affecting current work:
 - [Phase 10]: TEMPLATE_ONLY_BUDGET_USD_THRESHOLD is the single source for the $0.01 template-only budget cutoff.
 - [Phase 10]: MAX_PARALLEL_NODES is exported from sharp-config and kept equal to SHARP_CONCURRENCY_LIMIT.
 - [Phase 10]: DAG sibling failures do not cancel already in-flight siblings; only descendants are skipped.
+- [Phase 11]: Photoroom composite eval uses alpha_coverage on provider output instead of pixel_delta against an unused params.input baseline.
+- [Phase 11]: Option A was applied: composite_layers:photoroom is narrowed to Photoroom's actual single-subject Image Editing API contract.
+- [Phase 11]: Malformed eval cases with params.input against requiresInputImage=false capabilities are recorded as errors before invocation.
 
 ### Pending Todos
 
@@ -133,9 +137,9 @@ None currently.
 
 ## Session Continuity
 
-Last session: 2026-05-03T19:56:59.146Z
-Stopped at: Phase 11 context gathered
-Resume file: .planning/phases/11-provider-breadth-post-eval/11-CONTEXT.md
+Last session: 2026-05-03T22:55:02.728Z
+Stopped at: Completed 11-03-PLAN.md
+Resume file: None
 
 ## Quick Tasks
 

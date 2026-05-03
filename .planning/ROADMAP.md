@@ -29,7 +29,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 8: Op Primitives Expansion** - composite, transform, upscale, analyze_* capabilities
 - [x] **Phase 9: image_task Planner + DAG Executor** - Goal-shaped MCP tool with Haiku-planned DAG execution
 - [x] **Phase 10: Template Fast-Paths + Executor Parallelism** - Skip planner LLM for matching template signatures; concurrent DAG node execution (completed 2026-05-03)
-- [ ] **Phase 11: Provider Breadth (Post-Eval)** - Photoroom, fal.ai, Flux Kontext, Ideogram added against measured registry
+- [x] **Phase 11: Provider Breadth (Post-Eval)** - Photoroom, fal.ai, Flux Kontext, Ideogram added against measured registry (completed 2026-05-03)
 
 ## Phase Details
 
@@ -231,7 +231,7 @@ Plans:
 - [x] 11-02-PLAN.md — Phase 11 eval cases populating quality.scores, dag-executor trace transparency (qualityMeasured/noIncumbentComparison/qualityUnavailable), planner system-prompt routing-notes alignment, README routing-transparency docs
 
 **Wave 3 — Gap closure** *(blocked on Wave 2 completion; closes G1–G4 from 11-VERIFICATION.md)*
-- [ ] 11-03-PLAN.md — Narrow Photoroom composite_layers adapter to single-subject Image Editing contract (G1: CR-01/CR-02), realign composite eval case to alpha_coverage matching the post-G1 contract (G2: CR-03), add case→adapter contract lint in runEval to refuse populating quality from semantically invalid cases (G3), document the live human verification command sequence so PROV-01/PROV-05 can flip to VERIFIED without further code changes (G4)
+- [x] 11-03-PLAN.md — Narrow Photoroom composite_layers adapter to single-subject Image Editing contract (G1: CR-01/CR-02), realign composite eval case to alpha_coverage matching the post-G1 contract (G2: CR-03), add case→adapter contract lint in runEval to refuse populating quality from semantically invalid cases (G3), document the live human verification command sequence so PROV-01/PROV-05 can flip to VERIFIED without further code changes (G4)
 
 ## Progress
 
@@ -260,4 +260,4 @@ Phases execute in numeric order with one parallelization window:
 | 8. Op Primitives Expansion | 0/2-3 | Not started (parallel with 7) | - |
 | 9. image_task Planner + DAG Executor | 4/4 | ✓ Complete | 2026-05-03 |
 | 10. Template Fast-Paths + Parallelism | 2/2 | Complete    | 2026-05-03 |
-| 11. Provider Breadth (Post-Eval) | 0/2-3 | Not started | - |
+| 11. Provider Breadth (Post-Eval) | 3/3 | Complete   | 2026-05-03 |

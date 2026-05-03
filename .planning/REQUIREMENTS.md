@@ -98,11 +98,11 @@
 
 ### Provider Breadth (PROV) — Post-Eval
 
-- [ ] **PROV-01**: Photoroom registered for `extract_subject` (with shadow) and `composite_layers` (product photography)
+- [x] **PROV-01**: Photoroom registered for `extract_subject` (with shadow) and `composite_layers` (product photography)
 - [ ] **PROV-02**: fal.ai registered as faster/cheaper mirror for Replicate-class capabilities
 - [ ] **PROV-03**: Flux Kontext registered for `edit_prompt` (no-mask instruction edit, on Replicate or BFL direct)
 - [ ] **PROV-04**: Ideogram registered for `generate` with measured text-fidelity score
-- [ ] **PROV-05**: Each new provider has at least one eval case before its `quality.score` is populated
+- [x] **PROV-05**: Each new provider has at least one eval case before its `quality.score` is populated
 
 ## Superseded Requirements
 
