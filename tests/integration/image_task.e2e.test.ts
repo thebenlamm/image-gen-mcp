@@ -132,13 +132,13 @@ describe('SC#3 image_task budget cap', () => {
     const parsed = parseResponse(await handleImageTask({
       goal,
       input_images: [fixturePath],
-      constraints: { budget_cap_usd: 0.001 },
+      constraints: { budget_cap_usd: 0.02 },
     }));
 
     expect(parsed.success).toBe(false);
     expect(parsed.error.code).toBe('BUDGET_CAP_EXCEEDED');
     expect(parsed.error.estimated_cost_usd).toBe(0.035);
-    expect(parsed.error.cap_usd).toBe(0.001);
+    expect(parsed.error.cap_usd).toBe(0.02);
     expect(parsed.trace).toEqual([]);
     expect(mockInvoke).not.toHaveBeenCalled();
   });
