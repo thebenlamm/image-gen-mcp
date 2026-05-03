@@ -20,16 +20,28 @@ export interface RunManifest {
   status: 'in_progress' | 'success' | 'error';
   invocation: {
     tool: 'image_op' | 'image_task';
-    op: string;
-    provider: string;
-    params: Record<string, unknown>;
+    op?: string;
+    provider?: string;
+    params?: Record<string, unknown>;
     outputPath?: string;
     outputDir?: string;
+    goal?: string;
+    inputImages?: Record<string, string>;
+    constraints?: { budget_cap_usd?: number; latency_cap_ms?: number };
   };
   nodes: RunManifestNode[];
   finalOutput?: string;
   totalDurationMs?: number;
   error?: string;
+  plan?: unknown;
+  planner?: {
+    model?: string;
+    tokens?: { input?: number; output?: number };
+    latency_ms?: number;
+    cost_usd?: number;
+  };
+  totals?: { cost_usd: number; latency_ms: number; success: number; failure: number; skipped: number };
+  bestPartial?: { nodeId: string; artifactPath: string } | null;
 }
 
 export async function writeManifest(
