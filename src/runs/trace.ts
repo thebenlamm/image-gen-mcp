@@ -11,16 +11,21 @@ export interface TraceNode {
   endedAtMs: number;
   durationMs: number;
   latencyMs: number;
-  outcome: 'success' | 'error';
+  outcome: 'success' | 'error' | 'skipped';
   error?: string;
   revisedPrompt?: string;
   cost_usd?: number;
   metadata?: Record<string, unknown>;
+  inputRefs?: Array<{ field: string; ref: string; resolvedTo: string }>;
+  errorDetail?: { code: string; retryable: boolean; suggestion?: string };
+  attempts?: number;
+  skipReason?: string;
 }
 
 export interface Trace {
   runId: string;
   nodes: TraceNode[];
+  skips?: Array<{ nodeId: string; reason: string }>;
 }
 
 export interface BuildTraceNodeInput {
@@ -32,11 +37,15 @@ export interface BuildTraceNodeInput {
   output?: string;
   startedAtMs: number;
   endedAtMs: number;
-  outcome: 'success' | 'error';
+  outcome: 'success' | 'error' | 'skipped';
   error?: string;
   revisedPrompt?: string;
   cost_usd?: number;
   metadata?: Record<string, unknown>;
+  inputRefs?: Array<{ field: string; ref: string; resolvedTo: string }>;
+  errorDetail?: { code: string; retryable: boolean; suggestion?: string };
+  attempts?: number;
+  skipReason?: string;
 }
 
 export function buildTraceNode(input: BuildTraceNodeInput): TraceNode {
@@ -57,5 +66,9 @@ export function buildTraceNode(input: BuildTraceNodeInput): TraceNode {
     revisedPrompt: input.revisedPrompt,
     cost_usd: input.cost_usd ?? 0,
     metadata: input.metadata,
+    inputRefs: input.inputRefs,
+    errorDetail: input.errorDetail,
+    attempts: input.attempts,
+    skipReason: input.skipReason,
   };
 }
