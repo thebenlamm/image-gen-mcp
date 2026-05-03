@@ -184,7 +184,7 @@ Plans:
   3. Setting `constraints.budget_cap_usd: 0.005` against a goal whose plan exceeds the cap returns a hard error at plan time, not after partial execution
   4. When a DAG node fails mid-execution, the trace identifies the failed node and the response includes the best partial result instead of nothing
   5. Trace includes per-node `cost_usd`, `latency_ms`, `revisedPrompt` (when present), and saved artifact paths — never base64 image data
-**Plans**: 3 plans
+**Plans**: 4 plans
 **UI hint**: no
 
 **Backlog (deferred from earlier phases — fold into Phase 9 plans when scoping):**
