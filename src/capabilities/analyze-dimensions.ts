@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import sharp from 'sharp';
+import { assertWithinInputRoot } from '../utils/path-input-root.js';
 import type { Capability } from './types.js';
 import { CapabilityInvokeError } from './types.js';
 
@@ -24,6 +25,11 @@ export function createAnalyzeDimensionsCapability(): Capability {
           'analyze_dimensions requires params.input file path',
           false,
         );
+      }
+      try {
+        await assertWithinInputRoot(filePath);
+      } catch (error) {
+        throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', error instanceof Error ? error.message : String(error), false);
       }
 
       const buffer = await fs.promises.readFile(filePath);

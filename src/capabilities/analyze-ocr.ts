@@ -1,4 +1,5 @@
 import { recognizePooled } from '../utils/ocr.js';
+import { assertWithinInputRoot } from '../utils/path-input-root.js';
 import type { AnalyzeOcrResult, Capability } from './types.js';
 import { CapabilityInvokeError } from './types.js';
 
@@ -37,6 +38,11 @@ export function createAnalyzeOcrCapability(): Capability {
 
       if (typeof filePath !== 'string' || !filePath.trim()) {
         throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', 'analyze_ocr requires params.input file path', false);
+      }
+      try {
+        await assertWithinInputRoot(filePath);
+      } catch (error) {
+        throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', error instanceof Error ? error.message : String(error), false);
       }
 
       const data = await recognizePooled(filePath, lang);

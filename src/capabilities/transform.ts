@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import { assertWithinInputRoot } from '../utils/path-input-root.js';
 import { applyOperations } from '../utils/processing.js';
 import type { Capability, ProcessingOperation } from './types.js';
 import { CapabilityInvokeError } from './types.js';
@@ -26,6 +27,11 @@ export function createTransformCapability(): Capability {
           'transform requires params.input file path',
           false,
         );
+      }
+      try {
+        await assertWithinInputRoot(filePath);
+      } catch (error) {
+        throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', error instanceof Error ? error.message : String(error), false);
       }
 
       const operations = input.params.operations;

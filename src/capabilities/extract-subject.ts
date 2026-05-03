@@ -1,4 +1,5 @@
 import { removeBackground } from '@imgly/background-removal-node';
+import { assertWithinInputRoot } from '../utils/path-input-root.js';
 import type { Capability } from './types.js';
 import { CapabilityInvokeError } from './types.js';
 
@@ -33,6 +34,11 @@ export function createExtractSubjectCapability(): Capability {
 
       if (typeof filePath !== 'string' || !filePath.trim()) {
         throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', 'extract_subject requires params.input file path', false);
+      }
+      try {
+        await assertWithinInputRoot(filePath);
+      } catch (error) {
+        throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', error instanceof Error ? error.message : String(error), false);
       }
 
       const result = await removeBackground(filePath);

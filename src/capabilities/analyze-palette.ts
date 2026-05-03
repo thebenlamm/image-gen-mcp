@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import sharp from 'sharp';
+import { assertWithinInputRoot } from '../utils/path-input-root.js';
 import type { Capability } from './types.js';
 import { CapabilityInvokeError } from './types.js';
 
@@ -34,6 +35,11 @@ export function createAnalyzePaletteCapability(): Capability {
           'analyze_palette requires params.input file path',
           false,
         );
+      }
+      try {
+        await assertWithinInputRoot(filePath);
+      } catch (error) {
+        throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', error instanceof Error ? error.message : String(error), false);
       }
 
       const requestedCount = input.params.count;

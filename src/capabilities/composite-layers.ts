@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import sharp from 'sharp';
+import { assertWithinInputRoot } from '../utils/path-input-root.js';
 import type { Capability } from './types.js';
 import { CapabilityInvokeError } from './types.js';
 
@@ -118,6 +119,13 @@ export function createCompositeLayersCapability(): Capability {
       }
       if (layers.length > MAX_LAYERS) {
         throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', `composite_layers layers exceed cap of ${MAX_LAYERS}`, false);
+      }
+      for (const layer of layers) {
+        try {
+          await assertWithinInputRoot(layer.input);
+        } catch (error) {
+          throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', error instanceof Error ? error.message : String(error), false);
+        }
       }
 
       const overlays = await Promise.all(layers.map(async (layer, index) => {
