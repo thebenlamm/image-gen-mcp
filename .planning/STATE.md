@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Goal-Shaped Image MCP
-status: executing
-stopped_at: Planned 09-04-PLAN.md
-last_updated: "2026-05-03T17:41:32.764Z"
-last_activity: 2026-05-03 -- Phase 09 planning complete
+status: completed
+stopped_at: Completed 09-04-PLAN.md
+last_updated: "2026-05-03T17:49:56.209Z"
+last_activity: 2026-05-03 -- Phase 09 marked complete
 progress:
   total_phases: 11
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 22
-  completed_plans: 19
-  percent: 86
+  completed_plans: 20
+  percent: 91
 ---
 
 # Project State
@@ -25,16 +25,16 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 ## Current Position
 
-Phase: 09 (image-task-planner-dag-executor) — EXECUTING
-Plan: 3 of 4
-Status: Ready to execute
-Last activity: 2026-05-03 -- Phase 09 planning complete
+Phase: 09 — COMPLETE
+Plan: 4 of 4
+Status: Phase 09 complete
+Last activity: 2026-05-03 -- Phase 09 marked complete
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 18
+- Total plans completed: 20
 - Average duration: 2.6 min
 - Total execution time: 0.5 hours
 
@@ -62,6 +62,7 @@ Last activity: 2026-05-03 -- Phase 09 planning complete
 | Phase 09-image-task-planner-dag-executor P01 | 9min | 10 tasks | 18 files |
 | Phase 09-image-task-planner-dag-executor P02 | 10min | 11 tasks | 11 files |
 | Phase 09-image-task-planner-dag-executor P03 | 9min | 5 tasks | 9 files |
+| Phase 09-image-task-planner-dag-executor P04 | 4min | 4 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -108,6 +109,9 @@ Recent decisions affecting current work:
 - [Phase 09-image-task-planner-dag-executor]: [Phase 09]: image_task dry_run returns compact validated plan and estimated totals without provider invocation.
 - [Phase 09-image-task-planner-dag-executor]: [Phase 09]: image_task response serialization rejects Buffers, typed arrays, data URLs, and long base64-looking strings at the MCP boundary.
 - [Phase 09-image-task-planner-dag-executor]: [Phase 09]: budget-cap validation responses round estimated_cost_usd to six decimals to match executor totals.
+- [Phase 09-image-task-planner-dag-executor]: [Phase 09]: validatePlan rejects `$nodes.X.output` refs unless the current node declares `X` in dependsOn.
+- [Phase 09-image-task-planner-dag-executor]: [Phase 09]: validatePlan derives required outputKind from CapabilityOp, so data ops cannot spoof image output.
+- [Phase 09-image-task-planner-dag-executor]: [Phase 09]: validatePlan checks all caller-provided ctx.inputImages with IMAGE_GEN_INPUT_ROOT before dry_run can return success.
 
 ### Pending Todos
 
@@ -120,7 +124,7 @@ None currently.
 ## Session Continuity
 
 Last session: 2026-05-03T16:26:20.556Z
-Stopped at: Completed 09-03-PLAN.md
+Stopped at: Completed 09-04-PLAN.md
 Resume file: None
 
 ## Quick Tasks
