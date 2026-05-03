@@ -4,6 +4,20 @@ import { CapabilityInvokeError } from './types.js';
 
 const MODEL_VERSION = 'tesseract.js@5';
 const DEFAULT_LANG = 'eng';
+const SUPPORTED_LANGS = new Set(['eng']);
+
+function resolveLang(value: unknown): string {
+  if (value === undefined) {
+    return DEFAULT_LANG;
+  }
+  if (typeof value !== 'string' || !/^[a-z]{3}(?:\+[a-z]{3}){0,2}$/.test(value)) {
+    throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', 'analyze_ocr lang must be a tesseract language code', false);
+  }
+  if (!SUPPORTED_LANGS.has(value)) {
+    throw new CapabilityInvokeError('UNSUPPORTED', `analyze_ocr lang '${value}' is not enabled`, false, 'Use lang=eng');
+  }
+  return value;
+}
 
 export function createAnalyzeOcrCapability(): Capability {
   return {
@@ -18,7 +32,7 @@ export function createAnalyzeOcrCapability(): Capability {
     latencyMsP50: 1500,
     async invoke(input) {
       const filePath = input.params.input;
-      const lang = (input.params.lang as string | undefined) ?? DEFAULT_LANG;
+      const lang = resolveLang(input.params.lang);
       const includeWords = input.params.includeWords === true;
 
       if (typeof filePath !== 'string' || !filePath.trim()) {

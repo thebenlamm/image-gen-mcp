@@ -61,6 +61,17 @@ describe('analyze_ocr capability', () => {
     });
   });
 
+  it('rejects unsupported OCR languages before pooling', async () => {
+    const capability = createAnalyzeOcrCapability();
+
+    await expect(capability.invoke({ params: { input: INPUT, lang: 'spa' } })).rejects.toMatchObject({
+      code: 'UNSUPPORTED',
+    });
+    await expect(capability.invoke({ params: { input: INPUT, lang: 'eng+spa+fra+deu' } })).rejects.toMatchObject({
+      code: 'CONSTRAINT_VIOLATION',
+    });
+  });
+
   it('uses the pooled worker for repeated invocations', async () => {
     await terminatePool();
     const capability = createAnalyzeOcrCapability();
@@ -73,10 +84,4 @@ describe('analyze_ocr capability', () => {
     expect(second.ms).toBeLessThan(first.ms * 0.75);
   }, 60_000);
 
-  it.skip('loads non-English language workers when requested', async () => {
-    const capability = createAnalyzeOcrCapability();
-    await expect(capability.invoke({ params: { input: INPUT, lang: 'spa' } })).resolves.toMatchObject({
-      kind: 'data',
-    });
-  });
 });

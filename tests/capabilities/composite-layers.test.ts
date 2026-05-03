@@ -127,6 +127,23 @@ describe('composite_layers capability', () => {
     })).rejects.toMatchObject({ code: 'CONSTRAINT_VIOLATION' });
   });
 
+  it('rejects invalid placement parameters before sharp work', async () => {
+    const overlay = await writeSolidPng('overlay.png', 64, 64, { r: 255, g: 0, b: 0, alpha: 1 });
+    const capability = createCompositeLayersCapability();
+
+    expect(() => validateCapabilityParams(capability, {
+      canvas: { width: 256, height: 256 },
+      layers: [{ input: overlay, anchor: 'centre' }],
+    })).toThrow(/anchor/);
+
+    await expect(capability.invoke({
+      params: {
+        canvas: { width: 256, height: 256 },
+        layers: [{ input: overlay, x: '10', y: 0 }],
+      },
+    })).rejects.toMatchObject({ code: 'CONSTRAINT_VIOLATION' });
+  });
+
   it('scales layers before compositing', async () => {
     const overlay = await writeSolidPng('overlay.png', 64, 64, { r: 255, g: 0, b: 0, alpha: 1 });
     const capability = createCompositeLayersCapability();

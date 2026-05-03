@@ -1,5 +1,11 @@
 import type { Capability } from './types.js';
 
+const COMPOSITE_ANCHORS = new Set(['top-left', 'center', 'top-right', 'bottom-left', 'bottom-right']);
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
 export function validateCapabilityParams(
   capability: Capability,
   params: Record<string, unknown>
@@ -35,7 +41,7 @@ export function validateCapabilityParams(
 
   if (capability.op === 'composite_layers') {
     const canvas = params.canvas as Record<string, unknown> | undefined;
-    if (!canvas || typeof canvas.width !== 'number' || typeof canvas.height !== 'number') {
+    if (!canvas || !isFiniteNumber(canvas.width) || !isFiniteNumber(canvas.height)) {
       throw new Error('composite_layers requires canvas.width and canvas.height (numbers)');
     }
     if (canvas.width <= 0 || canvas.height <= 0) {
@@ -55,6 +61,21 @@ export function validateCapabilityParams(
       const layer = layers[index] as Record<string, unknown>;
       if (typeof layer.input !== 'string' || layer.input.trim() === '') {
         throw new Error(`composite_layers.layers[${index}].input must be a non-empty string`);
+      }
+      if (layer.x !== undefined && !isFiniteNumber(layer.x)) {
+        throw new Error(`composite_layers.layers[${index}].x must be a finite number`);
+      }
+      if (layer.y !== undefined && !isFiniteNumber(layer.y)) {
+        throw new Error(`composite_layers.layers[${index}].y must be a finite number`);
+      }
+      if (layer.scale !== undefined && (!isFiniteNumber(layer.scale) || layer.scale < 0.05 || layer.scale > 10)) {
+        throw new Error(`composite_layers.layers[${index}].scale must be between 0.05 and 10`);
+      }
+      if (layer.opacity !== undefined && (!isFiniteNumber(layer.opacity) || layer.opacity < 0 || layer.opacity > 1)) {
+        throw new Error(`composite_layers.layers[${index}].opacity must be between 0 and 1`);
+      }
+      if (layer.anchor !== undefined && (typeof layer.anchor !== 'string' || !COMPOSITE_ANCHORS.has(layer.anchor))) {
+        throw new Error(`composite_layers.layers[${index}].anchor is invalid`);
       }
     }
   }

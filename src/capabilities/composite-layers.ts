@@ -8,6 +8,7 @@ const MAX_LAYERS = 16;
 const MAX_CANVAS_PIXELS = 16_000_000;
 const MIN_SCALE = 0.05;
 const MAX_SCALE = 10;
+const ANCHORS = new Set(['top-left', 'center', 'top-right', 'bottom-left', 'bottom-right']);
 
 type Anchor = 'top-left' | 'center' | 'top-right' | 'bottom-left' | 'bottom-right';
 
@@ -26,14 +27,32 @@ interface CompositeCanvas {
   background?: sharp.Color;
 }
 
+function finiteNumber(value: unknown, name: string): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', `${name} must be a finite number`, false);
+  }
+  return value;
+}
+
+function optionalFiniteNumber(value: unknown, name: string, fallback: number): number {
+  return value === undefined ? fallback : finiteNumber(value, name);
+}
+
+function validateAnchor(value: unknown, name: string): Anchor {
+  const anchor = value ?? 'top-left';
+  if (typeof anchor !== 'string' || !ANCHORS.has(anchor)) {
+    throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', `${name} must be one of ${Array.from(ANCHORS).join(', ')}`, false);
+  }
+  return anchor as Anchor;
+}
+
 function resolveAnchor(
-  layer: CompositeLayer,
+  layer: Required<Pick<CompositeLayer, 'x' | 'y' | 'anchor'>>,
   info: { width: number; height: number },
 ): { left: number; top: number } {
-  const x = layer.x ?? 0;
-  const y = layer.y ?? 0;
+  const { x, y } = layer;
 
-  switch (layer.anchor ?? 'top-left') {
+  switch (layer.anchor) {
     case 'center':
       return { left: Math.round(x - info.width / 2), top: Math.round(y - info.height / 2) };
     case 'top-right':
@@ -43,7 +62,6 @@ function resolveAnchor(
     case 'bottom-right':
       return { left: Math.round(x - info.width), top: Math.round(y - info.height) };
     case 'top-left':
-    default:
       return { left: Math.round(x), top: Math.round(y) };
   }
 }
@@ -83,6 +101,11 @@ export function createCompositeLayersCapability(): Capability {
       if (!canvas || typeof canvas.width !== 'number' || typeof canvas.height !== 'number') {
         throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', 'composite_layers requires canvas.width and canvas.height', false);
       }
+      finiteNumber(canvas.width, 'composite_layers.canvas.width');
+      finiteNumber(canvas.height, 'composite_layers.canvas.height');
+      if (canvas.width <= 0 || canvas.height <= 0) {
+        throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', 'composite_layers canvas dimensions must be positive', false);
+      }
       if (canvas.width * canvas.height > MAX_CANVAS_PIXELS) {
         throw new CapabilityInvokeError('INPUT_TOO_LARGE', 'composite_layers canvas exceeds 16MP cap', false);
       }
@@ -94,7 +117,7 @@ export function createCompositeLayersCapability(): Capability {
       }
 
       const overlays = await Promise.all(layers.map(async (layer, index) => {
-        const scale = layer.scale ?? 1;
+        const scale = optionalFiniteNumber(layer.scale, `composite_layers.layers[${index}].scale`, 1);
         if (scale < MIN_SCALE || scale > MAX_SCALE) {
           throw new CapabilityInvokeError(
             'CONSTRAINT_VIOLATION',
@@ -102,7 +125,8 @@ export function createCompositeLayersCapability(): Capability {
             false,
           );
         }
-        if (layer.opacity !== undefined && (layer.opacity < 0 || layer.opacity > 1)) {
+        const opacity = optionalFiniteNumber(layer.opacity, `composite_layers.layers[${index}].opacity`, 1);
+        if (opacity < 0 || opacity > 1) {
           throw new CapabilityInvokeError(
             'CONSTRAINT_VIOLATION',
             `composite_layers.layers[${index}].opacity must be between 0 and 1`,
@@ -116,6 +140,9 @@ export function createCompositeLayersCapability(): Capability {
             false,
           );
         }
+        const anchor = validateAnchor(layer.anchor, `composite_layers.layers[${index}].anchor`);
+        const x = optionalFiniteNumber(layer.x, `composite_layers.layers[${index}].x`, 0);
+        const y = optionalFiniteNumber(layer.y, `composite_layers.layers[${index}].y`, 0);
 
         const layerBuffer = await fs.promises.readFile(layer.input);
         let pipeline = sharp(layerBuffer);
@@ -135,13 +162,13 @@ export function createCompositeLayersCapability(): Capability {
           );
         }
 
-        if (layer.opacity !== undefined && layer.opacity < 1) {
+        if (opacity < 1) {
           // Opacity is handled by multiplying the prepared layer alpha channel.
-          pipeline = await applyOpacity(pipeline, layer.opacity);
+          pipeline = await applyOpacity(pipeline, opacity);
         }
 
         const prepared = await pipeline.png().toBuffer({ resolveWithObject: true });
-        const position = resolveAnchor(layer, prepared.info);
+        const position = resolveAnchor({ x, y, anchor }, prepared.info);
         return {
           input: prepared.data,
           left: position.left,

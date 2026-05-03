@@ -36,6 +36,20 @@ function getInputPath(evalCase: EvalCase): string {
   return input;
 }
 
+function scorePassed(score: { scorer: string; status: string; value?: number }): boolean {
+  if (score.status !== 'scored' || typeof score.value !== 'number' || !Number.isFinite(score.value)) {
+    return false;
+  }
+  if (
+    score.scorer === 'dimensions_exact' ||
+    score.scorer === 'palette_exact' ||
+    score.scorer === 'ocr_text_presence'
+  ) {
+    return score.value >= 1;
+  }
+  return true;
+}
+
 export async function runEval(): Promise<string> {
   const cases = await loadEvalCases();
   const results: EvalCaseResult[] = [];
@@ -83,6 +97,7 @@ export async function runEval(): Promise<string> {
       });
 
       if (invokeResult.kind === 'image') {
+        await fs.mkdir(ARTIFACTS_DIR, { recursive: true });
         await writeFileAtomic(outputPath, invokeResult.buffer);
       } else {
         resultData = invokeResult.data;
@@ -96,9 +111,7 @@ export async function runEval(): Promise<string> {
         evalCase.params,
         resultData,
       );
-      const status = scores.some((score) => score.status === 'scored')
-        ? 'scored'
-        : 'skipped';
+      const status = scores.length > 0 && scores.every(scorePassed) ? 'scored' : 'error';
 
       results.push({
         caseId: evalCase.id,
@@ -109,6 +122,12 @@ export async function runEval(): Promise<string> {
         status,
         outputPath,
         scores,
+        error: status === 'error'
+          ? `eval scorer failed: ${scores
+            .filter((score) => !scorePassed(score))
+            .map((score) => `${score.scorer}${score.reason ? ` (${score.reason})` : ''}`)
+            .join(', ')}`
+          : undefined,
         latencyMs: Date.now() - startedAt,
       });
     } catch (error) {
@@ -141,6 +160,11 @@ export async function runEval(): Promise<string> {
   };
 
   const resultPath = await writeEvalResults(runResult);
+  const failed = results.filter((result) => result.status === 'error');
+  if (failed.length > 0) {
+    throw new Error(`eval failed ${failed.length} case(s); see result JSON: ${resultPath}`);
+  }
+
   applyEvalResultsToRegistry(capabilityRegistry, runResult, resultPath);
   return resultPath;
 }

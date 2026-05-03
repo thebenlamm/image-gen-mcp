@@ -113,7 +113,7 @@ describe('eval runner', () => {
     ).toBe(true);
   });
 
-  it('records a throwing capability and continues remaining cases', async () => {
+  it('writes results then fails when any eval case errors', async () => {
     let calls = 0;
     registered.push(registerFakeCapability('extract_subject', '@imgly/local', async () => {
       calls += 1;
@@ -123,8 +123,10 @@ describe('eval runner', () => {
       return { kind: 'image' as const, buffer: await fakePng(), model: 'fake-model' };
     }));
 
-    const result = await readResult(await runEval());
+    await expect(runEval()).rejects.toThrow(/eval failed 1 case/);
 
+    const files = await fs.readdir(EVAL_RESULTS_DIR);
+    const result = await readResult(path.join(EVAL_RESULTS_DIR, files.find((file) => file.endsWith('.json'))!));
     expect(result.results.some((entry: any) => entry.status === 'error')).toBe(true);
     expect(result.results.some((entry: any) => entry.status === 'scored')).toBe(true);
   });
