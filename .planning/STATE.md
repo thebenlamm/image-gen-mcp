@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Goal-Shaped Image MCP
 status: executing
-stopped_at: Completed 09-04-PLAN.md
-last_updated: "2026-05-03T18:48:11.715Z"
-last_activity: 2026-05-03 -- Phase 10 planning complete
+stopped_at: Completed 10-01-PLAN.md
+last_updated: "2026-05-03T19:06:57.060Z"
+last_activity: 2026-05-03 -- Completed 10-01 template fast paths
 progress:
   total_phases: 11
   completed_phases: 8
   total_plans: 24
-  completed_plans: 20
-  percent: 83
+  completed_plans: 21
+  percent: 88
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-01)
 
 **Core value:** Two value props — guaranteed primitives (v1.0) and flexible goal handoff (v2.0).
-**Current focus:** Phase 10 — template-fast-paths-+-executor-parallelism
+**Current focus:** Phase 10 — template-fast-paths-executor-parallelism
 
 ## Current Position
 
-Phase: 10
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-05-03 -- Phase 10 planning complete
+Phase: 10 (template-fast-paths-executor-parallelism) — EXECUTING
+Plan: 2 of 2
+Status: Executing Phase 10
+Last activity: 2026-05-03 -- Completed 10-01 template fast paths
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Last activity: 2026-05-03 -- Phase 10 planning complete
 | Phase 09-image-task-planner-dag-executor P02 | 10min | 11 tasks | 11 files |
 | Phase 09-image-task-planner-dag-executor P03 | 9min | 5 tasks | 9 files |
 | Phase 09-image-task-planner-dag-executor P04 | 4min | 4 tasks | 4 files |
+| Phase 10-template-fast-paths-executor-parallelism P01 | 7min 15s | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -113,6 +114,9 @@ Recent decisions affecting current work:
 - [Phase 09-image-task-planner-dag-executor]: [Phase 09]: validatePlan rejects `$nodes.X.output` refs unless the current node declares `X` in dependsOn.
 - [Phase 09-image-task-planner-dag-executor]: [Phase 09]: validatePlan derives required outputKind from CapabilityOp, so data ops cannot spoof image output.
 - [Phase 09-image-task-planner-dag-executor]: [Phase 09]: validatePlan checks all caller-provided ctx.inputImages with IMAGE_GEN_INPUT_ROOT before dry_run can return success.
+- [Phase 10]: plannerMethod lives only on SerializedImageTaskResponse, not Trace.
+- [Phase 10]: ASSET_PRESETS-derived templates pass preset.operations by reference so v1.0 preset fixes propagate to image_task.
+- [Phase 10]: Template matches still go through validatePlan before dry-run or execution.
 
 ### Pending Todos
 
@@ -124,8 +128,8 @@ None currently.
 
 ## Session Continuity
 
-Last session: 2026-05-03T16:26:20.556Z
-Stopped at: Completed 09-04-PLAN.md
+Last session: 2026-05-03T19:06:57.055Z
+Stopped at: Completed 10-01-PLAN.md
 Resume file: None
 
 ## Quick Tasks

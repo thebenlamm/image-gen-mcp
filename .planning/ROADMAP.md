@@ -205,7 +205,7 @@ Plans:
 
 Plans:
 **Wave 1**
-- [ ] 10-01-PLAN.md — Template registry + matcher (ASSET_PRESETS by reference, 3 new templates, plannerMethod field, planner short-circuit)
+- [x] 10-01-PLAN.md — Template registry + matcher (ASSET_PRESETS by reference, 3 new templates, plannerMethod field, planner short-circuit)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 10-02-PLAN.md — Budget gate (sub-cent cap requires template) + bounded executor parallelism (sharp.concurrency 2, MAX_PARALLEL_NODES 2)
@@ -249,5 +249,5 @@ Phases execute in numeric order with one parallelization window:
 | 7. Eval Harness + Golden Set | 0/2 | Not started (parallel with 8) | - |
 | 8. Op Primitives Expansion | 0/2-3 | Not started (parallel with 7) | - |
 | 9. image_task Planner + DAG Executor | 4/4 | ✓ Complete | 2026-05-03 |
-| 10. Template Fast-Paths + Parallelism | 0/2 | Not started | - |
+| 10. Template Fast-Paths + Parallelism | 1/2 | In Progress|  |
 | 11. Provider Breadth (Post-Eval) | 0/2-3 | Not started | - |

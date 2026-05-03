@@ -91,9 +91,9 @@
 
 ### Templates + Fast-Paths (TMPL)
 
-- [ ] **TMPL-01**: Template table imports existing `ASSET_PRESETS` by reference (not forked); fixes propagate to v1.0 `generate_asset`
-- [ ] **TMPL-02**: Template matcher runs before planner LLM; if `goal + constraints` matches a template signature, skip the Haiku call
-- [ ] **TMPL-03**: New templates added: `product-on-white`, `logo-cleanup`, `upscale-export`
+- [x] **TMPL-01**: Template table imports existing `ASSET_PRESETS` by reference (not forked); fixes propagate to v1.0 `generate_asset`
+- [x] **TMPL-02**: Template matcher runs before planner LLM; if `goal + constraints` matches a template signature, skip the Haiku call
+- [x] **TMPL-03**: New templates added: `product-on-white`, `logo-cleanup`, `upscale-export`
 - [ ] **TMPL-04**: Planner-skip enforced when `constraints.budget_cap_usd < $0.01` — must match a template or fail
 
 ### Provider Breadth (PROV) — Post-Eval
