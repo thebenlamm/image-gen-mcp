@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { capabilityRegistry } from '../../src/capabilities/registry.js';
 import type { Capability, CapabilityOp } from '../../src/capabilities/types.js';
 import { EVAL_RESULTS_DIR } from '../../src/eval/results.js';
-import { hasUsableEnv, runEval } from '../../src/eval/run.js';
+import { hasUsableEnv, runEval, scorePassed } from '../../src/eval/run.js';
 
 async function fakePng(): Promise<Buffer> {
   return sharp({
@@ -129,5 +129,20 @@ describe('eval runner', () => {
     const result = await readResult(path.join(EVAL_RESULTS_DIR, files.find((file) => file.endsWith('.json'))!));
     expect(result.results.some((entry: any) => entry.status === 'error')).toBe(true);
     expect(result.results.some((entry: any) => entry.status === 'scored')).toBe(true);
+  });
+
+  it('enforces declared pixel delta thresholds', () => {
+    expect(scorePassed(
+      { scorer: 'pixel_delta', status: 'scored', value: 0.01 },
+      { maxPixelDelta: 0.05 },
+    )).toBe(true);
+    expect(scorePassed(
+      { scorer: 'pixel_delta', status: 'scored', value: 0.2 },
+      { maxPixelDelta: 0.05 },
+    )).toBe(false);
+    expect(scorePassed(
+      { scorer: 'pixel_delta', status: 'scored', value: 0 },
+      { minPixelDelta: 0.01 },
+    )).toBe(false);
   });
 });

@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import sharp from 'sharp';
 import type { Capability } from './types.js';
 import { CapabilityInvokeError } from './types.js';
 
@@ -22,6 +23,14 @@ function resolveOptionalEnv(value: string | undefined): string | undefined {
     return undefined;
   }
   return trimmed;
+}
+
+async function imageMimeType(buffer: Buffer): Promise<string> {
+  const format = (await sharp(buffer).metadata()).format;
+  if (format === 'png') return 'image/png';
+  if (format === 'jpeg') return 'image/jpeg';
+  if (format === 'webp') return 'image/webp';
+  throw new CapabilityInvokeError('UNSUPPORTED', `edit_prompt unsupported input format '${format ?? 'unknown'}'`, false);
 }
 
 export function createEditPromptCapability(): Capability | null {
@@ -74,6 +83,7 @@ export function createEditPromptCapability(): Capability | null {
         : SIZE_MAP[requestedSize as keyof typeof SIZE_MAP];
 
       const source = await fs.promises.readFile(filePath);
+      const mimeType = await imageMimeType(source);
       const response = await fetch('https://api.openai.com/v1/images/edits', {
         method: 'POST',
         headers: {
@@ -83,7 +93,7 @@ export function createEditPromptCapability(): Capability | null {
         body: JSON.stringify({
           model,
           images: [{
-            image_url: `data:image/png;base64,${source.toString('base64')}`,
+            image_url: `data:${mimeType};base64,${source.toString('base64')}`,
           }],
           prompt,
           n: 1,

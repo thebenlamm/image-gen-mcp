@@ -6,6 +6,7 @@
     "fixtureId": "composite-golden",
     "params": {
       "input": "${fixture.path}",
+      "maxPixelDelta": 0.05,
       "canvas": { "width": 512, "height": 512, "background": { "r": 255, "g": 255, "b": 255, "alpha": 1 } },
       "layers": [
         { "input": "eval/fixtures/composite-overlay.png", "x": 192, "y": 192, "anchor": "top-left" }

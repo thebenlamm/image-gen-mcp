@@ -6,6 +6,7 @@
     "fixtureId": "product-simple",
     "params": {
       "input": "${fixture.path}",
+      "minPixelDelta": 0.01,
       "prompt": "Change the product rectangle to a saturated blue while preserving the off-white background."
     },
     "scorers": ["pixel_delta"],
@@ -18,6 +19,7 @@
     "fixtureId": "text-label",
     "params": {
       "input": "${fixture.path}",
+      "minPixelDelta": 0.01,
       "prompt": "Change the label text from SALE 25 to SALE 50 while keeping the label style.",
       "expectedText": "SALE 50"
     },
@@ -31,6 +33,7 @@
     "fixtureId": "text-poster",
     "params": {
       "input": "${fixture.path}",
+      "minPixelDelta": 0.01,
       "prompt": "Change the poster text from OPEN to CLOSED while preserving the poster color blocks.",
       "expectedText": "CLOSED"
     },

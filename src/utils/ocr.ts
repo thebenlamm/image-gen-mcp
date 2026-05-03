@@ -24,7 +24,10 @@ export async function recognizeOnce(path: string, lang = 'eng') {
 export async function recognizePooled(path: string, lang = 'eng') {
   let workerPromise = pool.get(lang);
   if (!workerPromise) {
-    workerPromise = createWorker(lang);
+    workerPromise = createWorker(lang).catch((error) => {
+      pool.delete(lang);
+      throw error;
+    });
     pool.set(lang, workerPromise);
   }
 

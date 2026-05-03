@@ -61,6 +61,13 @@ function getOutputUrl(output: unknown): string {
   return imageUrl;
 }
 
+function imageMimeType(format: string | undefined): string {
+  if (format === 'png') return 'image/png';
+  if (format === 'jpeg') return 'image/jpeg';
+  if (format === 'webp') return 'image/webp';
+  throw new CapabilityInvokeError('UNSUPPORTED', `enhance_upscale unsupported input format '${format ?? 'unknown'}'`, false);
+}
+
 export function createEnhanceUpscaleCapability(): Capability | null {
   const apiToken = resolveOptionalEnv(process.env.REPLICATE_API_TOKEN);
   if (!apiToken) {
@@ -98,6 +105,7 @@ export function createEnhanceUpscaleCapability(): Capability | null {
 
       const buffer = await fs.promises.readFile(filePath);
       const meta = await sharp(buffer).metadata();
+      const mimeType = imageMimeType(meta.format);
       const inputPixels = (meta.width ?? 0) * (meta.height ?? 0);
       if (inputPixels <= 0) {
         throw new CapabilityInvokeError('PROVIDER_FAILURE', 'sharp returned no input dimensions', false);
@@ -123,7 +131,7 @@ export function createEnhanceUpscaleCapability(): Capability | null {
       const prediction = await client.predictions.create({
         model: MODEL,
         input: {
-          image: `data:image/png;base64,${buffer.toString('base64')}`,
+          image: `data:${mimeType};base64,${buffer.toString('base64')}`,
           scale,
           face_enhance: faceEnhance,
         },

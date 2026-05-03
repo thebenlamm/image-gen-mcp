@@ -36,9 +36,21 @@ function getInputPath(evalCase: EvalCase): string {
   return input;
 }
 
-function scorePassed(score: { scorer: string; status: string; value?: number }): boolean {
+function optionalNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+export function scorePassed(
+  score: { scorer: string; status: string; value?: number },
+  params: Record<string, unknown> = {},
+): boolean {
   if (score.status !== 'scored' || typeof score.value !== 'number' || !Number.isFinite(score.value)) {
     return false;
+  }
+  if (score.scorer === 'pixel_delta') {
+    const min = optionalNumber(params.minPixelDelta);
+    const max = optionalNumber(params.maxPixelDelta);
+    return (min === undefined || score.value >= min) && (max === undefined || score.value <= max);
   }
   if (
     score.scorer === 'dimensions_exact' ||
@@ -111,7 +123,9 @@ export async function runEval(): Promise<string> {
         evalCase.params,
         resultData,
       );
-      const status = scores.length > 0 && scores.every(scorePassed) ? 'scored' : 'error';
+      const status = scores.length > 0 && scores.every((score) => scorePassed(score, evalCase.params))
+        ? 'scored'
+        : 'error';
 
       results.push({
         caseId: evalCase.id,
@@ -124,7 +138,7 @@ export async function runEval(): Promise<string> {
         scores,
         error: status === 'error'
           ? `eval scorer failed: ${scores
-            .filter((score) => !scorePassed(score))
+            .filter((score) => !scorePassed(score, evalCase.params))
             .map((score) => `${score.scorer}${score.reason ? ` (${score.reason})` : ''}`)
             .join(', ')}`
           : undefined,
