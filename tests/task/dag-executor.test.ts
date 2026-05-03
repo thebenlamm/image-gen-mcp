@@ -41,6 +41,38 @@ function makeMockCap(op: string, results: Array<CapabilityInvokeResult | Error> 
   } as unknown as Capability;
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function makeDelayedCap(
+  op: string,
+  options: {
+    delayMs: number;
+    onStart?: () => void;
+    onEnd?: () => void;
+    result?: CapabilityInvokeResult;
+    fail?: Error;
+    constraints?: Capability['constraints'];
+  },
+): Capability {
+  const invoke = vi.fn(async () => {
+    options.onStart?.();
+    await sleep(options.delayMs);
+    options.onEnd?.();
+    if (options.fail) throw options.fail;
+    return options.result ?? imageResult();
+  });
+  return {
+    op,
+    provider: 'mock',
+    modelVersion: 'mock-1',
+    constraints: options.constraints ?? {},
+    cost: { perCallUsd: 0 },
+    invoke,
+  } as unknown as Capability;
+}
+
 function makeRegistry(capsByKey: Record<string, Capability>) {
   return {
     get: (op: string, provider: string) => capsByKey[`${op}:${provider}`],
@@ -281,5 +313,166 @@ describe('executeDag', () => {
     expect(capB.invoke).toHaveBeenCalledWith(expect.objectContaining({
       params: { dims: { type: 'dimensions', width: 1, height: 1, format: 'png', channels: 4, hasAlpha: true } },
     }));
+  });
+
+  it('runs two independent ready nodes with overlapping wall-clock time', async () => {
+    const starts = new Map<string, number>();
+    const durationMs = 120;
+    const capA = makeDelayedCap('extract_subject', {
+      delayMs: durationMs,
+      onStart: () => starts.set('A', Date.now()),
+    });
+    const capB = makeDelayedCap('extract_subject', {
+      delayMs: durationMs,
+      onStart: () => starts.set('B', Date.now()),
+    });
+    const capC = makeMockCap('composite_layers');
+
+    await executeDag(
+      plan([
+        { id: 'A', op: 'extract_subject', provider: 'mock-A', params: {}, dependsOn: [], outputKind: 'image' },
+        { id: 'B', op: 'extract_subject', provider: 'mock-B', params: {}, dependsOn: [], outputKind: 'image' },
+        {
+          id: 'C',
+          op: 'composite_layers',
+          provider: 'mock-C',
+          params: {
+            canvas: { width: 1, height: 1 },
+            layers: [{ input: '$nodes.A.output' }, { input: '$nodes.B.output' }],
+          },
+          dependsOn: ['A', 'B'],
+          outputKind: 'image',
+        },
+      ], 'C'),
+      {},
+      { runId, runDir, registry: makeRegistry({
+        'extract_subject:mock-A': capA,
+        'extract_subject:mock-B': capB,
+        'composite_layers:mock-C': capC,
+      }) },
+    );
+
+    expect(Math.abs(starts.get('A')! - starts.get('B')!)).toBeLessThan(durationMs / 2);
+  });
+
+  it('caps ready-node execution at two in flight', async () => {
+    let inflight = 0;
+    let maxInflight = 0;
+    const makeTracked = (id: string) => makeDelayedCap('extract_subject', {
+      delayMs: 80,
+      onStart: () => {
+        inflight += 1;
+        maxInflight = Math.max(maxInflight, inflight);
+      },
+      onEnd: () => {
+        inflight -= 1;
+      },
+    });
+    const caps = Object.fromEntries(
+      ['A', 'B', 'C', 'D'].map((id) => [`extract_subject:mock-${id}`, makeTracked(id)]),
+    );
+
+    await executeDag(
+      plan([
+        { id: 'A', op: 'extract_subject', provider: 'mock-A', params: {}, dependsOn: [], outputKind: 'image' },
+        { id: 'B', op: 'extract_subject', provider: 'mock-B', params: {}, dependsOn: [], outputKind: 'image' },
+        { id: 'C', op: 'extract_subject', provider: 'mock-C', params: {}, dependsOn: [], outputKind: 'image' },
+        { id: 'D', op: 'extract_subject', provider: 'mock-D', params: {}, dependsOn: [], outputKind: 'image' },
+      ], 'D'),
+      {},
+      { runId, runDir, registry: makeRegistry(caps) },
+    );
+
+    expect(maxInflight).toBe(2);
+  });
+
+  it('does not start descendants until all parents complete', async () => {
+    const timings = new Map<string, { start?: number; end?: number }>();
+    const markStart = (id: string) => () => timings.set(id, { ...timings.get(id), start: Date.now() });
+    const markEnd = (id: string) => () => timings.set(id, { ...timings.get(id), end: Date.now() });
+
+    await executeDag(
+      plan([
+        { id: 'A', op: 'extract_subject', provider: 'mock-A', params: {}, dependsOn: [], outputKind: 'image' },
+        { id: 'B', op: 'extract_subject', provider: 'mock-B', params: {}, dependsOn: [], outputKind: 'image' },
+        {
+          id: 'C',
+          op: 'composite_layers',
+          provider: 'mock-C',
+          params: {
+            canvas: { width: 1, height: 1 },
+            layers: [{ input: '$nodes.A.output' }, { input: '$nodes.B.output' }],
+          },
+          dependsOn: ['A', 'B'],
+          outputKind: 'image',
+        },
+        { id: 'D', op: 'extract_subject', provider: 'mock-D', params: { input: '$nodes.C.output' }, dependsOn: ['C'], outputKind: 'image' },
+      ], 'D'),
+      {},
+      { runId, runDir, registry: makeRegistry({
+        'extract_subject:mock-A': makeDelayedCap('extract_subject', { delayMs: 60, onStart: markStart('A'), onEnd: markEnd('A') }),
+        'extract_subject:mock-B': makeDelayedCap('extract_subject', { delayMs: 60, onStart: markStart('B'), onEnd: markEnd('B') }),
+        'composite_layers:mock-C': makeDelayedCap('composite_layers', { delayMs: 20, onStart: markStart('C'), onEnd: markEnd('C') }),
+        'extract_subject:mock-D': makeDelayedCap('extract_subject', { delayMs: 1, onStart: markStart('D'), onEnd: markEnd('D') }),
+      }) },
+    );
+
+    expect(timings.get('C')!.start).toBeGreaterThanOrEqual(timings.get('A')!.end!);
+    expect(timings.get('C')!.start).toBeGreaterThanOrEqual(timings.get('B')!.end!);
+    expect(timings.get('D')!.start).toBeGreaterThanOrEqual(timings.get('C')!.end!);
+  });
+
+  it('keeps in-flight siblings running when one root fails and skips only descendants', async () => {
+    const sibling = makeDelayedCap('extract_subject', { delayMs: 80 });
+    const failed = makeDelayedCap('extract_subject', {
+      delayMs: 20,
+      fail: new CapabilityInvokeError('PROVIDER_FAILURE', 'root failed', false),
+    });
+    const downstream = makeMockCap('extract_subject');
+
+    const result = await executeDag(
+      plan([
+        { id: 'A', op: 'extract_subject', provider: 'mock-A', params: {}, dependsOn: [], outputKind: 'image' },
+        { id: 'B', op: 'extract_subject', provider: 'mock-B', params: {}, dependsOn: [], outputKind: 'image' },
+        { id: 'C', op: 'extract_subject', provider: 'mock-C', params: { input: '$nodes.A.output' }, dependsOn: ['A'], outputKind: 'image' },
+      ], 'C'),
+      {},
+      { runId, runDir, registry: makeRegistry({
+        'extract_subject:mock-A': failed,
+        'extract_subject:mock-B': sibling,
+        'extract_subject:mock-C': downstream,
+      }) },
+    );
+
+    expect(result.trace.nodes.find((node) => node.id === 'nA')!.outcome).toBe('error');
+    expect(result.trace.nodes.find((node) => node.id === 'nB')!.outcome).toBe('success');
+    expect(result.trace.nodes.find((node) => node.id === 'nC')!.outcome).toBe('skipped');
+    expect(sibling.invoke).toHaveBeenCalledTimes(1);
+    expect(downstream.invoke).not.toHaveBeenCalled();
+  });
+
+  it('keeps batch siblings running when one node fails validation', async () => {
+    const sibling = makeDelayedCap('extract_subject', { delayMs: 40 });
+    const invalid = makeDelayedCap('extract_subject', {
+      delayMs: 40,
+      constraints: { requiresInputImage: true },
+    });
+
+    const result = await executeDag(
+      plan([
+        { id: 'A', op: 'extract_subject', provider: 'mock-A', params: {}, dependsOn: [], outputKind: 'image' },
+        { id: 'B', op: 'extract_subject', provider: 'mock-B', params: {}, dependsOn: [], outputKind: 'image' },
+      ], 'B'),
+      {},
+      { runId, runDir, registry: makeRegistry({
+        'extract_subject:mock-A': invalid,
+        'extract_subject:mock-B': sibling,
+      }) },
+    );
+
+    expect(result.trace.nodes.find((node) => node.id === 'nA')!.outcome).toBe('error');
+    expect(result.trace.nodes.find((node) => node.id === 'nB')!.outcome).toBe('success');
+    expect(invalid.invoke).not.toHaveBeenCalled();
+    expect(sibling.invoke).toHaveBeenCalledTimes(1);
   });
 });
