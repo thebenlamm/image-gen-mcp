@@ -47,6 +47,7 @@ Two value props, one MCP:
 - ✓ `image_op` run/session artifact layer with unique run IDs, atomic intermediates under `.runs/<runId>/`, manifests, trace paths, and startup retention sweep (Phase 6)
 - ✓ Deterministic eval harness + golden set with measured-quality routing: per-capability registry quality from `npm run eval`, real tesseract.js OCR scoring, alpha-coverage and pixel-delta scorers, OCR cases require machine-readable `expectedText` (Phase 7)
 - ✓ Full op primitive taxonomy for `image_op`: `transform`, `composite_layers`, `enhance_upscale`, `analyze_dimensions`, `analyze_palette`, and `analyze_ocr`, with data-result contract, discovery via `list_capabilities`, and deterministic eval coverage where applicable (Phase 8)
+- ✓ `image_task` template fast-paths and executor controls: `ASSET_PRESETS`-derived templates skip the planner, explicit product/logo/upscale templates are available, sub-cent budgets require template routing, and DAG execution runs independent nodes with bounded parallelism/sharp concurrency (Phase 10)
 
 ### Active (v2.0)
 
@@ -108,7 +109,7 @@ See `.planning/REQUIREMENTS.md` for full requirement list with REQ-IDs. Categori
 | **CapabilityRegistry parallel to ImageProvider (NOT optional methods)** | Five existing providers untouched; "extract-only" providers don't need fake `generate()` stubs | v2.0 — Pending |
 | **Drop ProviderName enum at capability layer (use plain string)** | Closed unions break every provider add | v2.0 — Pending |
 | **Anthropic Claude Haiku as planner LLM** | Flexible enough for novel goals, $0.001-0.003/call | v2.0 — Pending |
-| **Templates seed from ASSET_PRESETS by reference (not forked)** | Fixes propagate; v1.0 + v2.0 stay in sync | v2.0 — Pending |
+| **Templates seed from ASSET_PRESETS by reference (not forked)** | Fixes propagate; v1.0 + v2.0 stay in sync | v2.0 — Phase 10 validated |
 | **Trace returns paths only, never base64** | MCP stdio response size bound | v2.0 — Phase 6 validated for `image_op`; Phase 9 extends to `image_task` |
 | **Eval harness blocks second provider per op** | Without measured scores the planner picks on vibes | v2.0 — Phase 7 validated; Phase 8 eval gate now fails missing local caps and exact-score regressions |
 | **Data-returning capabilities do not write image artifacts** | Analysis ops should return typed data and leave `trace.artifactPath` empty | v2.0 — Phase 8 validated for dimensions, palette, OCR |
@@ -132,4 +133,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-03 — Phase 8 op primitives complete; `image_op` now covers transform, composite, upscale, dimensions, palette, and OCR*
+*Last updated: 2026-05-03 — Phase 10 template fast-paths and bounded DAG execution complete; `image_task` now skips the planner for known templates and enforces template-only sub-cent budgets*
