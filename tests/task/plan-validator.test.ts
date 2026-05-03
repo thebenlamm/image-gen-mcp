@@ -94,6 +94,65 @@ describe('validatePlan', () => {
     if (!result.ok) expect(result.errors.some((error) => error.code === 'PLAN_UNKNOWN_REF')).toBe(true);
   });
 
+  it('returns PLAN_MISSING_DEP when a node references another node output without dependsOn', async () => {
+    const extract: PlanNode = {
+      ...baseNode,
+      id: 'extract',
+      op: 'extract_subject',
+      provider: '@imgly/local',
+      params: { input: '$inputs.product' },
+      dependsOn: [],
+      outputKind: 'image',
+    };
+    const edit: PlanNode = {
+      ...baseNode,
+      id: 'edit',
+      op: 'edit_prompt',
+      provider: 'openai',
+      params: { input: '$nodes.extract.output', prompt: 'clean background' },
+      dependsOn: [],
+      outputKind: 'image',
+    };
+
+    const result = await validate(makePlan({
+      nodes: [extract, edit],
+      terminalNodeId: 'edit',
+    }));
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContainEqual(expect.objectContaining({
+        code: 'PLAN_MISSING_DEP',
+        nodeId: 'edit',
+        field: 'params.input',
+        message: expect.stringContaining("depends on 'extract'"),
+      }));
+    }
+  });
+
+  it('returns PLAN_OUTPUT_KIND_MISMATCH when analyze_dimensions lies as image', async () => {
+    const result = await validate(makePlan({
+      nodes: [{
+        ...baseNode,
+        op: 'analyze_dimensions',
+        provider: 'sharp',
+        params: { input: '$inputs.product' },
+        dependsOn: [],
+        outputKind: 'image',
+      }],
+    }));
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContainEqual(expect.objectContaining({
+        code: 'PLAN_OUTPUT_KIND_MISMATCH',
+        nodeId: 'n1',
+        field: 'outputKind',
+        message: expect.stringContaining("must declare outputKind 'data'"),
+      }));
+    }
+  });
+
   it('collects PLAN_REF_TYPE_MISMATCH for data refs in image fields', async () => {
     const dataNode: PlanNode = {
       id: 'ocr',
@@ -184,6 +243,25 @@ describe('validatePlan', () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.errors.some((error) => error.code === 'INPUT_PATH_OUTSIDE_ROOT')).toBe(true);
+  });
+
+  it('collects INPUT_PATH_OUTSIDE_ROOT for ctx.inputImages referenced by dry-run plans', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'validator-root-'));
+    const root = path.join(tmp, 'root');
+    const outside = path.join(tmp, 'outside.png');
+    await fs.mkdir(root);
+    await fs.writeFile(outside, 'not really an image');
+    process.env.IMAGE_GEN_INPUT_ROOT = root;
+    const result = await validate(makePlan(), { product: outside });
+    await fs.rm(tmp, { recursive: true, force: true });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContainEqual(expect.objectContaining({
+        code: 'INPUT_PATH_OUTSIDE_ROOT',
+        field: '$inputs.product',
+      }));
+    }
   });
 
   it('returns BUDGET_CAP_EXCEEDED with budget details', async () => {

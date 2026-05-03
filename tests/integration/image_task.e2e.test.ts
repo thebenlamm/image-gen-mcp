@@ -15,9 +15,11 @@ const goal = 'remove the background and place this on a clean white studio surfa
 
 let outputRoot: string;
 let previousOutputDir: string | undefined;
+let previousInputRoot: string | undefined;
 
 beforeEach(async () => {
   previousOutputDir = process.env.IMAGE_GEN_OUTPUT_DIR;
+  previousInputRoot = process.env.IMAGE_GEN_INPUT_ROOT;
   outputRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'image-task-e2e-'));
   process.env.IMAGE_GEN_OUTPUT_DIR = outputRoot;
 });
@@ -28,6 +30,11 @@ afterEach(async () => {
     delete process.env.IMAGE_GEN_OUTPUT_DIR;
   } else {
     process.env.IMAGE_GEN_OUTPUT_DIR = previousOutputDir;
+  }
+  if (previousInputRoot === undefined) {
+    delete process.env.IMAGE_GEN_INPUT_ROOT;
+  } else {
+    process.env.IMAGE_GEN_INPUT_ROOT = previousInputRoot;
   }
   await fs.rm(outputRoot, { recursive: true, force: true });
 });
@@ -83,6 +90,36 @@ describe('SC#2 image_task dry_run', () => {
     expect(parsed.dry_run).toBe(true);
     expect(parsed.plan.steps).toHaveLength(3);
     expect(parsed.total_cost_usd).toBe(plan.estimatedTotalCostUsd);
+    expect(mockInvoke).not.toHaveBeenCalled();
+  });
+
+  it('returns INPUT_PATH_OUTSIDE_ROOT before provider invocation for unsafe dry-run input_images', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'image-task-input-root-'));
+    const root = path.join(tmp, 'root');
+    const outside = path.join(tmp, 'outside.png');
+    await fs.mkdir(root);
+    await fs.writeFile(outside, 'not really an image');
+    process.env.IMAGE_GEN_INPUT_ROOT = root;
+
+    const { handleImageTask, capabilityRegistry } = await importHandleImageTaskWithPlanner(makePlan());
+    const { mockInvoke } = registerMockCapabilities(capabilityRegistry);
+
+    const parsed = parseResponse(await handleImageTask({
+      goal: 'dry run unsafe input',
+      input_images: [outside],
+      dry_run: true,
+      runId: 'dry-run-unsafe-input',
+    }));
+
+    await fs.rm(tmp, { recursive: true, force: true });
+
+    expect(parsed.success).toBe(false);
+    const codes = [
+      parsed.error?.code,
+      ...(Array.isArray(parsed.errors) ? parsed.errors.map((error: { code: string }) => error.code) : []),
+    ];
+    expect(codes).toContain('INPUT_PATH_OUTSIDE_ROOT');
+    expect(parsed.dry_run).not.toBe(true);
     expect(mockInvoke).not.toHaveBeenCalled();
   });
 });
