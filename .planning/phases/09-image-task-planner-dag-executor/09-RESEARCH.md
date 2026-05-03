@@ -1224,26 +1224,20 @@ async function planTask(args: PlanArgs): Promise<Plan> {
 | A5 | Total planning + validation + execution stays under MCP stdio response size limits when path-only | §6.5 | Yes — typical response is ~3-10 KB. The base64 guard catches accidental bloat. |
 | A6 | `messages.parse` exposes `usage` like `messages.create` does | §10.9 | Highly likely (it's a thin wrapper) but verify the field path before locking the cost-attribution code. |
 
-**User confirmation needed before lockdown:**
-- A1 (smoke-test in Wave 0 before implementation)
-- A6 (5-minute SDK introspection)
+**Assumptions resolved (locked 2026-05-02 by user):**
+- A1: `zodOutputFormat` works with Haiku 4.5 — verified via Wave 0 smoke test as part of 09-01 Task 1 acceptance (`@anthropic-ai/sdk@^0.92.0` install + import resolves).
+- A6: `messages.parse` exposes `usage` field — accepted; if SDK shape differs at implementation time, executor reads token usage from whatever field the SDK exposes (cost telemetry is non-blocking for SC#1-#5).
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should `image_task` accept `outputPath`/`outputDir` like `image_op`?**
-   - What we know: `image_op` accepts both. `image_task` is goal-shaped and the user expects the server to manage paths.
-   - What's unclear: should the user be able to direct the *terminal* image to a specific path?
-   - Recommendation: Yes — accept both. Reuse `resolveOutputPath`. Default behavior is `~/Downloads/generated-images/<auto-name>.png`. Document in the tool description.
+   - **RESOLVED: YES** — accept both. Reuse `resolveOutputPath`. Default behavior is `~/Downloads/generated-images/<auto-name>.png`. Document in the tool description. Locked into 09-03 Task 2 input schema.
 
 2. **Should the planner be allowed to emit `outputPath`/`outputDir` for individual nodes?**
-   - What we know: capabilities accept these via `CapabilityInvokeParams`.
-   - What's unclear: does the planner need this knob, or is the runId-based per-node artifact path always correct?
-   - Recommendation: NO. The executor owns per-node artifact paths (`<runDir>/n<id>.png`). Forbid the planner from setting `outputPath`/`outputDir` per node. The terminal node gets the user-facing path, set by the executor, not the plan. Add a validation pass that rejects nodes with `params.outputPath`/`params.outputDir`.
+   - **RESOLVED: NO** — executor owns per-node artifact paths (`<runDir>/n<id>.png`). Plan validator rejects nodes with `params.outputPath`/`params.outputDir`. The terminal node gets the user-facing path, set by the executor, not the plan. Locked into 09-01 Task 5 plan-validator pass list.
 
 3. **Where should `ANTHROPIC_API_KEY` absence surface — at server startup or at first `image_task` call?**
-   - What we know: STATE.md "Pending Todos" includes documenting this env var. Existing capabilities that need keys (OpenAI, Replicate) skip registration when keys are absent.
-   - What's unclear: should `image_task` register at all without the key? Or should it register but fail with a clear error on first call?
-   - Recommendation: Register the tool unconditionally and fail with a clean `PLANNER_AUTH` error on first call. Reason: Claude Code may have the tool descriptor cached; making registration conditional would surprise users. Surface a one-line warning at startup if `ANTHROPIC_API_KEY` is unset, mirroring the existing provider-availability log.
+   - **RESOLVED: register tool unconditionally; fail with `PLANNER_AUTH` on first call.** Surface a one-line startup warning when `ANTHROPIC_API_KEY` is unset, mirroring existing provider-availability logs. Reason: Claude Code may cache the tool descriptor — conditional registration would surprise users. Locked into 09-01 Task 6 (planner error taxonomy) and 09-03 Task 3 (handler).
 
 ## Environment Availability
 
