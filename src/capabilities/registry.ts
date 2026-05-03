@@ -15,6 +15,7 @@ export class CapabilityRegistry {
     const key = this.createKey(capability.op, capability.provider);
     const existing = this.capabilities.get(key);
     const incoming = { ...capability };
+    const registrationQuality = capability.quality;
 
     if (existing && existing.modelVersion !== incoming.modelVersion) {
       incoming.quality = undefined;
@@ -35,6 +36,15 @@ export class CapabilityRegistry {
       throw new Error(
         `Capability ${incoming.op}/${incoming.provider} is unscored; add an eval case before production routing`
       );
+    }
+
+    if (options.allowUnscoredProduction === true) {
+      const justification = registrationQuality?.unscoredJustification;
+      if (typeof justification !== 'string' || justification.trim().length === 0) {
+        throw new Error(
+          `Capability ${incoming.op}/${incoming.provider} registered with allowUnscoredProduction=true requires a non-empty quality.unscoredJustification (D-09 audit trail)`
+        );
+      }
     }
 
     this.capabilities.set(key, incoming);

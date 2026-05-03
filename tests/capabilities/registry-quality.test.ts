@@ -25,7 +25,7 @@ function capability(
             : {}),
         }
       : undefined,
-    invoke: async () => ({ buffer: Buffer.alloc(0), model: 'fake-model' }),
+    invoke: async () => ({ kind: 'image' as const, buffer: Buffer.alloc(0), model: 'fake-model' }),
   };
 }
 

@@ -14,7 +14,7 @@ function capability(provider = '@imgly/local', modelVersion = 'model-v1'): Capab
     modelVersion,
     constraints: { outputFormat: 'png' },
     cost: { perCallUsd: 0 },
-    invoke: async () => ({ buffer: Buffer.alloc(0), model: 'fake-model' }),
+    invoke: async () => ({ kind: 'image' as const, buffer: Buffer.alloc(0), model: 'fake-model' }),
   };
 }
 

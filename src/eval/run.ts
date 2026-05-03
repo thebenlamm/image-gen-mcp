@@ -1,5 +1,10 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import type {
+  AnalyzeDimensionsResult,
+  AnalyzeOcrResult,
+  AnalyzePaletteResult,
+} from '../capabilities/types.js';
 import { capabilityRegistry } from '../capabilities/registry.js';
 import { writeFileAtomic } from '../runs/write.js';
 import { loadEvalCases } from './cases.js';
@@ -29,11 +34,6 @@ function getInputPath(evalCase: EvalCase): string {
     throw new Error(`eval case ${evalCase.id} requires params.input`);
   }
   return input;
-}
-
-function getExpectedText(evalCase: EvalCase): string | undefined {
-  const expectedText = evalCase.params.expectedText;
-  return typeof expectedText === 'string' ? expectedText : undefined;
 }
 
 export async function runEval(): Promise<string> {
@@ -73,6 +73,7 @@ export async function runEval(): Promise<string> {
 
     const startedAt = Date.now();
     let outputPath: string | undefined;
+    let resultData: AnalyzeDimensionsResult | AnalyzePaletteResult | AnalyzeOcrResult | undefined;
     try {
       const inputPath = getInputPath(evalCase);
       outputPath = path.join(ARTIFACTS_DIR, `${evalCase.id}.png`);
@@ -80,12 +81,20 @@ export async function runEval(): Promise<string> {
         params: evalCase.params,
         outputPath,
       });
-      await writeFileAtomic(outputPath, invokeResult.buffer);
+
+      if (invokeResult.kind === 'image') {
+        await writeFileAtomic(outputPath, invokeResult.buffer);
+      } else {
+        resultData = invokeResult.data;
+        outputPath = undefined;
+      }
+
       const scores = await runScorers(
         inputPath,
         outputPath,
         evalCase.scorers,
-        getExpectedText(evalCase),
+        evalCase.params,
+        resultData,
       );
       const status = scores.some((score) => score.status === 'scored')
         ? 'scored'

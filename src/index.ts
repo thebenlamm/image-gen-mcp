@@ -10,7 +10,12 @@ import * as http from 'http';
 import { pathToFileURL } from 'node:url';
 import express from 'express';
 
-import { capabilityRegistry, registerBuiltInCapabilities, type CapabilityOp } from './capabilities/index.js';
+import {
+  CapabilityInvokeError,
+  capabilityRegistry,
+  registerBuiltInCapabilities,
+  type CapabilityOp,
+} from './capabilities/index.js';
 import { validateCapabilityParams } from './capabilities/validation.js';
 import {
   createRunId,
@@ -437,7 +442,7 @@ server.tool(
   'Invoke a registered image capability directly by operation and provider. Current capabilities: extract_subject with provider @imgly/local removes a background from params.input with no API key; edit_prompt with provider openai edits params.input using params.prompt and optional params.size through GPT Image. Saves PNG output through standard output path rules and returns {success, output, runId, trace}.',
   {
     op: z
-      .enum(['extract_subject', 'edit_prompt', 'composite_layers', 'transform', 'enhance_upscale', 'analyze_dimensions', 'analyze_palette', 'analyze_ocr', 'generate'])
+      .enum(['extract_subject', 'edit_prompt', 'composite_layers', 'transform', 'enhance_upscale', 'analyze_dimensions', 'analyze_palette', 'analyze_ocr'])
       .describe('Capability operation. Currently supported: extract_subject, edit_prompt. Other values are reserved for future capabilities.'),
     provider: z
       .string()
@@ -464,7 +469,7 @@ export interface ImageOpArgs {
 
 function imageOpErrorResponse(
   runId: string,
-  error: string,
+  error: string | { message: string; code?: string; retryable?: boolean; suggestion?: string },
   nodes: ReturnType<typeof buildTraceNode>[] = [],
   extra: Record<string, unknown> = {},
 ): { content: Array<{ type: 'text'; text: string }> } {
@@ -473,7 +478,7 @@ function imageOpErrorResponse(
       type: 'text' as const,
       text: JSON.stringify({
         success: false,
-        error,
+        error: typeof error === 'string' ? { message: error } : error,
         runId,
         trace: { runId, nodes },
         ...extra,
@@ -571,7 +576,7 @@ export async function handleImageOp(args: ImageOpArgs): Promise<{
         type: 'text' as const,
         text: JSON.stringify({
           success: false,
-          error,
+          error: { message: error },
           available: capabilityRegistry.list(op as CapabilityOp).map((c) => c.provider),
           runId,
           trace: { runId, nodes: [errorNode] },
@@ -589,49 +594,93 @@ export async function handleImageOp(args: ImageOpArgs): Promise<{
     const result = await capability.invoke({ params, outputPath, outputDir });
     const nodeEndedAt = Date.now();
 
-    await writeFileAtomic(artifactPath, result.buffer);
+    if (result.kind === 'image') {
+      await writeFileAtomic(artifactPath, result.buffer);
 
-    const filePath = await resolveOutputPath({
-      outputPath,
-      outputDir,
-      prompt: `${op}-${provider}`,
-      provider,
-    });
-    await saveImage(result.buffer, filePath);
+      const filePath = await resolveOutputPath({
+        outputPath,
+        outputDir,
+        prompt: `${op}-${provider}`,
+        provider,
+      });
+      await saveImage(result.buffer, filePath);
 
-    const node = buildTraceNode({
-      id: `n${nodeId}`,
-      op,
-      provider,
-      model: result.model,
-      artifactPath,
-      output: filePath,
-      startedAtMs: nodeStartedAt,
-      endedAtMs: nodeEndedAt,
-      outcome: 'success',
-      revisedPrompt: result.revisedPrompt,
-      metadata: result.metadata,
-    });
-
-    const endedAt = Date.now();
-    await writeManifest(runDir, {
-      schemaVersion: 1,
-      runId,
-      startedAt: new Date(startedAt).toISOString(),
-      endedAt: new Date(endedAt).toISOString(),
-      status: 'success',
-      invocation: baseInvocation,
-      nodes: [{
-        id: node.id,
+      const node = buildTraceNode({
+        id: `n${nodeId}`,
         op,
         provider,
         model: result.model,
         artifactPath,
-        durationMs: node.durationMs,
+        output: filePath,
+        startedAtMs: nodeStartedAt,
+        endedAtMs: nodeEndedAt,
+        outcome: 'success',
+        revisedPrompt: result.revisedPrompt,
+        metadata: result.metadata,
+      });
+
+      const endedAt = Date.now();
+      await writeManifest(runDir, {
+        schemaVersion: 1,
+        runId,
+        startedAt: new Date(startedAt).toISOString(),
+        endedAt: new Date(endedAt).toISOString(),
+        status: 'success',
+        invocation: baseInvocation,
+        nodes: [{
+          id: node.id,
+          op,
+          provider,
+          model: result.model,
+          artifactPath,
+          durationMs: node.durationMs,
+          outcome: 'success',
+        }],
+        finalOutput: filePath,
+        totalDurationMs: endedAt - startedAt,
+      });
+
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify({
+            success: true,
+            output: filePath,
+            runId,
+            trace: { runId, nodes: [node] },
+          }),
+        }],
+      };
+    }
+
+    const dataNode = buildTraceNode({
+      id: `n${nodeId}`,
+      op,
+      provider,
+      model: result.model,
+      startedAtMs: nodeStartedAt,
+      endedAtMs: nodeEndedAt,
+      outcome: 'success',
+      metadata: result.metadata,
+    });
+
+    const dataEndedAt = Date.now();
+    await writeManifest(runDir, {
+      schemaVersion: 1,
+      runId,
+      startedAt: new Date(startedAt).toISOString(),
+      endedAt: new Date(dataEndedAt).toISOString(),
+      status: 'success',
+      invocation: baseInvocation,
+      nodes: [{
+        id: dataNode.id,
+        op,
+        provider,
+        model: result.model,
+        durationMs: dataNode.durationMs,
         outcome: 'success',
       }],
-      finalOutput: filePath,
-      totalDurationMs: endedAt - startedAt,
+      totalDurationMs: dataEndedAt - startedAt,
     });
 
     return {
@@ -639,15 +688,24 @@ export async function handleImageOp(args: ImageOpArgs): Promise<{
         type: 'text' as const,
         text: JSON.stringify({
           success: true,
-          output: filePath,
+          data: result.data,
           runId,
-          trace: { runId, nodes: [node] },
+          trace: { runId, nodes: [dataNode] },
         }),
       }],
     };
   } catch (error) {
     const endedAt = Date.now();
     const message = error instanceof Error ? error.message : String(error);
+    const errorPayload =
+      error instanceof CapabilityInvokeError
+        ? {
+            message,
+            code: error.code,
+            retryable: error.retryable,
+            suggestion: error.suggestion,
+          }
+        : { message };
     const errorNode = buildTraceNode({
       id: `n${nodeId}`,
       op,
@@ -692,7 +750,7 @@ export async function handleImageOp(args: ImageOpArgs): Promise<{
         type: 'text' as const,
         text: JSON.stringify({
           success: false,
-          error: message,
+          error: errorPayload,
           runId,
           trace: { runId, nodes: [errorNode] },
         }),

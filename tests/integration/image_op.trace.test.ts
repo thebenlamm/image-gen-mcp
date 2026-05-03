@@ -37,7 +37,9 @@ describe('image_op trace shape (Phase 6 -> Phase 9 contract)', () => {
       modelVersion: 'snap-1',
       constraints: { outputFormat: 'png' },
       cost: { perCallUsd: 0 },
+      quality: { unscoredJustification: 'test fake capability' },
       invoke: async () => ({
+        kind: 'image' as const,
         buffer: FAKE_PNG,
         model: 'snap-model',
         metadata: { fixture: true },

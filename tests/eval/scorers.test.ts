@@ -117,7 +117,9 @@ describe('eval scorers', () => {
       '<svg width="200" height="80" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="80" fill="white"/><text x="10" y="60" font-size="48" font-family="Arial" fill="black">OPEN</text></svg>',
     );
 
-    const scores = await runScorers(input, output, ['pixel_delta', 'ocr_text_presence'], 'OPEN');
+    const scores = await runScorers(input, output, ['pixel_delta', 'ocr_text_presence'], {
+      expectedText: 'OPEN',
+    });
 
     expect(scores.map((score) => score.scorer)).toEqual([
       'pixel_delta',

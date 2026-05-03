@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import type { Capability } from './types.js';
+import { CapabilityInvokeError } from './types.js';
 
 const MAX_PROMPT_LENGTH = 4000;
 const SIZE_MAP = {
@@ -50,15 +51,15 @@ export function createEditPromptCapability(): Capability | null {
       const prompt = input.params.prompt;
 
       if (typeof filePath !== 'string' || !filePath.trim()) {
-        throw new Error('edit_prompt requires params.input file path');
+        throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', 'edit_prompt requires params.input file path', false);
       }
 
       if (typeof prompt !== 'string' || !prompt.trim()) {
-        throw new Error('edit_prompt requires params.prompt');
+        throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', 'edit_prompt requires params.prompt', false);
       }
 
       if (prompt.length > MAX_PROMPT_LENGTH) {
-        throw new Error('edit_prompt prompt exceeds max length 4000');
+        throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', 'edit_prompt prompt exceeds max length 4000', false);
       }
 
       const requestedSize = input.params.size;
@@ -66,7 +67,7 @@ export function createEditPromptCapability(): Capability | null {
         requestedSize !== undefined &&
         (typeof requestedSize !== 'string' || !(requestedSize in SIZE_MAP))
       ) {
-        throw new Error(`edit_prompt does not support size '${requestedSize}'`);
+        throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', `edit_prompt does not support size '${requestedSize}'`, false);
       }
       const size = requestedSize === undefined
         ? undefined
@@ -94,17 +95,22 @@ export function createEditPromptCapability(): Capability | null {
         error?: { message?: string };
       };
       if (!response.ok) {
-        throw new Error(responseBody.error?.message || `OpenAI edit failed with status ${response.status}`);
+        throw new CapabilityInvokeError(
+          'PROVIDER_FAILURE',
+          responseBody.error?.message || `OpenAI edit failed with status ${response.status}`,
+          true,
+        );
       }
 
       const imageData = responseBody.data?.[0];
       if (!imageData?.b64_json) {
-        throw new Error('No image data returned from OpenAI edit');
+        throw new CapabilityInvokeError('PROVIDER_FAILURE', 'No image data returned from OpenAI edit', true);
       }
 
       const buffer = Buffer.from(imageData.b64_json, 'base64');
 
       return {
+        kind: 'image',
         buffer,
         model,
         revisedPrompt: imageData.revised_prompt,

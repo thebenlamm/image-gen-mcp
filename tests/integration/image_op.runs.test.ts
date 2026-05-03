@@ -24,9 +24,10 @@ function registerFakeCapability(
     modelVersion: 'test-1',
     constraints: { outputFormat: 'png' },
     cost: { perCallUsd: 0 },
+    quality: { unscoredJustification: 'test fake capability' },
     invoke: async () => {
       if (opts?.throws) throw opts.throws;
-      return { buffer: FAKE_PNG, model: 'fake-model' };
+      return { kind: 'image' as const, buffer: FAKE_PNG, model: 'fake-model' };
     },
   };
   capabilityRegistry.register(cap, { allowUnscoredProduction: true });

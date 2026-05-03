@@ -23,7 +23,7 @@ function capability(
     constraints: { outputFormat: 'png' },
     cost: { perCallUsd: 0 },
     quality: options.scores ? { scores: options.scores } : undefined,
-    invoke: async () => ({ buffer: Buffer.alloc(0), model: 'fake-model' }),
+    invoke: async () => ({ kind: 'image' as const, buffer: Buffer.alloc(0), model: 'fake-model' }),
   };
 }
 
@@ -99,10 +99,13 @@ describe('Phase 7 acceptance: eval harness routing preconditions', () => {
       })),
     ).toThrow(UNSCORED_ERROR);
 
-    registry.register(capability('provider-b', {
-      modelVersion: 'model-v2',
-      scores: { alpha_coverage: 0.9 },
-    }), { allowUnscoredProduction: true });
+    registry.register({
+      ...capability('provider-b', {
+        modelVersion: 'model-v2',
+        scores: { alpha_coverage: 0.9 },
+      }),
+      quality: { unscoredJustification: 'model changed; quality invalidation intentionally bypassed' },
+    }, { allowUnscoredProduction: true });
 
     expect(registry.get('extract_subject', 'provider-b')?.quality).toBeUndefined();
   });

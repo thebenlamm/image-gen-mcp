@@ -1,5 +1,6 @@
 import { removeBackground } from '@imgly/background-removal-node';
 import type { Capability } from './types.js';
+import { CapabilityInvokeError } from './types.js';
 
 const MODEL_VERSION = '@imgly/background-removal-node@1';
 
@@ -31,13 +32,14 @@ export function createExtractSubjectCapability(): Capability {
       const filePath = input.params.input;
 
       if (typeof filePath !== 'string' || !filePath.trim()) {
-        throw new Error('extract_subject requires params.input file path');
+        throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', 'extract_subject requires params.input file path', false);
       }
 
       const result = await removeBackground(filePath);
       const buffer = await toBuffer(result);
 
       return {
+        kind: 'image',
         buffer,
         model: MODEL_VERSION,
         metadata: { input: filePath },

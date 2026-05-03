@@ -1,6 +1,11 @@
 import pixelmatch from 'pixelmatch';
 import sharp from 'sharp';
 import { createWorker } from 'tesseract.js';
+import type {
+  AnalyzeDimensionsResult,
+  AnalyzeOcrResult,
+  AnalyzePaletteResult,
+} from '../capabilities/types.js';
 import type { EvalScore, EvalScorerId } from './types.js';
 
 const SCORE_SIZE = 256;
@@ -105,21 +110,116 @@ export async function scoreOcrTextPresence(
   }
 }
 
+export function scoreDimensionsExact(
+  data: {
+    width: number;
+    height: number;
+    format: string;
+    channels: number;
+    hasAlpha: boolean;
+  } | undefined,
+  expected: {
+    width?: number;
+    height?: number;
+    format?: string;
+    channels?: number;
+    hasAlpha?: boolean;
+  } | undefined,
+): EvalScore {
+  if (!data || !expected) {
+    return {
+      scorer: 'dimensions_exact',
+      status: 'error',
+      reason: 'missing data or expectedDimensions',
+    };
+  }
+
+  const ok =
+    (expected.width === undefined || data.width === expected.width) &&
+    (expected.height === undefined || data.height === expected.height) &&
+    (expected.format === undefined || data.format === expected.format) &&
+    (expected.channels === undefined || data.channels === expected.channels) &&
+    (expected.hasAlpha === undefined || data.hasAlpha === expected.hasAlpha);
+
+  return {
+    scorer: 'dimensions_exact',
+    status: 'scored',
+    value: ok ? 1 : 0,
+    reason: ok ? undefined : `actual=${JSON.stringify(data)} expected=${JSON.stringify(expected)}`,
+  };
+}
+
+export function scorePaletteExact(
+  data: { colors: Array<{ hex: string }> } | undefined,
+  expected: string[] | undefined,
+): EvalScore {
+  if (!data || !expected || expected.length === 0) {
+    return {
+      scorer: 'palette_exact',
+      status: 'error',
+      reason: 'missing data or expectedPalette',
+    };
+  }
+
+  const actualSet = new Set(data.colors.map((color) => color.hex.toLowerCase()));
+  const missing = expected.filter((hex) => !actualSet.has(hex.toLowerCase()));
+
+  return {
+    scorer: 'palette_exact',
+    status: 'scored',
+    value: (expected.length - missing.length) / expected.length,
+    reason: missing.length === 0 ? undefined : `missing=${missing.join(',')}`,
+  };
+}
+
 export async function runScorers(
   inputPath: string,
-  outputPath: string,
+  outputPath: string | undefined,
   scorerIds: EvalScorerId[],
-  expectedText?: string,
+  params: Record<string, unknown>,
+  data?: AnalyzeDimensionsResult | AnalyzePaletteResult | AnalyzeOcrResult,
 ): Promise<EvalScore[]> {
   const scores: EvalScore[] = [];
 
   for (const scorerId of scorerIds) {
     if (scorerId === 'alpha_coverage') {
+      if (!outputPath) {
+        scores.push({ scorer: 'alpha_coverage', status: 'error', reason: 'outputPath required' });
+        continue;
+      }
       scores.push(await scoreAlphaCoverage(outputPath));
     } else if (scorerId === 'pixel_delta') {
+      if (!outputPath) {
+        scores.push({ scorer: 'pixel_delta', status: 'error', reason: 'outputPath required' });
+        continue;
+      }
       scores.push(await scorePixelDelta(inputPath, outputPath));
     } else if (scorerId === 'ocr_text_presence') {
-      scores.push(await scoreOcrTextPresence(outputPath, expectedText));
+      if (!outputPath) {
+        scores.push({ scorer: 'ocr_text_presence', status: 'error', reason: 'outputPath required' });
+        continue;
+      }
+      const expectedText = params.expectedText;
+      scores.push(await scoreOcrTextPresence(
+        outputPath,
+        typeof expectedText === 'string' ? expectedText : undefined,
+      ));
+    } else if (scorerId === 'dimensions_exact') {
+      scores.push(scoreDimensionsExact(
+        data?.type === 'dimensions' ? data : undefined,
+        params.expectedDimensions as {
+          width?: number;
+          height?: number;
+          format?: string;
+          channels?: number;
+          hasAlpha?: boolean;
+        } | undefined,
+      ));
+    } else if (scorerId === 'palette_exact') {
+      scores.push(scorePaletteExact(
+        data?.type === 'palette' ? data : undefined,
+        params.expectedPalette as string[] | undefined,
+      ));
     } else {
       const exhaustive: never = scorerId;
       throw new Error(`Unsupported eval scorer: ${exhaustive}`);

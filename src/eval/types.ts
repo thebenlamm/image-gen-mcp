@@ -1,7 +1,12 @@
 import type { CapabilityOp } from '../capabilities/types.js';
 
 export type EvalCaseStatus = 'scored' | 'skipped' | 'error';
-export type EvalScorerId = 'alpha_coverage' | 'pixel_delta' | 'ocr_text_presence';
+export type EvalScorerId =
+  | 'alpha_coverage'
+  | 'pixel_delta'
+  | 'ocr_text_presence'
+  | 'dimensions_exact'
+  | 'palette_exact';
 
 export interface EvalFixture {
   id: string;
