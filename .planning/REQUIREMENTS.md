@@ -70,10 +70,10 @@
 - [ ] **PRIM-01**: `extract_subject` capability available via `@imgly/background-removal-node` (local, no API key required)
 - [ ] **PRIM-02**: `edit_prompt` capability available via OpenAI `gpt-image-1` edit endpoint
 - [ ] **PRIM-03**: `composite_layers` capability available via sharp (local, deterministic, alpha-aware)
-- [ ] **PRIM-04**: `transform` capability available via sharp, wrapping existing `processing.ts` operations
+- [x] **PRIM-04**: `transform` capability available via sharp, wrapping existing `processing.ts` operations
 - [ ] **PRIM-05**: `enhance_upscale` capability available via Replicate Real-ESRGAN
-- [ ] **PRIM-06**: `analyze_dimensions` returns `{w, h, format, channels, hasAlpha}` via sharp
-- [ ] **PRIM-07**: `analyze_palette` returns dominant colors via sharp
+- [x] **PRIM-06**: `analyze_dimensions` returns `{w, h, format, channels, hasAlpha}` via sharp
+- [x] **PRIM-07**: `analyze_palette` returns dominant colors via sharp
 - [ ] **PRIM-08**: `analyze_ocr` returns extracted text via `tesseract.js`
 
 ### image_task Planner + DAG Executor (TASK)
