@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Goal-Shaped Image MCP
-status: executing
-stopped_at: Completed 10-01-PLAN.md
-last_updated: "2026-05-03T19:06:57.060Z"
-last_activity: 2026-05-03 -- Completed 10-01 template fast paths
+status: ready_for_verification
+stopped_at: Completed 10-02-PLAN.md
+last_updated: "2026-05-03T19:18:37.971Z"
+last_activity: 2026-05-03 -- Completed 10-02 budget gate and bounded executor parallelism
 progress:
   total_phases: 11
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 24
-  completed_plans: 21
-  percent: 88
+  completed_plans: 22
+  percent: 92
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-01)
 
 ## Current Position
 
-Phase: 10 (template-fast-paths-executor-parallelism) — EXECUTING
+Phase: 10 (template-fast-paths-executor-parallelism) — READY FOR VERIFICATION
 Plan: 2 of 2
-Status: Executing Phase 10
-Last activity: 2026-05-03 -- Completed 10-01 template fast paths
+Status: Ready for verification
+Last activity: 2026-05-03 -- Completed 10-02 budget gate and bounded executor parallelism
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Last activity: 2026-05-03 -- Completed 10-01 template fast paths
 | Phase 09-image-task-planner-dag-executor P03 | 9min | 5 tasks | 9 files |
 | Phase 09-image-task-planner-dag-executor P04 | 4min | 4 tasks | 4 files |
 | Phase 10-template-fast-paths-executor-parallelism P01 | 7min 15s | 3 tasks | 7 files |
+| Phase 10-template-fast-paths-executor-parallelism P02 | 7min 50s | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -117,6 +118,9 @@ Recent decisions affecting current work:
 - [Phase 10]: plannerMethod lives only on SerializedImageTaskResponse, not Trace.
 - [Phase 10]: ASSET_PRESETS-derived templates pass preset.operations by reference so v1.0 preset fixes propagate to image_task.
 - [Phase 10]: Template matches still go through validatePlan before dry-run or execution.
+- [Phase 10]: TEMPLATE_ONLY_BUDGET_USD_THRESHOLD is the single source for the $0.01 template-only budget cutoff.
+- [Phase 10]: MAX_PARALLEL_NODES is exported from sharp-config and kept equal to SHARP_CONCURRENCY_LIMIT.
+- [Phase 10]: DAG sibling failures do not cancel already in-flight siblings; only descendants are skipped.
 
 ### Pending Todos
 
@@ -128,7 +132,7 @@ None currently.
 
 ## Session Continuity
 
-Last session: 2026-05-03T19:06:57.055Z
+Last session: 2026-05-03T19:18:04.153Z
 Stopped at: Completed 10-01-PLAN.md
 Resume file: None
 

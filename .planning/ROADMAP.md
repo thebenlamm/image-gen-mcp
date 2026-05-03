@@ -28,7 +28,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 7: Eval Harness + Golden Set** - Programmatic scoring populates capability quality scores so the planner routes on measurement
 - [x] **Phase 8: Op Primitives Expansion** - composite, transform, upscale, analyze_* capabilities
 - [x] **Phase 9: image_task Planner + DAG Executor** - Goal-shaped MCP tool with Haiku-planned DAG execution
-- [ ] **Phase 10: Template Fast-Paths + Executor Parallelism** - Skip planner LLM for matching template signatures; concurrent DAG node execution
+- [x] **Phase 10: Template Fast-Paths + Executor Parallelism** - Skip planner LLM for matching template signatures; concurrent DAG node execution (completed 2026-05-03)
 - [ ] **Phase 11: Provider Breadth (Post-Eval)** - Photoroom, fal.ai, Flux Kontext, Ideogram added against measured registry
 
 ## Phase Details
@@ -208,7 +208,7 @@ Plans:
 - [x] 10-01-PLAN.md — Template registry + matcher (ASSET_PRESETS by reference, 3 new templates, plannerMethod field, planner short-circuit)
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 10-02-PLAN.md — Budget gate (sub-cent cap requires template) + bounded executor parallelism (sharp.concurrency 2, MAX_PARALLEL_NODES 2)
+- [x] 10-02-PLAN.md — Budget gate (sub-cent cap requires template) + bounded executor parallelism (sharp.concurrency 2, MAX_PARALLEL_NODES 2)
 
 ### Phase 11: Provider Breadth (Post-Eval)
 **Goal**: Users can route through Photoroom, fal.ai, Flux Kontext, and Ideogram for capabilities where they measurably outperform existing providers
@@ -249,5 +249,5 @@ Phases execute in numeric order with one parallelization window:
 | 7. Eval Harness + Golden Set | 0/2 | Not started (parallel with 8) | - |
 | 8. Op Primitives Expansion | 0/2-3 | Not started (parallel with 7) | - |
 | 9. image_task Planner + DAG Executor | 4/4 | ✓ Complete | 2026-05-03 |
-| 10. Template Fast-Paths + Parallelism | 1/2 | In Progress|  |
+| 10. Template Fast-Paths + Parallelism | 2/2 | Complete   | 2026-05-03 |
 | 11. Provider Breadth (Post-Eval) | 0/2-3 | Not started | - |

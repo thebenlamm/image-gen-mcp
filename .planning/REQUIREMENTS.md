@@ -94,7 +94,7 @@
 - [x] **TMPL-01**: Template table imports existing `ASSET_PRESETS` by reference (not forked); fixes propagate to v1.0 `generate_asset`
 - [x] **TMPL-02**: Template matcher runs before planner LLM; if `goal + constraints` matches a template signature, skip the Haiku call
 - [x] **TMPL-03**: New templates added: `product-on-white`, `logo-cleanup`, `upscale-export`
-- [ ] **TMPL-04**: Planner-skip enforced when `constraints.budget_cap_usd < $0.01` — must match a template or fail
+- [x] **TMPL-04**: Planner-skip enforced when `constraints.budget_cap_usd < $0.01` — must match a template or fail
 
 ### Provider Breadth (PROV) — Post-Eval
 
@@ -168,7 +168,7 @@ After Phase 9 (image_task ships):
 | EVAL-01, EVAL-02, EVAL-03, EVAL-04, EVAL-05 | 7 | Pending (v2.0 P7) |
 | PRIM-03, PRIM-04, PRIM-05, PRIM-06, PRIM-07, PRIM-08 | 8 | Pending (v2.0 P8) |
 | TASK-01..TASK-10 | 9 | Complete |
-| TMPL-01, TMPL-02, TMPL-03, TMPL-04 | 10 | Pending (v2.0 P10) |
+| TMPL-01, TMPL-02, TMPL-03, TMPL-04 | 10 | Complete |
 | PROV-01, PROV-02, PROV-03, PROV-04, PROV-05 | 11 | Pending (v2.0 P11) |
 
 **Coverage (v2.0):**
