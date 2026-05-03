@@ -1,6 +1,6 @@
 ---
 phase: 11-provider-breadth-post-eval
-reviewed: 2026-05-03T21:06:43Z
+reviewed: 2026-05-03T23:12:32Z
 depth: standard
 files_reviewed: 31
 files_reviewed_list:
@@ -36,100 +36,89 @@ files_reviewed_list:
   - tests/task/planner.test.ts
   - tests/task/templates.test.ts
 findings:
-  critical: 3
-  warning: 2
+  critical: 0
+  warning: 3
   info: 0
-  total: 5
+  total: 3
 status: issues_found
 ---
 
 # Phase 11: Code Review Report
 
-**Reviewed:** 2026-05-03T21:06:43Z
+**Reviewed:** 2026-05-03T23:12:32Z
 **Depth:** standard
 **Files Reviewed:** 31
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the provider breadth changes, eval cases, planner/validator integration, and tests. The main risk is `composite_layers:photoroom`: it is registered as a multi-layer composition provider, but the implementation uploads only one image, ignores the documented layer positioning contract, and is blocked by a top-level `params.input` validation requirement that the public docs say is not required.
-
-## Critical Issues
-
-### CR-01: BLOCKER - Photoroom Composite Is Rejected By Shared Validation For Documented Calls
-
-**File:** `src/capabilities/photoroom-composite-layers.ts:127`
-**Issue:** The capability declares `requiresInputImage: true`, so `validateCapabilityParams` rejects any `image_op`/`image_task` call that only supplies `canvas` and `layers`. That contradicts the public tool docs, which list `composite_layers:photoroom` requirements as `PHOTOROOM_API_KEY`, `params.canvas`, and `params.layers[]` in `README.md:413`. The provider's own `invoke` path also reads `layers[0].input`, not `params.input`, so a documented Photoroom composite call cannot pass through the normal MCP entry points.
-**Fix:**
-```ts
-constraints: {
-  requiresInputImage: false,
-  supportsMultipleInputs: true,
-  outputFormat: 'png',
-},
-```
-Then add a regression test through `handleImageOp` or `validatePlan` for `composite_layers/photoroom` with only `canvas` and `layers`.
-
-### CR-02: BLOCKER - Layer Composition Parameters Are Not Applied To Photoroom Requests
-
-**File:** `src/capabilities/photoroom-composite-layers.ts:139`
-**Issue:** The adapter reads only `layers[0].input` and sends that single file as `imageFile`; additional layer image files are never uploaded. It then sends `x`, `y`, `scale`, `opacity`, and `anchor` inside a custom `imageGenMcp.layers` field at line 156. Photoroom's documented Image Editing API accepts one `imageFile`/`imageUrl` plus documented edit and positioning fields (see https://docs.photoroom.com/api-reference-openapi); it will not apply this custom layer list. As a result, multi-layer input is silently reduced to one image and requested placement/opacity are ignored.
-**Fix:** Either narrow the capability to what Photoroom actually supports, or implement the advertised contract before calling Photoroom. For example:
-```ts
-if (layers.length !== 1) {
-  throw new CapabilityInvokeError(
-    'CONSTRAINT_VIOLATION',
-    'photoroom composite_layers currently supports exactly one subject layer',
-    false,
-  );
-}
-// Remove imageGenMcp.layers and translate supported placement fields to documented
-// Photoroom positioning parameters, or pre-compose layers locally with sharp first.
-```
-Also set `supportsMultipleInputs: false` if only one uploaded subject is supported.
-
-### CR-03: BLOCKER - Photoroom Composite Eval Scores The Wrong Input Semantics
-
-**File:** `eval/cases/photoroom.json:35`
-**Issue:** The composite eval case sets `params.input` to `${fixture.path}` and `pixel_delta` compares the provider output against that fixture via `src/eval/run.ts:107-123`, but the capability ignores `params.input` and uploads `layers[0].input` instead at `src/capabilities/photoroom-composite-layers.ts:139`. This means the Phase 11 eval is not measuring the documented composite scenario; it compares an edit of `composite-overlay.png` against `composite-bg.png`. Any quality score from this case is invalid for routing decisions.
-**Fix:** Align the eval and capability contract. If Photoroom edits a single subject image, remove the top-level `input` from the case and use an appropriate scorer/golden for the subject output. If the intended contract is background plus overlay composition, implement that contract first and ensure the eval invokes the same fields production uses.
+Reviewed the Phase 11 provider-breadth sources and tests after the prior critical fixes. No remaining critical findings were found, but the new provider adapters still have contract and robustness defects that can produce wrong output or hang tool calls.
 
 ## Warnings
 
-### WR-01: WARNING - Ideogram Generate Request Can Hang Indefinitely
+### WR-01: Photoroom composite ignores the canonical canvas background field
 
-**File:** `src/capabilities/ideogram-generate.ts:122`
-**Issue:** The initial Ideogram API call has no `AbortController` timeout. Downloading the ephemeral image URL is bounded, but a stalled generate request can hang an `image_op`, `image_task`, or eval run indefinitely.
-**Fix:** Wrap the generate `fetch` in the same timeout pattern used by Photoroom and fal submit calls:
+**File:** `src/capabilities/photoroom-composite-layers.ts:174`
+**Issue:** `PhotoroomCompositeParams` accepts `canvas.background` at lines 25-28, matching the existing `composite_layers` contract and template output, but invocation only reads `params.background.color` / `params.background.prompt`. A valid plan using `canvas.background` is accepted and then silently sent to Photoroom without the requested background, producing transparent/default output instead of the requested composition.
+**Fix:**
 ```ts
-const controller = new AbortController();
-const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-try {
-  const response = await fetch(ENDPOINT, {
-    method: 'POST',
-    headers: { 'Api-Key': apiKey },
-    body: form,
-    signal: controller.signal,
-  });
-  // ...
-} catch (error) {
-  if (error instanceof Error && error.name === 'AbortError') {
-    throw new CapabilityInvokeError('TIMEOUT', 'Ideogram generate timed out after 30s', true);
-  }
-  throw error;
-} finally {
-  clearTimeout(timer);
+const canvasBackground = params.canvas?.background;
+if (typeof params.background?.color === 'string') {
+  form.set('background.color', params.background.color.replace(/^#/, ''));
+} else if (isRgbBackground(canvasBackground)) {
+  form.set('background.color', rgbToHex(canvasBackground));
+} else if (canvasBackground !== undefined) {
+  throw new CapabilityInvokeError(
+    'CONSTRAINT_VIOLATION',
+    'composite_layers:photoroom supports canvas.background only as an opaque RGB color',
+    false,
+  );
 }
 ```
+Add a test that passes `canvas: { width, height, background: { r: 255, g: 255, b: 255, alpha: 1 } }` and asserts the outgoing form contains `background.color=FFFFFF`, or reject unsupported `canvas.background` before the network call.
 
-### WR-02: WARNING - fal Queue Poll Requests Are Not Bounded Per Request
+### WR-02: Remote provider calls can hang indefinitely because some fetches have no timeout
 
-**File:** `src/capabilities/fal-edit-prompt.ts:90`
-**Issue:** `resolveFalResult` enforces an overall 60s loop, but each `fetchFalJson` call can hang because it has no abort signal. A stalled status or response URL request bypasses the intended queue timeout and can leave the caller waiting indefinitely.
-**Fix:** Add a timeout parameter to `fetchFalJson` and call it with an `AbortController`, mapping aborts to retryable `TIMEOUT`.
+**File:** `src/capabilities/ideogram-generate.ts:122`
+**Issue:** The Ideogram generation POST has no `AbortController`, and the fal status/result fetches at `src/capabilities/fal-edit-prompt.ts:91` have no per-request timeout. A stalled TCP request can keep `image_op`, `image_task`, or eval runs open indefinitely; the fal poll loop timeout only applies between completed status requests, not to a stuck status or result fetch.
+**Fix:** Wrap every provider fetch in a shared timeout helper and convert aborts to retryable `CapabilityInvokeError('TIMEOUT', ...)`.
+```ts
+async function fetchJsonWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new CapabilityInvokeError('TIMEOUT', 'provider request timed out', true);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+```
+Cover Ideogram generation timeout and fal status/response timeout in tests.
+
+### WR-03: Composite layer validation crashes on non-object layer entries
+
+**File:** `src/capabilities/photoroom-composite-layers.ts:105`
+**Issue:** `layers` is only checked as an array before the loop. If a caller passes `layers: [null]`, `layers: ['x']`, or another non-object entry, `layer.input` throws a raw `TypeError` instead of a non-retryable `CONSTRAINT_VIOLATION`. The generic validator has the same unchecked cast in `src/capabilities/validation.ts:82`, so malformed JSON can bypass the intended validation path and surface inconsistent errors through `image_op`, `image_task`, and plan validation.
+**Fix:**
+```ts
+const layer = layers[index];
+if (!layer || typeof layer !== 'object' || Array.isArray(layer)) {
+  throw new CapabilityInvokeError(
+    'CONSTRAINT_VIOLATION',
+    `composite_layers.layers[${index}] must be an object`,
+    false,
+  );
+}
+```
+Apply the same object guard in `validateCapabilityParams` before reading `layer.input`, and add tests for `layers: [null]` and `layers: ['bad']`.
 
 ---
 
-_Reviewed: 2026-05-03T21:06:43Z_
+_Reviewed: 2026-05-03T23:12:32Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: standard_
