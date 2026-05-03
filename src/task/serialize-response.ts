@@ -16,6 +16,7 @@ export interface SerializedImageTaskResponse {
   success: boolean;
   output?: { path: string; mimeType: string; width?: number; height?: number };
   runId: string;
+  plannerMethod?: 'llm' | 'template';
   total_cost_usd: number;
   total_latency_ms: number;
   plan: {
@@ -144,6 +145,7 @@ export function serializeImageTaskResponse(args: {
   plan: Plan;
   dagResult: ExecResult;
   runId: string;
+  plannerMethod?: 'llm' | 'template';
 }): SerializedImageTaskResponse {
   const { plan, dagResult, runId } = args;
   const totalCostUsd = dagResult.trace.nodes.reduce((sum, node) => sum + (node.cost_usd ?? 0), 0);
@@ -153,6 +155,7 @@ export function serializeImageTaskResponse(args: {
     success: failed === undefined && (terminalOutput(plan, dagResult) !== undefined || dagResult.trace.nodes.length === 0),
     ...(terminalOutput(plan, dagResult) !== undefined ? { output: terminalOutput(plan, dagResult) } : {}),
     runId,
+    ...(args.plannerMethod !== undefined ? { plannerMethod: args.plannerMethod } : {}),
     total_cost_usd: Number(totalCostUsd.toFixed(6)),
     total_latency_ms: totalLatencyMs,
     plan: {
