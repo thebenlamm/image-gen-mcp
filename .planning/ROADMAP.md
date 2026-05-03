@@ -204,7 +204,10 @@ Plans:
 **UI hint**: no
 
 Plans:
+**Wave 1**
 - [ ] 10-01-PLAN.md — Template registry + matcher (ASSET_PRESETS by reference, 3 new templates, plannerMethod field, planner short-circuit)
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 10-02-PLAN.md — Budget gate (sub-cent cap requires template) + bounded executor parallelism (sharp.concurrency 2, MAX_PARALLEL_NODES 2)
 
 ### Phase 11: Provider Breadth (Post-Eval)
