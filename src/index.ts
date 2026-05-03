@@ -37,6 +37,16 @@ import { createGrokProvider } from './providers/grok.js';
 import { resolveOutputPath, saveImage } from './utils/image.js';
 import { applyOperations, getImageInfo, type ProcessingOperation } from './utils/processing.js';
 import { getPreset, ASSET_PRESETS, type AssetType } from './utils/presets.js';
+import {
+  executeDag,
+  planImageTask,
+  PlannerError,
+  validatePlan,
+  type ExecResult,
+  type Plan,
+  type TaskConstraints,
+} from './task/index.js';
+import { ResponseGuardError, serializeImageTaskResponse } from './task/serialize-response.js';
 
 // Register available providers
 const providers = [
@@ -458,6 +468,29 @@ server.tool(
 );
 
 server.tool(
+  'image_task',
+  'Hand off a natural-language image goal and receive a final image plus structured trace. The MCP plans a DAG of capability invocations using Anthropic Claude Haiku, validates it against the registry (budget cap, latency cap, capability params, IMAGE_GEN_INPUT_ROOT path policy), executes it, and returns {output: {path}, runId, total_cost_usd, total_latency_ms, plan, trace}. Use dry_run: true to preview the validated plan without executing. Trace returns filesystem paths only - never base64 image data. Requires ANTHROPIC_API_KEY.',
+  {
+    goal: z.string().min(1).describe('Natural-language description of the desired image outcome.'),
+    input_images: z.array(z.string()).optional().describe('Absolute paths to input images. When IMAGE_GEN_INPUT_ROOT is set, paths must resolve under that root.'),
+    constraints: z.object({
+      output_size: z.enum(['square', 'landscape', 'portrait']).optional(),
+      output_format: z.enum(['png']).optional(),
+      quality_tier: z.enum(['fast', 'balanced', 'best']).optional(),
+      budget_cap_usd: z.number().positive().optional().describe('Hard plan-time gate. If estimated cost exceeds this, fail before any provider call.'),
+      latency_cap_seconds: z.number().positive().optional(),
+      style_refs: z.array(z.string()).optional(),
+    }).optional(),
+    dry_run: z.boolean().optional().describe('When true, return the validated plan and estimated totals without invoking any provider.'),
+    runId: z.string().optional().describe('Reuse an existing runId; otherwise auto-generated.'),
+    seed: z.number().optional().describe('Optional planner seed for reproducible plan choice.'),
+    outputDir: z.string().optional(),
+    outputPath: z.string().optional(),
+  },
+  handleImageTask,
+);
+
+server.tool(
   'list_capabilities',
   'List all registered capabilities (op, provider, modelVersion, constraints, cost, latencyMsP50, quality). Use this before calling image_op to discover available routes and pick a provider by cost or quality. The Phase 9 planner consumes this to make routing decisions.',
   {},
@@ -472,6 +505,17 @@ export interface ImageOpArgs {
   params: Record<string, unknown>;
   outputPath?: string;
   outputDir?: string;
+}
+
+export interface ImageTaskArgs {
+  goal: string;
+  input_images?: string[];
+  constraints?: TaskConstraints;
+  dry_run?: boolean;
+  runId?: string;
+  seed?: number;
+  outputDir?: string;
+  outputPath?: string;
 }
 
 export async function handleListCapabilities(): Promise<{
@@ -790,6 +834,233 @@ export async function handleImageOp(args: ImageOpArgs): Promise<{
         }),
       }],
     };
+  }
+}
+
+function imageTaskErrorResponse(
+  runId: string,
+  error: string | { message: string; code?: string; retryable?: boolean; suggestion?: string; estimated_cost_usd?: number; cap_usd?: number },
+  extra: Record<string, unknown> = {},
+): { content: Array<{ type: 'text'; text: string }> } {
+  return {
+    content: [{
+      type: 'text' as const,
+      text: JSON.stringify({
+        success: false,
+        error: typeof error === 'string' ? { message: error } : error,
+        runId,
+        trace: [],
+        ...extra,
+      }),
+    }],
+  };
+}
+
+function imageTaskPlannerErrorResponse(runId: string, err: unknown): { content: Array<{ type: 'text'; text: string }> } {
+  if (err instanceof PlannerError) {
+    return imageTaskErrorResponse(runId, {
+      message: err.message,
+      code: err.code,
+      retryable: err.retryable,
+      suggestion: err.suggestion,
+    });
+  }
+  return imageTaskErrorResponse(runId, err instanceof Error ? err.message : String(err));
+}
+
+function imageTaskValidationErrorResponse(
+  runId: string,
+  failure: Exclude<Awaited<ReturnType<typeof validatePlan>>, { ok: true }>,
+): { content: Array<{ type: 'text'; text: string }> } {
+  const first = failure.errors[0];
+  return imageTaskErrorResponse(runId, {
+    message: first?.message ?? 'Plan validation failed',
+    code: first?.code,
+    suggestion: first?.suggestion,
+    ...(failure.estimated_cost_usd !== undefined ? { estimated_cost_usd: failure.estimated_cost_usd } : {}),
+    ...(failure.budget_cap_usd !== undefined ? { cap_usd: failure.budget_cap_usd } : {}),
+  });
+}
+
+function inputImagesByRef(inputImages: string[] | undefined): Record<string, string> {
+  return Object.fromEntries((inputImages ?? []).map((imagePath, index) => [`image_${index}`, imagePath]));
+}
+
+function dryRunResponse(plan: Plan, runId: string): { content: Array<{ type: 'text'; text: string }> } {
+  const response = serializeImageTaskResponse({
+    plan,
+    dagResult: {
+      nodeOutputs: {},
+      trace: { runId, nodes: [], skips: [] },
+      totals: { cost_usd: plan.estimatedTotalCostUsd, latency_ms: plan.estimatedTotalLatencyMs, success: 0, failure: 0, skipped: 0 },
+      bestPartial: null,
+    },
+    runId,
+  });
+  return {
+    content: [{
+      type: 'text' as const,
+      text: JSON.stringify({
+        ...response,
+        dry_run: true,
+        total_cost_usd: plan.estimatedTotalCostUsd,
+        total_latency_ms: plan.estimatedTotalLatencyMs,
+      }),
+    }],
+  };
+}
+
+async function saveTerminalOutput(args: {
+  dagResult: ExecResult;
+  plan: Plan;
+  outputPath?: string;
+  outputDir?: string;
+  goal: string;
+}): Promise<void> {
+  const terminal = args.dagResult.nodeOutputs[args.plan.terminalNodeId];
+  if (terminal?.kind !== 'image') return;
+
+  const finalPath = await resolveOutputPath({
+    outputPath: args.outputPath,
+    outputDir: args.outputDir,
+    prompt: args.goal,
+    provider: 'image_task',
+  });
+  const buffer = await fs.promises.readFile(terminal.artifactPath);
+  await saveImage(buffer, finalPath);
+  terminal.artifactPath = finalPath;
+
+  const terminalTrace = args.dagResult.trace.nodes.find((node) => node.id === `n${args.plan.terminalNodeId}`);
+  if (terminalTrace) {
+    terminalTrace.output = finalPath;
+  }
+}
+
+export async function handleImageTask(args: ImageTaskArgs): Promise<{
+  content: Array<{ type: 'text'; text: string }>;
+}> {
+  const startedAt = Date.now();
+  const runId = args.runId ?? createRunId();
+  let runDir: string;
+
+  try {
+    runDir = await resolveRunDir(runId);
+  } catch (err) {
+    return imageTaskErrorResponse(runId, `Failed to create run directory: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  const inputImages = inputImagesByRef(args.input_images);
+  const baseInvocation: RunManifest['invocation'] = {
+    tool: 'image_task',
+    goal: args.goal,
+    inputImages,
+    constraints: args.constraints,
+    outputPath: args.outputPath,
+    outputDir: args.outputDir,
+  };
+
+  try {
+    await writeManifest(runDir, {
+      schemaVersion: 1,
+      runId,
+      startedAt: new Date(startedAt).toISOString(),
+      status: 'in_progress',
+      invocation: baseInvocation,
+      nodes: [],
+    });
+  } catch (err) {
+    return imageTaskErrorResponse(runId, `Failed to write run manifest: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  let plan: Plan;
+  let planner: Awaited<ReturnType<typeof planImageTask>>;
+  try {
+    planner = await planImageTask({
+      goal: args.goal,
+      inputImages,
+      constraints: args.constraints,
+    }, capabilityRegistry, { seed: args.seed } as never);
+    plan = planner.plan;
+  } catch (err) {
+    return imageTaskPlannerErrorResponse(runId, err);
+  }
+
+  const validation = await validatePlan(plan, {
+    inputImages,
+    constraints: args.constraints ?? {},
+    registry: capabilityRegistry,
+  });
+  if (!validation.ok) {
+    return imageTaskValidationErrorResponse(runId, validation);
+  }
+
+  if (args.dry_run === true) {
+    return dryRunResponse(plan, runId);
+  }
+
+  let dagResult: ExecResult;
+  try {
+    dagResult = await executeDag(plan, inputImages, { runId, runDir });
+    await saveTerminalOutput({
+      dagResult,
+      plan,
+      outputPath: args.outputPath,
+      outputDir: args.outputDir,
+      goal: args.goal,
+    });
+  } catch (err) {
+    return imageTaskErrorResponse(runId, err instanceof Error ? err.message : String(err));
+  }
+
+  const endedAt = Date.now();
+  const finalOutput = dagResult.nodeOutputs[plan.terminalNodeId];
+  try {
+    await writeManifest(runDir, {
+      schemaVersion: 1,
+      runId,
+      startedAt: new Date(startedAt).toISOString(),
+      endedAt: new Date(endedAt).toISOString(),
+      status: dagResult.totals.failure > 0 ? 'error' : 'success',
+      invocation: baseInvocation,
+      nodes: dagResult.trace.nodes.map((node) => ({
+        id: node.id,
+        op: String(node.op),
+        provider: node.provider,
+        model: node.model,
+        artifactPath: node.artifactPath,
+        durationMs: node.durationMs,
+        outcome: node.outcome,
+        error: node.error,
+      })),
+      plan,
+      planner: {
+        model: 'claude-haiku-4-5',
+        tokens: {
+          input: planner.usage.promptTokens,
+          output: planner.usage.completionTokens,
+        },
+        latency_ms: planner.latencyMs,
+      },
+      totals: dagResult.totals,
+      bestPartial: dagResult.bestPartial,
+      finalOutput: finalOutput?.kind === 'image' ? finalOutput.artifactPath : undefined,
+      totalDurationMs: endedAt - startedAt,
+      error: dagResult.totals.failure > 0
+        ? `Node ${dagResult.trace.nodes.find((node) => node.outcome === 'error')?.id ?? 'unknown'} failed`
+        : undefined,
+    });
+  } catch (err) {
+    console.error(`[image_task] manifest write failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  try {
+    const response = serializeImageTaskResponse({ plan, dagResult, runId });
+    return { content: [{ type: 'text' as const, text: JSON.stringify(response) }] };
+  } catch (err) {
+    if (err instanceof ResponseGuardError) {
+      return imageTaskErrorResponse(runId, `Response guard tripped: ${err.message}`);
+    }
+    throw err;
   }
 }
 

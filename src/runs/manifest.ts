@@ -8,7 +8,7 @@ export interface RunManifestNode {
   model?: string;
   artifactPath?: string;
   durationMs?: number;
-  outcome?: 'success' | 'error';
+  outcome?: 'success' | 'error' | 'skipped';
   error?: string;
 }
 

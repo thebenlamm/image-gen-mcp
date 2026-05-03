@@ -150,7 +150,7 @@ export function serializeImageTaskResponse(args: {
   const totalLatencyMs = dagResult.trace.nodes.reduce((sum, node) => sum + node.latencyMs, 0);
   const failed = failedNodeId(dagResult);
   const response: SerializedImageTaskResponse = {
-    success: failed === undefined && terminalOutput(plan, dagResult) !== undefined,
+    success: failed === undefined && (terminalOutput(plan, dagResult) !== undefined || dagResult.trace.nodes.length === 0),
     ...(terminalOutput(plan, dagResult) !== undefined ? { output: terminalOutput(plan, dagResult) } : {}),
     runId,
     total_cost_usd: Number(totalCostUsd.toFixed(6)),
