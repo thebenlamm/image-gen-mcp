@@ -42,6 +42,16 @@ export interface PlanValidationSuccess {
 
 const INPUT_REF_RE = /^\$inputs\.([A-Za-z_][A-Za-z0-9_]*)$/;
 const NODE_REF_RE = /^\$nodes\.([A-Za-z_][A-Za-z0-9_]*)\.output$/;
+const EXPECTED_OUTPUT_KIND = {
+  extract_subject: 'image',
+  edit_prompt: 'image',
+  composite_layers: 'image',
+  transform: 'image',
+  enhance_upscale: 'image',
+  analyze_dimensions: 'data',
+  analyze_palette: 'data',
+  analyze_ocr: 'data',
+} as const satisfies Record<PlanNode['op'], 'image' | 'data'>;
 
 interface StringParam {
   node: PlanNode;
@@ -238,6 +248,26 @@ export async function validatePlan(
         nodeId: node.id,
         field,
       });
+    } else if (nodeMatch && !node.dependsOn.includes(nodeMatch[1])) {
+      errors.push({
+        code: 'PLAN_MISSING_DEP',
+        message: `Node '${node.id}' references '${value}' but does not depend on '${nodeMatch[1]}'`,
+        nodeId: node.id,
+        field,
+        suggestion: `Add '${nodeMatch[1]}' to dependsOn.`,
+      });
+    }
+  }
+
+  for (const node of plan.nodes) {
+    const expected = EXPECTED_OUTPUT_KIND[node.op];
+    if (node.outputKind !== expected) {
+      errors.push({
+        code: 'PLAN_OUTPUT_KIND_MISMATCH',
+        message: `Node '${node.id}' op '${node.op}' must declare outputKind '${expected}'`,
+        nodeId: node.id,
+        field: 'outputKind',
+      });
     }
   }
 
@@ -255,6 +285,19 @@ export async function validatePlan(
           field,
         });
       }
+    }
+  }
+
+  for (const [inputName, inputPath] of Object.entries(ctx.inputImages)) {
+    try {
+      await assertWithinInputRoot(inputPath);
+    } catch (error) {
+      errors.push({
+        code: 'INPUT_PATH_OUTSIDE_ROOT',
+        message: error instanceof Error ? error.message : String(error),
+        field: `$inputs.${inputName}`,
+        suggestion: 'Place input files under IMAGE_GEN_INPUT_ROOT or unset IMAGE_GEN_INPUT_ROOT.',
+      });
     }
   }
 

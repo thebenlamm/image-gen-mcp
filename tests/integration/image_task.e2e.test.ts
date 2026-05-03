@@ -108,7 +108,7 @@ describe('SC#2 image_task dry_run', () => {
       goal: 'dry run unsafe input',
       input_images: [outside],
       dry_run: true,
-      runId: 'dry-run-unsafe-input',
+      runId: 'run-2026-05-03T13-47-00-000Z-abcdef',
     }));
 
     await fs.rm(tmp, { recursive: true, force: true });

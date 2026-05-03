@@ -125,7 +125,7 @@ describe('validatePlan', () => {
         code: 'PLAN_MISSING_DEP',
         nodeId: 'edit',
         field: 'params.input',
-        message: expect.stringContaining("depends on 'extract'"),
+        message: expect.stringContaining("depend on 'extract'"),
       }));
     }
   });
