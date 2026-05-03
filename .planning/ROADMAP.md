@@ -220,15 +220,18 @@ Plans:
   3. Flux Kontext is registered for `edit_prompt` (no-mask instruction edit) and selectable when its measured edit-quality score exceeds gpt-image-1's
   4. Ideogram is registered for `generate` with a measured text-fidelity score that the planner uses for text-heavy goals
   5. Each new provider has at least one eval case before its `quality.score` is populated; provider registration fails or warns if no eval case exists
-**Plans**: 2 plans
+**Plans**: 3 plans
 **UI hint**: no
 
 Plans:
 **Wave 1**
-- [ ] 11-01-PLAN.md — Wave-0 `generate` enum pre-flight + provider capability adapters (Photoroom extract_subject AND composite_layers (with shadow per D-15/PROV-01), fal Flux Kontext, Ideogram), register.ts wiring with unscored-second-provider gates preserved
+- [x] 11-01-PLAN.md — Wave-0 `generate` enum pre-flight + provider capability adapters (Photoroom extract_subject AND composite_layers (with shadow per D-15/PROV-01), fal Flux Kontext, Ideogram), register.ts wiring with unscored-second-provider gates preserved
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 11-02-PLAN.md — Phase 11 eval cases populating quality.scores, dag-executor trace transparency (qualityMeasured/noIncumbentComparison/qualityUnavailable), planner system-prompt routing-notes alignment, README routing-transparency docs
+- [x] 11-02-PLAN.md — Phase 11 eval cases populating quality.scores, dag-executor trace transparency (qualityMeasured/noIncumbentComparison/qualityUnavailable), planner system-prompt routing-notes alignment, README routing-transparency docs
+
+**Wave 3 — Gap closure** *(blocked on Wave 2 completion; closes G1–G4 from 11-VERIFICATION.md)*
+- [ ] 11-03-PLAN.md — Narrow Photoroom composite_layers adapter to single-subject Image Editing contract (G1: CR-01/CR-02), realign composite eval case to alpha_coverage matching the post-G1 contract (G2: CR-03), add case→adapter contract lint in runEval to refuse populating quality from semantically invalid cases (G3), document the live human verification command sequence so PROV-01/PROV-05 can flip to VERIFIED without further code changes (G4)
 
 ## Progress
 
