@@ -549,6 +549,47 @@ Set `constraints.budget_cap_usd` to enforce a maximum estimated cost. If the pla
 
 The trace always returns filesystem paths only — never base64 image data. Intermediate artifacts live under `<outputDir>/.runs/<runId>/`.
 
+#### Phase 11 Provider Breadth (Post-Eval)
+
+Run the Phase 11 provider evals after configuring provider keys:
+
+```bash
+PHOTOROOM_API_KEY=... FAL_KEY=... IDEOGRAM_API_KEY=... npm run eval
+```
+
+These cases use deterministic scorers only. Photoroom `extract_subject` uses `alpha_coverage` and `pixel_delta` for subject and edge preservation. Photoroom `composite_layers` uses the Image Editing API with `params.shadow.enabled: true`; this is where shadow/background quality is measured and where PROV-01's `(with shadow)` qualifier is satisfied. fal Flux Kontext mirrors existing OpenAI `edit_prompt` fixtures and uses `pixel_delta` plus `ocr_text_presence` for instruction success on text edits. Ideogram `generate` uses `ocr_text_presence` with `expectedText` to measure text fidelity.
+
+`image_op` allows immediate direct exploration of registered providers once API keys are present. `image_task` planner preference requires eval-populated `quality.scores`; a second provider should show either a `>=0.03` relevant quality-score edge or a `>=20%` latency/cost edge above the acceptable quality floor before displacing an incumbent.
+
+Trace metadata explains routing decisions:
+
+- `metadata.qualityMeasured`: whether the selected capability has eval scores.
+- `metadata.qualityScores`: the scorer values used for route comparison.
+- `metadata.noIncumbentComparison`: emitted when the provider is the only registered provider for its op.
+- `metadata.qualityUnavailable`: emitted when no legal provider for the op has measured quality.
+- Photoroom also reports `metadata.api` (`remove-background` or `image-editing`) and `metadata.shadowApplied` so users can verify which Photoroom path ran.
+
+Example Photoroom composite trace node:
+
+```json
+{
+  "id": "n1",
+  "op": "composite_layers",
+  "provider": "photoroom",
+  "outcome": "success",
+  "metadata": {
+    "provider": "photoroom",
+    "modelVersion": "photoroom-image-editing-v1",
+    "api": "image-editing",
+    "shadowApplied": true,
+    "qualityMeasured": true,
+    "qualityScores": { "pixel_delta": 0.12 }
+  }
+}
+```
+
+After a successful eval run, `list_capabilities` should show populated `quality.scores` for `extract_subject:photoroom`, `composite_layers:photoroom`, `edit_prompt:fal`, and `generate:ideogram`. PROV-01 is satisfied by two Photoroom adapters: `extract_subject` uses the Remove Background API without shadow, while `composite_layers:photoroom` uses the Image Editing API with shadow. The eval case `composite-photoroom-product-with-shadow` exercises this path with `params.shadow.enabled: true`.
+
 #### Best-Partial on Failure
 
 If a node fails mid-execution, downstream nodes whose dependencies cannot be satisfied are skipped. The response includes `bestPartial: {nodeId, path}` for the latest successful image-producing node, `failedNodeId` for the failed node, and a structured `error: {message, code, retryable, suggestion}` on that trace entry.
