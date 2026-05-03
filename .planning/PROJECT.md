@@ -46,6 +46,7 @@ Two value props, one MCP:
 - ✓ Combined generate + process pipeline (`generate_asset` tool)
 - ✓ `image_op` run/session artifact layer with unique run IDs, atomic intermediates under `.runs/<runId>/`, manifests, trace paths, and startup retention sweep (Phase 6)
 - ✓ Deterministic eval harness + golden set with measured-quality routing: per-capability registry quality from `npm run eval`, real tesseract.js OCR scoring, alpha-coverage and pixel-delta scorers, OCR cases require machine-readable `expectedText` (Phase 7)
+- ✓ Full op primitive taxonomy for `image_op`: `transform`, `composite_layers`, `enhance_upscale`, `analyze_dimensions`, `analyze_palette`, and `analyze_ocr`, with data-result contract, discovery via `list_capabilities`, and deterministic eval coverage where applicable (Phase 8)
 
 ### Active (v2.0)
 
@@ -54,7 +55,6 @@ See `.planning/REQUIREMENTS.md` for full requirement list with REQ-IDs. Categori
 - **OP** — `image_op` escape-hatch tool
 - **RUN** — Run/session artifact layer
 - **EVAL** — Eval harness + golden set
-- **PRIM** — Op primitives expansion
 - **TASK** — `image_task` planner + DAG executor
 - **TMPL** — Template fast-paths + executor parallelism
 - **PROV** — Provider breadth
@@ -110,7 +110,8 @@ See `.planning/REQUIREMENTS.md` for full requirement list with REQ-IDs. Categori
 | **Anthropic Claude Haiku as planner LLM** | Flexible enough for novel goals, $0.001-0.003/call | v2.0 — Pending |
 | **Templates seed from ASSET_PRESETS by reference (not forked)** | Fixes propagate; v1.0 + v2.0 stay in sync | v2.0 — Pending |
 | **Trace returns paths only, never base64** | MCP stdio response size bound | v2.0 — Phase 6 validated for `image_op`; Phase 9 extends to `image_task` |
-| **Eval harness blocks second provider per op** | Without measured scores the planner picks on vibes | v2.0 — Pending |
+| **Eval harness blocks second provider per op** | Without measured scores the planner picks on vibes | v2.0 — Phase 7 validated; Phase 8 eval gate now fails missing local caps and exact-score regressions |
+| **Data-returning capabilities do not write image artifacts** | Analysis ops should return typed data and leave `trace.artifactPath` empty | v2.0 — Phase 8 validated for dimensions, palette, OCR |
 | **`generate_asset` is NOT deprecated** | Two value props: flexible (`image_task`) vs guaranteed (`generate_asset`) | v2.0 — Pending |
 
 ## Evolution
@@ -131,4 +132,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-02 — Phase 7 eval harness + golden set complete; capability registry quality now driven by measured eval results*
+*Last updated: 2026-05-03 — Phase 8 op primitives complete; `image_op` now covers transform, composite, upscale, dimensions, palette, and OCR*
