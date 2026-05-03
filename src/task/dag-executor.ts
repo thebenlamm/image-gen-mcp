@@ -344,6 +344,7 @@ export async function executeDag(
     },
     { cost_usd: 0, latency_ms: 0, success: 0, failure: 0, skipped: 0 },
   );
+  totals.cost_usd = Number(totals.cost_usd.toFixed(6));
 
   return {
     nodeOutputs,
