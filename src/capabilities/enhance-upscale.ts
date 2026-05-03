@@ -90,13 +90,13 @@ export function createEnhanceUpscaleCapability(): Capability | null {
     quality: { unscoredJustification: UNSCORED_JUSTIFICATION },
     async invoke(input) {
       const filePath = input.params.input;
-      const scale = (input.params.scale as number | undefined) ?? 2;
+      const scale = input.params.scale === undefined ? 2 : input.params.scale;
       const faceEnhance = (input.params.face_enhance as boolean | undefined) ?? false;
 
       if (typeof filePath !== 'string' || !filePath.trim()) {
         throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', 'enhance_upscale requires params.input file path', false);
       }
-      if (scale !== 2 && scale !== 4) {
+      if (typeof scale !== 'number' || (scale !== 2 && scale !== 4)) {
         throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', 'enhance_upscale scale must be 2 or 4', false);
       }
       if (typeof faceEnhance !== 'boolean') {

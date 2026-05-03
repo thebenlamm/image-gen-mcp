@@ -60,6 +60,18 @@ describe('OCR utility', () => {
     expect(second.ms).toBeLessThan(first.ms * 0.5);
   }, 60_000);
 
+  it('serializes concurrent pooled recognitions for the same language', async () => {
+    const fixture = await writeTextFixture();
+
+    const [first, second] = await Promise.all([
+      recognizePooled(fixture),
+      recognizePooled(fixture),
+    ]);
+
+    expect(first.text).toContain('OPEN');
+    expect(second.text).toContain('OPEN');
+  }, 60_000);
+
   it('terminatePool clears cached workers', async () => {
     const fixture = await writeTextFixture();
 

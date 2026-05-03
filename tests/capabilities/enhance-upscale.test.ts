@@ -112,6 +112,9 @@ describe('enhance_upscale capability', () => {
     await expect(capability.invoke({ params: { input, scale: 3 } })).rejects.toMatchObject({
       code: 'CONSTRAINT_VIOLATION',
     });
+    await expect(capability.invoke({ params: { input, scale: null } })).rejects.toMatchObject({
+      code: 'CONSTRAINT_VIOLATION',
+    });
   });
 
   it('returns a fetched upscaled image with prediction metadata', async () => {

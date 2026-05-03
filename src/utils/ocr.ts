@@ -3,6 +3,7 @@ import { createWorker } from 'tesseract.js';
 type Worker = Awaited<ReturnType<typeof createWorker>>;
 
 const pool = new Map<string, Promise<Worker>>();
+const queues = new Map<string, Promise<unknown>>();
 
 /**
  * Per-call mode: create -> recognize -> terminate. Used by eval scoring where
@@ -31,9 +32,14 @@ export async function recognizePooled(path: string, lang = 'eng') {
     pool.set(lang, workerPromise);
   }
 
-  const worker = await workerPromise;
-  const result = await worker.recognize(path);
-  return result.data;
+  const previous = queues.get(lang) ?? Promise.resolve();
+  const next = previous.then(async () => {
+    const worker = await workerPromise;
+    const result = await worker.recognize(path);
+    return result.data;
+  });
+  queues.set(lang, next.catch(() => undefined));
+  return next;
 }
 
 /**
@@ -42,6 +48,7 @@ export async function recognizePooled(path: string, lang = 'eng') {
 export async function terminatePool(): Promise<void> {
   const promises = Array.from(pool.values());
   pool.clear();
+  queues.clear();
 
   for (const promise of promises) {
     const worker = await promise.catch(() => null);

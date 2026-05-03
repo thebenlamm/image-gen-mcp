@@ -84,7 +84,7 @@ export function validateCapabilityParams(
   }
 
   if (capability.op === 'enhance_upscale') {
-    const scale = params.scale ?? 2;
+    const scale = params.scale === undefined ? 2 : params.scale;
     if (typeof scale !== 'number' || (scale !== 2 && scale !== 4)) {
       throw new Error('enhance_upscale scale must be 2 or 4');
     }
