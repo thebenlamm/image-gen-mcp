@@ -198,7 +198,7 @@ function skipDownstream(
   adjacency: Map<string, string[]>,
   nodeById: Map<string, ExecNode>,
   outcomes: Map<string, NodeOutcome>,
-  traceNodes: TraceNode[],
+  traceNodesByNodeId: Map<string, TraceNode>,
   skips: Array<{ nodeId: string; reason: string }>,
 ): void {
   const queue = [...(adjacency.get(failedNodeId) ?? [])];
@@ -214,7 +214,7 @@ function skipDownstream(
     outcomes.set(nodeId, { status: 'skipped' });
     skips.push({ nodeId, reason });
     const now = Date.now();
-    traceNodes.push(buildTraceNode({
+    traceNodesByNodeId.set(node.id, buildTraceNode({
       id: `n${node.id}`,
       op: node.op,
       provider: node.provider,
@@ -248,7 +248,7 @@ export async function executeDag(
   }
 
   const outcomes = new Map<string, NodeOutcome>();
-  const traceNodes: TraceNode[] = [];
+  const traceNodesByNodeId = new Map<string, TraceNode>();
   const skips: Array<{ nodeId: string; reason: string }> = [];
   const ready = plan.nodes.filter((node) => node.dependsOn.length === 0).map((node) => node.id);
 
@@ -268,8 +268,8 @@ export async function executeDag(
     } catch (err) {
       const traceNode = makeErrorTraceNode(node, Date.now(), err, 0);
       outcomes.set(node.id, { status: 'error' });
-      traceNodes.push(traceNode);
-      skipDownstream(node.id, adjacency, nodeById, outcomes, traceNodes, skips);
+      traceNodesByNodeId.set(node.id, traceNode);
+      skipDownstream(node.id, adjacency, nodeById, outcomes, traceNodesByNodeId, skips);
       return;
     }
 
@@ -279,8 +279,8 @@ export async function executeDag(
       const traceNode = makeErrorTraceNode(node, Date.now(), error, 0);
       traceNode.inputRefs = inputRefs;
       outcomes.set(node.id, { status: 'error' });
-      traceNodes.push(traceNode);
-      skipDownstream(node.id, adjacency, nodeById, outcomes, traceNodes, skips);
+      traceNodesByNodeId.set(node.id, traceNode);
+      skipDownstream(node.id, adjacency, nodeById, outcomes, traceNodesByNodeId, skips);
       return;
     }
 
@@ -290,8 +290,8 @@ export async function executeDag(
       const traceNode = makeErrorTraceNode(node, Date.now(), err, 0);
       traceNode.inputRefs = inputRefs;
       outcomes.set(node.id, { status: 'error' });
-      traceNodes.push(traceNode);
-      skipDownstream(node.id, adjacency, nodeById, outcomes, traceNodes, skips);
+      traceNodesByNodeId.set(node.id, traceNode);
+      skipDownstream(node.id, adjacency, nodeById, outcomes, traceNodesByNodeId, skips);
       return;
     }
 
@@ -310,7 +310,7 @@ export async function executeDag(
       }
 
       outcomes.set(node.id, { status: 'success', output });
-      traceNodes.push(runResult.traceNode);
+      traceNodesByNodeId.set(node.id, runResult.traceNode);
       for (const downstreamId of adjacency.get(node.id) ?? []) {
         const nextDegree = (indegree.get(downstreamId) ?? 0) - 1;
         indegree.set(downstreamId, nextDegree);
@@ -320,8 +320,8 @@ export async function executeDag(
     }
 
     outcomes.set(node.id, { status: 'error' });
-    traceNodes.push(runResult.traceNode);
-    skipDownstream(node.id, adjacency, nodeById, outcomes, traceNodes, skips);
+    traceNodesByNodeId.set(node.id, runResult.traceNode);
+    skipDownstream(node.id, adjacency, nodeById, outcomes, traceNodesByNodeId, skips);
   }
 
   while (ready.length > 0) {
@@ -343,6 +343,9 @@ export async function executeDag(
       .filter(([, outcome]) => outcome.status === 'success' && outcome.output)
       .map(([nodeId, outcome]) => [nodeId, outcome.output as NodeOutput]),
   );
+  const traceNodes = plan.nodes
+    .map((node) => traceNodesByNodeId.get(node.id))
+    .filter((node): node is TraceNode => node !== undefined);
   const totals = traceNodes.reduce(
     (acc, traceNode) => {
       if (traceNode.outcome === 'success') {

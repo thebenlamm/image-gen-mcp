@@ -205,6 +205,48 @@ describe('serializeImageTaskResponse', () => {
     expect(error.jsonPath).toBe('$.trace[0].metadata.thumbnail');
   });
 
+  it('rejects ArrayBuffer and typed array payloads from data node outputs', () => {
+    const plan = makePlan({
+      nodes: [
+        {
+          id: 'dimensions',
+          op: 'analyze_dimensions',
+          provider: 'sharp',
+          params: { input: '$inputs.image_0' },
+          dependsOn: [],
+          outputKind: 'data',
+        },
+      ],
+      terminalNodeId: 'dimensions',
+    });
+    const traceNode = makeTraceNode({
+      id: 'ndimensions',
+      op: 'analyze_dimensions',
+      provider: 'sharp',
+      artifactPath: undefined,
+    });
+
+    for (const [payload, expectedPath] of [
+      [new ArrayBuffer(8), '$.trace[0].data.raw'],
+      [new DataView(new ArrayBuffer(8)), '$.trace[0].data.raw'],
+      [new Uint16Array([1, 2]), '$.trace[0].data.raw'],
+    ] as const) {
+      const dagResult = makeDagResult({
+        nodeOutputs: { dimensions: { kind: 'data', data: { raw: payload } } },
+        trace: { runId: 'run_123', nodes: [traceNode] },
+        bestPartial: null,
+      });
+
+      const error = captureGuardError(() => serializeImageTaskResponse({
+        plan,
+        dagResult,
+        runId: 'run_123',
+      }));
+      expect(error.code).toBe('BUFFER_IN_RESPONSE');
+      expect(error.jsonPath).toBe(expectedPath);
+    }
+  });
+
   it('Test 3: data URL base64 guard rejects image data URLs', () => {
     const dagResult = makeDagResult({
       trace: {

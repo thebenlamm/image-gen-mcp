@@ -386,6 +386,35 @@ describe('executeDag', () => {
     expect(maxInflight).toBe(2);
   });
 
+  it('emits trace nodes in plan order when parallel siblings finish out of order', async () => {
+    const result = await executeDag(
+      plan([
+        { id: 'A', op: 'extract_subject', provider: 'mock-A', params: {}, dependsOn: [], outputKind: 'image' },
+        { id: 'B', op: 'extract_subject', provider: 'mock-B', params: {}, dependsOn: [], outputKind: 'image' },
+        {
+          id: 'C',
+          op: 'composite_layers',
+          provider: 'mock-C',
+          params: {
+            canvas: { width: 1, height: 1 },
+            layers: [{ input: '$nodes.A.output' }, { input: '$nodes.B.output' }],
+          },
+          dependsOn: ['A', 'B'],
+          outputKind: 'image',
+        },
+      ], 'C'),
+      {},
+      { runId, runDir, registry: makeRegistry({
+        'extract_subject:mock-A': makeDelayedCap('extract_subject', { delayMs: 90 }),
+        'extract_subject:mock-B': makeDelayedCap('extract_subject', { delayMs: 10 }),
+        'composite_layers:mock-C': makeMockCap('composite_layers'),
+      }) },
+    );
+
+    expect(result.trace.nodes.map((node) => node.id)).toEqual(['nA', 'nB', 'nC']);
+    expect(result.trace.nodes[0]!.endedAtMs).toBeGreaterThan(result.trace.nodes[1]!.endedAtMs);
+  });
+
   it('does not start descendants until all parents complete', async () => {
     const timings = new Map<string, { start?: number; end?: number }>();
     const markStart = (id: string) => () => timings.set(id, { ...timings.get(id), start: Date.now() });

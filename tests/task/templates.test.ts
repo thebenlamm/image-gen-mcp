@@ -85,6 +85,31 @@ describe('matchTemplate', () => {
     });
   });
 
+  it('maps product-on-white output_size constraints to canvas dimensions', () => {
+    const cases = [
+      ['square', { width: 2000, height: 2000 }],
+      ['landscape', { width: 2000, height: 1125 }],
+      ['portrait', { width: 1125, height: 2000 }],
+    ] as const;
+
+    for (const [outputSize, expectedCanvas] of cases) {
+      const match = matchTemplate({
+        goal: 'product-on-white',
+        inputImages: { product: '/p.png' },
+        constraints: { output_size: outputSize },
+      }, makeRegistry());
+      const compose = match!.plan.nodes[1]!;
+
+      expect(compose.params.canvas).toMatchObject(expectedCanvas);
+      expect(compose.params.layers).toEqual([
+        expect.objectContaining({
+          x: expectedCanvas.width / 2,
+          y: expectedCanvas.height / 2,
+        }),
+      ]);
+    }
+  });
+
   it('matches logo-cleanup as an extract_subject terminal alpha cutout', () => {
     const match = matchTemplate({ goal: 'logo-cleanup', inputImages: { logo: '/l.png' } }, makeRegistry());
 

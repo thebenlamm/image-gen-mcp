@@ -57,7 +57,12 @@ const productOnWhite: TemplateBuilder = (input) => {
   const inputRef = firstInputRef(input);
   if (!inputRef) return null;
 
-  const size = input.constraints?.output_size === 'portrait' ? 2000 : 2000;
+  const canvasBySize = {
+    square: { width: 2000, height: 2000 },
+    landscape: { width: 2000, height: 1125 },
+    portrait: { width: 1125, height: 2000 },
+  } as const;
+  const canvas = canvasBySize[input.constraints?.output_size ?? 'square'];
   const nodes: PlanNode[] = [
     {
       id: 'extract',
@@ -75,8 +80,8 @@ const productOnWhite: TemplateBuilder = (input) => {
       op: 'composite_layers',
       provider: 'sharp',
       params: {
-        canvas: { width: size, height: size, background: { r: 255, g: 255, b: 255, alpha: 1 } },
-        layers: [{ input: '$nodes.extract.output', anchor: 'center', x: size / 2, y: size / 2 }],
+        canvas: { ...canvas, background: { r: 255, g: 255, b: 255, alpha: 1 } },
+        layers: [{ input: '$nodes.extract.output', anchor: 'center', x: canvas.width / 2, y: canvas.height / 2 }],
       },
       dependsOn: ['extract'],
       outputKind: 'image',

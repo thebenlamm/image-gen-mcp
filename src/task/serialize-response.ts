@@ -54,7 +54,7 @@ function isPlainObject(value: object): boolean {
 export function assertNoBinaryPayload(value: unknown, path = '$', seen = new WeakSet<object>()): void {
   if (value === null || value === undefined) return;
 
-  if (Buffer.isBuffer(value) || value instanceof Uint8Array) {
+  if (Buffer.isBuffer(value) || value instanceof ArrayBuffer || ArrayBuffer.isView(value)) {
     throw new ResponseGuardError('BUFFER_IN_RESPONSE', path);
   }
 
