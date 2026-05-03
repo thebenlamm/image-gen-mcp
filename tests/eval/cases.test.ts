@@ -44,4 +44,11 @@ describe('eval cases loader', () => {
       }
     }
   });
+
+  it('has unique case ids', async () => {
+    const cases = await loadEvalCases();
+    const ids = cases.map((evalCase) => evalCase.id);
+
+    expect(new Set(ids).size).toBe(ids.length);
+  });
 });

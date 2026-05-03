@@ -51,6 +51,7 @@ export async function loadEvalCases(): Promise<EvalCase[]> {
   const entries = await fs.readdir(CASES_ROOT);
   const caseFiles = entries.filter((entry) => entry.endsWith('.json')).sort();
   const cases: EvalCase[] = [];
+  const seenIds = new Set<string>();
 
   for (const file of caseFiles) {
     const raw = await fs.readFile(path.join(CASES_ROOT, file), 'utf8');
@@ -64,6 +65,10 @@ export async function loadEvalCases(): Promise<EvalCase[]> {
       if (!isEvalCase(entry)) {
         throw new Error(`Eval case file contains an invalid case: ${file}`);
       }
+      if (seenIds.has(entry.id)) {
+        throw new Error(`Duplicate eval case id: ${entry.id}`);
+      }
+      seenIds.add(entry.id);
 
       const fixture = fixturesById.get(entry.fixtureId);
       if (!fixture) {

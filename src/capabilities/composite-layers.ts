@@ -155,11 +155,16 @@ export function createCompositeLayersCapability(): Capability {
               false,
             );
           }
-          pipeline = pipeline.resize(
-            Math.round(meta.width * scale),
-            Math.round(meta.height * scale),
-            { fit: 'fill' },
-          );
+          const width = Math.round(meta.width * scale);
+          const height = Math.round(meta.height * scale);
+          if (width < 1 || height < 1) {
+            throw new CapabilityInvokeError(
+              'CONSTRAINT_VIOLATION',
+              `composite_layers.layers[${index}].scale produces a zero-sized layer`,
+              false,
+            );
+          }
+          pipeline = pipeline.resize(width, height, { fit: 'fill' });
         }
 
         if (opacity < 1) {

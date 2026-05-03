@@ -90,7 +90,7 @@ export async function runEval(): Promise<string> {
         op: evalCase.op,
         provider: evalCase.provider,
         fixtureId: evalCase.fixtureId,
-        status: 'skipped',
+        status: 'error',
         scores: [],
         error: `capability not registered: ${evalCase.op}/${evalCase.provider}`,
       });

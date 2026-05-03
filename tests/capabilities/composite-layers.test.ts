@@ -144,6 +144,21 @@ describe('composite_layers capability', () => {
     })).rejects.toMatchObject({ code: 'CONSTRAINT_VIOLATION' });
   });
 
+  it('rejects scales that produce zero-sized layers', async () => {
+    const overlay = await writeSolidPng('tiny.png', 1, 1, { r: 255, g: 0, b: 0, alpha: 1 });
+    const capability = createCompositeLayersCapability();
+
+    await expect(capability.invoke({
+      params: {
+        canvas: { width: 16, height: 16 },
+        layers: [{ input: overlay, scale: 0.05 }],
+      },
+    })).rejects.toMatchObject({
+      code: 'CONSTRAINT_VIOLATION',
+      message: expect.stringContaining('zero-sized layer'),
+    });
+  });
+
   it('scales layers before compositing', async () => {
     const overlay = await writeSolidPng('overlay.png', 64, 64, { r: 255, g: 0, b: 0, alpha: 1 });
     const capability = createCompositeLayersCapability();

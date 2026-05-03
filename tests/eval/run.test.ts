@@ -7,6 +7,8 @@ import type { Capability, CapabilityOp } from '../../src/capabilities/types.js';
 import { EVAL_RESULTS_DIR } from '../../src/eval/results.js';
 import { hasUsableEnv, runEval, scorePassed } from '../../src/eval/run.js';
 
+const registered: Array<{ unregister: () => void }> = [];
+
 async function fakePng(): Promise<Buffer> {
   return sharp({
     create: {
@@ -39,6 +41,39 @@ function registerFakeCapability(
   return { unregister: () => capabilityRegistry.unregister(op, provider) };
 }
 
+function registerFakeLocalEvalCapabilities(
+  overrides: Partial<Record<CapabilityOp, Capability['invoke']>> = {},
+): void {
+  registered.push(registerFakeCapability('extract_subject', '@imgly/local', overrides.extract_subject));
+  registered.push(registerFakeCapability('composite_layers', 'sharp', overrides.composite_layers ?? (async () => ({
+    kind: 'image' as const,
+    buffer: await fs.readFile('eval/fixtures/composite-golden.png'),
+    model: 'fake-model',
+  }))));
+  registered.push(registerFakeCapability('analyze_dimensions', 'sharp', overrides.analyze_dimensions ?? (async () => ({
+    kind: 'data' as const,
+    data: { type: 'dimensions', width: 256, height: 128, format: 'png', channels: 4, hasAlpha: true },
+    model: 'fake-model',
+  }))));
+  registered.push(registerFakeCapability('analyze_palette', 'sharp', overrides.analyze_palette ?? (async () => ({
+    kind: 'data' as const,
+    data: {
+      type: 'palette',
+      colors: [
+        { hex: '#ff0000', r: 255, g: 0, b: 0, weight: 0.34 },
+        { hex: '#00ff00', r: 0, g: 255, b: 0, weight: 0.33 },
+        { hex: '#0000ff', r: 0, g: 0, b: 255, weight: 0.33 },
+      ],
+    },
+    model: 'fake-model',
+  }))));
+  registered.push(registerFakeCapability('analyze_ocr', 'tesseract', overrides.analyze_ocr ?? (async () => ({
+    kind: 'data' as const,
+    data: { type: 'ocr', text: 'SALE', confidence: 95 },
+    model: 'fake-model',
+  }))));
+}
+
 async function readResult(resultPath: string): Promise<any> {
   return JSON.parse(await fs.readFile(resultPath, 'utf8'));
 }
@@ -53,7 +88,6 @@ async function removeEvalResults(): Promise<void> {
 }
 
 describe('eval runner', () => {
-  const registered: Array<{ unregister: () => void }> = [];
   const previousOpenAiKey = process.env.OPENAI_API_KEY;
 
   beforeEach(async () => {
@@ -78,7 +112,7 @@ describe('eval runner', () => {
   });
 
   it('writes result JSON for scored local cases and skipped provider cases', async () => {
-    registered.push(registerFakeCapability('extract_subject', '@imgly/local'));
+    registerFakeLocalEvalCapabilities();
     registered.push(registerFakeCapability('edit_prompt', 'openai', async () => {
       throw new Error('OpenAI should not be invoked without usable env');
     }));
@@ -99,6 +133,7 @@ describe('eval runner', () => {
 
   it('skips OpenAI cases for placeholder env without invoking capability', async () => {
     process.env.OPENAI_API_KEY = '${OPENAI_API_KEY}';
+    registerFakeLocalEvalCapabilities();
     registered.push(registerFakeCapability('extract_subject', '@imgly/local'));
     registered.push(registerFakeCapability('edit_prompt', 'openai', async () => {
       throw new Error('OpenAI should not be invoked for placeholder env');
@@ -113,8 +148,42 @@ describe('eval runner', () => {
     ).toBe(true);
   });
 
+  it('fails when a non-env-gated capability is missing', async () => {
+    registerFakeLocalEvalCapabilities();
+    capabilityRegistry.unregister('extract_subject', '@imgly/local');
+
+    await expect(runEval()).rejects.toThrow(/eval failed/);
+
+    const files = await fs.readdir(EVAL_RESULTS_DIR);
+    const result = await readResult(path.join(EVAL_RESULTS_DIR, files.find((file) => file.endsWith('.json'))!));
+
+    expect(
+      result.results.some(
+        (entry: any) =>
+          entry.op === 'extract_subject' &&
+          entry.provider === '@imgly/local' &&
+          entry.status === 'error' &&
+          entry.error === 'capability not registered: extract_subject/@imgly/local',
+      ),
+    ).toBe(true);
+  });
+
+  it('still skips missing env-gated provider capabilities', async () => {
+    registerFakeLocalEvalCapabilities();
+    registered.push(registerFakeCapability('extract_subject', '@imgly/local'));
+
+    const result = await readResult(await runEval());
+
+    expect(
+      result.results
+        .filter((entry: any) => entry.op === 'edit_prompt' && entry.provider === 'openai')
+        .every((entry: any) => entry.status === 'skipped'),
+    ).toBe(true);
+  });
+
   it('writes results then fails when any eval case errors', async () => {
     let calls = 0;
+    registerFakeLocalEvalCapabilities();
     registered.push(registerFakeCapability('extract_subject', '@imgly/local', async () => {
       calls += 1;
       if (calls === 1) {
