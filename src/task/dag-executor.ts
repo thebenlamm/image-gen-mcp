@@ -11,6 +11,7 @@ import { buildTraceNode, type Trace, type TraceNode } from '../runs/trace.js';
 import { writeFileAtomic } from '../runs/write.js';
 import { selectBestPartial, type NodeOutcome } from './best-partial.js';
 import { resolveRefs, type NodeOutput, type ResolveCtx } from './ref-resolver.js';
+import './sharp-config.js';
 
 export interface ExecPlan {
   goal: string;
