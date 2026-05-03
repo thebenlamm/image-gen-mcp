@@ -68,14 +68,14 @@ describe('executeDag', () => {
   it('executes a 3-node happy path in topological order', async () => {
     const caps = {
       'extract_subject:mock': makeMockCap('extract_subject'),
-      'edit_prompt:mock': makeMockCap('edit_prompt'),
-      'enhance_upscale:mock': makeMockCap('enhance_upscale'),
+      'extract_subject:mock-b': makeMockCap('extract_subject'),
+      'extract_subject:mock-c': makeMockCap('extract_subject'),
     };
     const result = await executeDag(
       plan([
         { id: 'A', op: 'extract_subject', provider: 'mock', params: {}, dependsOn: [], outputKind: 'image', costUsd: 0.01 },
-        { id: 'B', op: 'edit_prompt', provider: 'mock', params: { input: '$nodes.A.output' }, dependsOn: ['A'], outputKind: 'image', costUsd: 0.02 },
-        { id: 'C', op: 'enhance_upscale', provider: 'mock', params: { input: '$nodes.B.output' }, dependsOn: ['B'], outputKind: 'image', costUsd: 0.03 },
+        { id: 'B', op: 'extract_subject', provider: 'mock-b', params: { input: '$nodes.A.output' }, dependsOn: ['A'], outputKind: 'image', costUsd: 0.02 },
+        { id: 'C', op: 'extract_subject', provider: 'mock-c', params: { input: '$nodes.B.output' }, dependsOn: ['B'], outputKind: 'image', costUsd: 0.03 },
       ], 'C'),
       {},
       { runId, runDir, registry: makeRegistry(caps) },
