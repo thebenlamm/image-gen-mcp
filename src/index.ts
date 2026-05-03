@@ -38,6 +38,7 @@ import { resolveOutputPath, saveImage } from './utils/image.js';
 import { applyOperations, getImageInfo, type ProcessingOperation } from './utils/processing.js';
 import { getPreset, ASSET_PRESETS, type AssetType } from './utils/presets.js';
 import {
+  checkBudgetGate,
   executeDag,
   planImageTask,
   PlannerError,
@@ -840,7 +841,7 @@ export async function handleImageOp(args: ImageOpArgs): Promise<{
 
 function imageTaskErrorResponse(
   runId: string,
-  error: string | { message: string; code?: string; retryable?: boolean; suggestion?: string; estimated_cost_usd?: number; cap_usd?: number },
+  error: string | { message: string; code?: string; retryable?: boolean; suggestion?: string; estimated_cost_usd?: number; cap_usd?: number; budget_cap_usd?: number; threshold_usd?: number },
   extra: Record<string, unknown> = {},
 ): { content: Array<{ type: 'text'; text: string }> } {
   return {
@@ -990,6 +991,14 @@ export async function handleImageTask(args: ImageTaskArgs): Promise<{
     inputImages,
     constraints: args.constraints,
   }, capabilityRegistry);
+
+  const gate = checkBudgetGate({
+    constraints: args.constraints,
+    templateMatched: templateMatch !== null,
+  });
+  if (!gate.ok) {
+    return imageTaskErrorResponse(runId, gate.error);
+  }
 
   if (templateMatch) {
     plannerMethod = 'template';

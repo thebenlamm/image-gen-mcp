@@ -1,4 +1,5 @@
 export * from './best-partial.js';
+export * from './budget-gate.js';
 export * from './dag-executor.js';
 export * from './plan-schema.js';
 export * from './plan-validator.js';
