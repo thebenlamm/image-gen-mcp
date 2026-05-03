@@ -249,5 +249,5 @@ Phases execute in numeric order with one parallelization window:
 | 7. Eval Harness + Golden Set | 0/2 | Not started (parallel with 8) | - |
 | 8. Op Primitives Expansion | 0/2-3 | Not started (parallel with 7) | - |
 | 9. image_task Planner + DAG Executor | 4/4 | ✓ Complete | 2026-05-03 |
-| 10. Template Fast-Paths + Parallelism | 2/2 | Complete   | 2026-05-03 |
+| 10. Template Fast-Paths + Parallelism | 2/2 | Complete    | 2026-05-03 |
 | 11. Provider Breadth (Post-Eval) | 0/2-3 | Not started | - |
