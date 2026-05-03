@@ -166,7 +166,7 @@ describe('apply eval results to capability registry quality', () => {
           modelVersion: 'photoroom-image-editing-v1',
           fixtureId: 'composite-bg',
           status: 'scored',
-          scores: [{ scorer: 'pixel_delta', status: 'scored', value: 0.08 }],
+          scores: [{ scorer: 'alpha_coverage', status: 'scored', value: 0.95 }],
         },
         {
           caseId: 'edit-fal-kontext-text-label',
@@ -197,7 +197,7 @@ describe('apply eval results to capability registry quality', () => {
       pixel_delta: 0.12,
     });
     expect(registry.get('composite_layers', 'photoroom')?.quality?.scores).toEqual({
-      pixel_delta: 0.08,
+      alpha_coverage: 0.95,
     });
     expect(registry.get('edit_prompt', 'fal')?.quality?.scores).toEqual({
       pixel_delta: 0.24,

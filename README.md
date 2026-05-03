@@ -410,7 +410,7 @@ Invoke a registered image capability directly by operation and provider. This is
 | `edit_prompt` | `openai` | `OPENAI_API_KEY`, `params.input`, `params.prompt` | Edits a local image using OpenAI GPT Image through the JSON Images API. Defaults to `OPENAI_EDIT_MODEL=gpt-image-1.5`. |
 | `edit_prompt` | `fal` | `FAL_KEY`, `params.input`, `params.prompt` | Edits a local image using fal.ai Flux Kontext (`fal-ai/flux-pro/kontext`). |
 | `composite_layers` | `sharp` | `params.canvas`, `params.layers[]` | Deterministic local PNG composition using sharp. |
-| `composite_layers` | `photoroom` | `PHOTOROOM_API_KEY`, `params.canvas`, `params.layers[]` | Uses Photoroom Image Editing API for product composition. This adapter delivers the `(with shadow)` qualifier through Image Editing API shadow/relighting. |
+| `composite_layers` | `photoroom` | `PHOTOROOM_API_KEY`, `params.canvas`, `params.layers[]` | Single-subject product composition through Photoroom Image Editing API. Accepts `params.canvas`, exactly ONE entry in `params.layers`, optional `params.shadow.enabled` for shadow/relighting, and optional `params.background.color`/`params.background.prompt`. Per-layer position fields (x/y/scale/opacity/anchor) are accepted at the schema level for sharp/Photoroom interchangeability but Photoroom's API does not consume them — use `composite_layers:sharp` for multi-layer placement. Delivers PROV-01's `(with shadow)` qualifier through Image Editing shadow. |
 | `generate` | `ideogram` | `IDEOGRAM_API_KEY`, `params.prompt` | Generates a PNG through Ideogram 3.0 and downloads the ephemeral image URL. |
 
 Photoroom, fal, and Ideogram are exposed through `image_op` once their API keys are present. `image_task` will only prefer them once Phase 11 eval cases populate quality scores. The Photoroom `composite_layers` adapter delivers the `(with shadow)` qualifier through the Image Editing API; the `extract_subject` adapter uses the simpler Remove Background API and produces a flat alpha cutout.
@@ -557,7 +557,7 @@ Run the Phase 11 provider evals after configuring provider keys:
 PHOTOROOM_API_KEY=... FAL_KEY=... IDEOGRAM_API_KEY=... npm run eval
 ```
 
-These cases use deterministic scorers only. Photoroom `extract_subject` uses `alpha_coverage` and `pixel_delta` for subject and edge preservation. Photoroom `composite_layers` uses the Image Editing API with `params.shadow.enabled: true`; this is where shadow/background quality is measured and where PROV-01's `(with shadow)` qualifier is satisfied. fal Flux Kontext mirrors existing OpenAI `edit_prompt` fixtures and uses `pixel_delta` plus `ocr_text_presence` for instruction success on text edits. Ideogram `generate` uses `ocr_text_presence` with `expectedText` to measure text fidelity.
+These cases use deterministic scorers only. Photoroom `extract_subject` uses `alpha_coverage` and `pixel_delta` for subject and edge preservation. Photoroom `composite_layers` runs through the Image Editing API with `params.shadow.enabled: true` and is scored with `alpha_coverage` on the Photoroom output. The routing question is "did Photoroom produce a clean alpha-aware product composite with shadow/relighting?" — the input baseline used by `pixel_delta` was removed because the adapter does not consume `params.input`; alpha_coverage measures the same routing signal directly on the Photoroom output. This is where PROV-01's `(with shadow)` qualifier is satisfied per D-15. fal Flux Kontext mirrors existing OpenAI `edit_prompt` fixtures and uses `pixel_delta` plus `ocr_text_presence` for instruction success on text edits. Ideogram `generate` uses `ocr_text_presence` with `expectedText` to measure text fidelity.
 
 `image_op` allows immediate direct exploration of registered providers once API keys are present. `image_task` planner preference requires eval-populated `quality.scores`; a second provider should show either a `>=0.03` relevant quality-score edge or a `>=20%` latency/cost edge above the acceptable quality floor before displacing an incumbent.
 
@@ -583,12 +583,41 @@ Example Photoroom composite trace node:
     "api": "image-editing",
     "shadowApplied": true,
     "qualityMeasured": true,
-    "qualityScores": { "pixel_delta": 0.12 }
+    "qualityScores": { "alpha_coverage": 0.95 }
   }
 }
 ```
 
-After a successful eval run, `list_capabilities` should show populated `quality.scores` for `extract_subject:photoroom`, `composite_layers:photoroom`, `edit_prompt:fal`, and `generate:ideogram`. PROV-01 is satisfied by two Photoroom adapters: `extract_subject` uses the Remove Background API without shadow, while `composite_layers:photoroom` uses the Image Editing API with shadow. The eval case `composite-photoroom-product-with-shadow` exercises this path with `params.shadow.enabled: true`.
+#### Live Human Verification (Phase 11 Gate)
+
+Run after the four Phase 11 gap-closure plans land. Required env vars must point at real provider credentials:
+
+```bash
+# 1. Run all Phase 11 evals (Photoroom extract + composite, fal Flux Kontext, Ideogram).
+PHOTOROOM_API_KEY=sk-... \
+FAL_KEY=fal_... \
+IDEOGRAM_API_KEY=... \
+npm run eval
+
+# 2. Confirm the registry now shows quality.scores for all four Phase 11 surfaces.
+npm run start &
+# In another terminal, send a list_capabilities MCP request through your client and
+# confirm extract_subject:photoroom, composite_layers:photoroom, edit_prompt:fal,
+# and generate:ideogram each have a non-empty quality.scores object.
+
+# 3. Drive a product-photography best-tier image_task and inspect the trace.
+#    From your MCP client, call image_task with:
+#      { goal: "product photo on a clean white surface with soft shadow",
+#        input_images: ["/path/to/product.jpg"],
+#        constraints: { quality_tier: "best" } }
+#    Confirm the returned trace shows composite_layers selected with
+#    provider=photoroom, metadata.qualityMeasured=true, metadata.api="image-editing",
+#    metadata.shadowApplied=true, and a non-empty metadata.qualityScores.
+```
+
+If step 1 produces a `case→adapter contract mismatch` error for any case, the case JSON in `eval/cases/` does not match the resolved adapter's `constraints.requiresInputImage` declaration. Fix the case (remove orphan `params.input` or change scorers/adapter contract) before re-running. The lint exists to make this loud rather than silently populate an invalid `quality.score`.
+
+After a successful eval run, `list_capabilities` shows populated `quality.scores` for `extract_subject:photoroom`, `composite_layers:photoroom`, `edit_prompt:fal`, and `generate:ideogram`. PROV-01 is satisfied by two Photoroom adapters: `extract_subject` uses the Remove Background API and produces a flat alpha cutout; `composite_layers:photoroom` uses the Image Editing API on a single subject with shadow/relighting and is scored with `alpha_coverage`. The case `composite-photoroom-product-with-shadow` exercises this path with `params.shadow.enabled: true` and `metadata.shadowApplied: true` on the invoke return. PROV-05 (each new provider has at least one valid eval case) holds for all four Phase 11 capability surfaces.
 
 #### Best-Partial on Failure
 
