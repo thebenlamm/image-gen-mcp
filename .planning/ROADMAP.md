@@ -187,6 +187,9 @@ Plans:
 **Plans**: 3 plans
 **UI hint**: no
 
+**Backlog (deferred from earlier phases — fold into Phase 9 plans when scoping):**
+- `[BACKLOG] IMAGE_GEN_INPUT_ROOT` env-var-based path validation for all capability `*.input` fields (composite_layers.layers[].input, analyze_ocr.params.input, enhance_upscale.params.input, plus existing extract_subject/edit_prompt/transform inputs). When set, all input paths must `path.resolve()` under the configured root; reject `..` traversal and symlinks pointing outside. Threat surface widens in Phase 9 because planner-generated paths are no longer user-typed. Tracked from Phase 8 threat T-08-02-01.
+
 ### Phase 10: Template Fast-Paths + Executor Parallelism
 **Goal**: Common goal patterns skip the planner LLM entirely, and independent DAG nodes execute concurrently with bounded libvips usage
 **Depends on**: Phase 9
