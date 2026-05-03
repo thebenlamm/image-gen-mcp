@@ -220,8 +220,12 @@ Plans:
   3. Flux Kontext is registered for `edit_prompt` (no-mask instruction edit) and selectable when its measured edit-quality score exceeds gpt-image-1's
   4. Ideogram is registered for `generate` with a measured text-fidelity score that the planner uses for text-heavy goals
   5. Each new provider has at least one eval case before its `quality.score` is populated; provider registration fails or warns if no eval case exists
-**Plans**: 2-3 plans
+**Plans**: 2 plans
 **UI hint**: no
+
+Plans:
+- [ ] 11-01-PLAN.md — Provider capability adapters (Photoroom, fal Flux Kontext, Ideogram), `generate` op wiring across types/schema/validator/enums, register.ts wiring with unscored-second-provider gates preserved
+- [ ] 11-02-PLAN.md — Phase 11 eval cases populating quality.scores, dag-executor trace transparency (qualityMeasured/noIncumbentComparison/qualityUnavailable), planner system-prompt routing-notes alignment, README routing-transparency docs
 
 ## Progress
 
