@@ -86,7 +86,6 @@ export async function scoreOcrTextPresence(
     };
   }
 
-  const needle = normalizeOcrText(expectedText);
   try {
     const data = await recognizeOnce(outputPath, 'eng');
     if (ocrContains(data.text, expectedText)) {
@@ -130,7 +129,7 @@ async function scoreOcrTextPresenceWithPreprocessing(
       name: string;
       psm: PSM;
       crop?: { left: number; top: number; width: number; height: number };
-      threshold?: boolean;
+      threshold?: boolean | number;
       resizeWidth: number;
       linear: { a: number; b: number };
       whitelist?: boolean;
@@ -152,6 +151,48 @@ async function scoreOcrTextPresenceWithPreprocessing(
       },
     ];
     if (width >= 16 && height >= 16) {
+      variants.push({
+        name: 'top-header',
+        psm: PSM.SINGLE_WORD,
+        threshold: true,
+        resizeWidth: 2600,
+        linear: { a: 1, b: 0 },
+        whitelist: true,
+        crop: {
+          left: 0,
+          top: 0,
+          width,
+          height: Math.max(1, Math.floor(height * 0.38)),
+        },
+      });
+      variants.push({
+        name: 'top-header-high-contrast',
+        psm: PSM.SINGLE_WORD,
+        threshold: 180,
+        resizeWidth: 2600,
+        linear: { a: 1, b: 0 },
+        whitelist: true,
+        crop: {
+          left: 0,
+          top: 0,
+          width,
+          height: Math.max(1, Math.floor(height * 0.38)),
+        },
+      });
+      variants.push({
+        name: 'top-half',
+        psm: PSM.SINGLE_WORD,
+        threshold: true,
+        resizeWidth: 2600,
+        linear: { a: 1, b: 0 },
+        whitelist: true,
+        crop: {
+          left: 0,
+          top: 0,
+          width,
+          height: Math.max(1, Math.floor(height * 0.5)),
+        },
+      });
       variants.push({
         name: 'upper-band',
         psm: PSM.SINGLE_WORD,
@@ -179,7 +220,7 @@ async function scoreOcrTextPresenceWithPreprocessing(
         .normalize()
         .linear(variant.linear.a, variant.linear.b);
       if (variant.threshold) {
-        image = image.threshold(128);
+        image = image.threshold(typeof variant.threshold === 'number' ? variant.threshold : 128);
       }
       await image.png().toFile(preprocessedPath);
       const data = await recognizeOnce(preprocessedPath, 'eng', {

@@ -1,9 +1,8 @@
-import { ZodError } from 'zod';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CapabilityOp } from '../../src/capabilities/types.js';
 import type { Plan } from '../../src/task/plan-schema.js';
 
-const mockParse = vi.fn();
+const mockCreate = vi.fn();
 const constructorOptions: unknown[] = [];
 
 class MockAuthenticationError extends Error {
@@ -28,7 +27,7 @@ class MockTimeoutError extends Error {}
 
 vi.mock('@anthropic-ai/sdk', () => ({
   default: class {
-    messages = { parse: mockParse };
+    messages = { create: mockCreate };
     constructor(opts: unknown) {
       constructorOptions.push(opts);
     }
@@ -38,10 +37,6 @@ vi.mock('@anthropic-ai/sdk', () => ({
   APIError: MockAPIError,
   BadRequestError: MockBadRequestError,
   APIConnectionTimeoutError: MockTimeoutError,
-}));
-
-vi.mock('@anthropic-ai/sdk/helpers/zod', () => ({
-  zodOutputFormat: (schema: unknown) => ({ schema }),
 }));
 
 const validPlan: Plan = {
@@ -88,7 +83,7 @@ function registry() {
 describe('planImageTask', () => {
   beforeEach(() => {
     vi.resetModules();
-    mockParse.mockReset();
+    mockCreate.mockReset();
     constructorOptions.length = 0;
     process.env.ANTHROPIC_API_KEY = 'test-key';
   });
@@ -98,9 +93,8 @@ describe('planImageTask', () => {
   });
 
   it('returns a parsed plan with reasoning and usage', async () => {
-    mockParse.mockResolvedValue({
-      parsed_output: validPlan,
-      content: [{ type: 'text', text: 'reasoning prose' }],
+    mockCreate.mockResolvedValue({
+      content: [{ type: 'text', text: JSON.stringify(validPlan) }],
       usage: { input_tokens: 100, output_tokens: 50 },
     });
     const { planImageTask } = await import('../../src/task/planner.js');
@@ -108,7 +102,7 @@ describe('planImageTask', () => {
     const result = await planImageTask({ goal: 'extract product', inputImages: { product: '/tmp/x.png' } }, registry() as never);
 
     expect(result.plan).toEqual(validPlan);
-    expect(result.reasoning).toBe('reasoning prose');
+    expect(result.reasoning).toBe('');
     expect(result.usage).toEqual({ promptTokens: 100, completionTokens: 50 });
   });
 
@@ -119,12 +113,12 @@ describe('planImageTask', () => {
     await expect(planImageTask({ goal: 'x' }, registry() as never)).rejects.toMatchObject({
       code: 'PLANNER_AUTH',
     });
-    expect(mockParse).not.toHaveBeenCalled();
+    expect(mockCreate).not.toHaveBeenCalled();
     expect(constructorOptions).toHaveLength(0);
   });
 
   it('maps SDK authentication errors to PLANNER_AUTH', async () => {
-    mockParse.mockRejectedValue(new MockAuthenticationError());
+    mockCreate.mockRejectedValue(new MockAuthenticationError());
     const { planImageTask } = await import('../../src/task/planner.js');
 
     await expect(planImageTask({ goal: 'x' }, registry() as never)).rejects.toMatchObject({
@@ -133,7 +127,7 @@ describe('planImageTask', () => {
   });
 
   it('maps timeout-like API errors to retryable PLANNER_TIMEOUT', async () => {
-    mockParse.mockRejectedValue(new MockAPIError('timeout', 0));
+    mockCreate.mockRejectedValue(new MockAPIError('timeout', 0));
     const { planImageTask } = await import('../../src/task/planner.js');
 
     await expect(planImageTask({ goal: 'x' }, registry() as never)).rejects.toMatchObject({
@@ -142,8 +136,11 @@ describe('planImageTask', () => {
     });
   });
 
-  it('maps Zod helper parse failures to PLANNER_PARSE', async () => {
-    mockParse.mockRejectedValue(new ZodError([]));
+  it('maps invalid JSON responses to PLANNER_PARSE', async () => {
+    mockCreate.mockResolvedValue({
+      content: [{ type: 'text', text: 'not json' }],
+      usage: {},
+    });
     const { planImageTask } = await import('../../src/task/planner.js');
 
     await expect(planImageTask({ goal: 'x' }, registry() as never)).rejects.toMatchObject({
@@ -152,9 +149,8 @@ describe('planImageTask', () => {
   });
 
   it('maps defensive schema validation failures to PLANNER_INVALID_PLAN', async () => {
-    mockParse.mockResolvedValue({
-      parsed_output: { invalid: 'shape' },
-      content: [],
+    mockCreate.mockResolvedValue({
+      content: [{ type: 'text', text: JSON.stringify({ invalid: 'shape' }) }],
       usage: {},
     });
     const { planImageTask } = await import('../../src/task/planner.js');
@@ -165,34 +161,46 @@ describe('planImageTask', () => {
   });
 
   it('sends the capability snapshot in the system prompt', async () => {
-    mockParse.mockResolvedValue({
-      parsed_output: validPlan,
-      content: [],
+    mockCreate.mockResolvedValue({
+      content: [{ type: 'text', text: JSON.stringify(validPlan) }],
       usage: {},
     });
     const { planImageTask } = await import('../../src/task/planner.js');
 
     await planImageTask({ goal: 'extract product' }, registry() as never);
 
-    expect(mockParse).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
       system: expect.stringContaining('@imgly/local'),
     }));
   });
 
-  it('instructs routing notes to surface no incumbent and missing quality decisions', async () => {
-    mockParse.mockResolvedValue({
-      parsed_output: validPlan,
-      content: [],
+  it('requests plain JSON without Anthropic structured output so params can be op-specific', async () => {
+    mockCreate.mockResolvedValue({
+      content: [{ type: 'text', text: JSON.stringify(validPlan) }],
       usage: {},
     });
     const { planImageTask } = await import('../../src/task/planner.js');
 
     await planImageTask({ goal: 'extract product' }, registry() as never);
 
-    expect(mockParse).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mockCreate).toHaveBeenCalledWith(expect.not.objectContaining({
+      output_config: expect.anything(),
+    }));
+  });
+
+  it('instructs routing notes to surface no incumbent and missing quality decisions', async () => {
+    mockCreate.mockResolvedValue({
+      content: [{ type: 'text', text: JSON.stringify(validPlan) }],
+      usage: {},
+    });
+    const { planImageTask } = await import('../../src/task/planner.js');
+
+    await planImageTask({ goal: 'extract product' }, registry() as never);
+
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
       system: expect.stringContaining('no incumbent comparison'),
     }));
-    expect(mockParse).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
       system: expect.stringContaining('routingNotes[i].measuredQuality'),
     }));
   });

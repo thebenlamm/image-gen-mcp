@@ -28,6 +28,16 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+export class EvalFailedError extends Error {
+  constructor(
+    public readonly resultPath: string,
+    public readonly failed: EvalCaseResult[],
+  ) {
+    super(`eval failed ${failed.length} case(s); see result JSON: ${resultPath}`);
+    this.name = 'EvalFailedError';
+  }
+}
+
 function getInputPath(evalCase: EvalCase): string | undefined {
   const input = evalCase.params.input;
   if (typeof input !== 'string' || !input.trim()) {
@@ -206,7 +216,7 @@ export async function runEval(): Promise<string> {
   const resultPath = await writeEvalResults(runResult);
   const failed = results.filter((result) => result.status === 'error');
   if (failed.length > 0) {
-    throw new Error(`eval failed ${failed.length} case(s); see result JSON: ${resultPath}`);
+    throw new EvalFailedError(resultPath, failed);
   }
 
   applyEvalResultsToRegistry(capabilityRegistry, runResult, resultPath);

@@ -5,7 +5,6 @@ import Anthropic, {
   BadRequestError,
   RateLimitError,
 } from '@anthropic-ai/sdk';
-import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { ZodError } from 'zod';
 import type { CapabilityRegistry } from '../capabilities/registry.js';
 import { capabilityRegistry } from '../capabilities/registry.js';
@@ -72,11 +71,17 @@ function buildSystemPrompt(registry: CapabilityRegistry): string {
 
   return [
     'You are the image_task planner for an MCP image pipeline.',
-    'Return only JSON matching the provided PlanSchema. Do not include prose outside structured output.',
+    'Return only a single JSON object matching the PlanSchema. Do not include Markdown fences, prose, or comments.',
+    'The top-level object must use exactly this shape: {"version":1,"goal":"...","nodes":[{"id":"node_id","op":"generate","provider":"ideogram","params":{"prompt":"..."},"dependsOn":[],"outputKind":"image","costUsd":0.08,"latencyMs":8000,"reason":"..."}],"terminalNodeId":"node_id","estimatedTotalCostUsd":0.08,"estimatedTotalLatencyMs":8000,"routingNotes":[{"nodeId":"node_id","measuredQuality":true,"rationale":"..."}]}.',
+    'Do not wrap the plan in another object. Do not omit version, goal, outputKind, costUsd, latencyMs, terminalNodeId, estimatedTotalCostUsd, estimatedTotalLatencyMs, or measuredQuality.',
     'Use only explicit refs of the form $inputs.<name> or $nodes.<id>.output.',
     'Choose only registered capabilities from this capability snapshot:',
     JSON.stringify(capabilitySnapshot, null, 2),
+    'For every node, set op and provider to an exact (op, provider) pair from the snapshot. Never invent providers, never leave provider blank, and never use providers from other tools.',
+    'Required params by op: extract_subject uses {"input":"$inputs.<name>"}; edit_prompt uses {"input":"$inputs.<name> or $nodes.<id>.output","prompt":"..."}; generate uses {"prompt":"..."}; composite_layers uses {"canvas":{"width":1024,"height":1024},"layers":[{"input":"$inputs.<name> or $nodes.<id>.output"}]}.',
+    'For output_size constraints, use params.size with one of square, landscape, portrait only when the chosen capability constraints list that size as supported.',
     'Routing policy: prefer measured quality when present, then lower cost, then lower latency, then deterministic/local providers. When you choose a provider that is the only registered provider for its op, set the corresponding routingNotes[i].rationale to include "no incumbent comparison". When no providers for an op have measured quality, set routingNotes[i].measuredQuality to false and explain that routing used cost/latency only.',
+    'Each routingNotes[i].rationale must be 200 characters or fewer.',
     'Honor budget, latency, output size, and quality constraints. Set node.reason with concise per-node rationale when useful.',
   ].join('\n');
 }
@@ -102,6 +107,32 @@ function extractReasoning(content: unknown): string {
       typeof (block as { text?: unknown }).text === 'string')
     .map((block) => block.text)
     .join('\n');
+}
+
+function extractJsonObject(text: string): unknown {
+  const trimmed = text.trim();
+  const fenced = /^```(?:json)?\s*([\s\S]*?)\s*```$/i.exec(trimmed);
+  const candidate = fenced?.[1]?.trim() ?? trimmed;
+
+  try {
+    return JSON.parse(candidate);
+  } catch {
+    const start = candidate.indexOf('{');
+    const end = candidate.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      try {
+        return JSON.parse(candidate.slice(start, end + 1));
+      } catch {
+        // Fall through to the consistent planner parse error below.
+      }
+    }
+    throw new PlannerError(
+      'PLANNER_PARSE',
+      'Planner response did not contain valid JSON.',
+      false,
+      'Ensure the planner prompt returns a single JSON object.',
+    );
+  }
 }
 
 function mapPlannerError(error: unknown): PlannerError {
@@ -170,25 +201,25 @@ export async function planImageTask(
   });
   const started = Date.now();
 
-  let message: Awaited<ReturnType<typeof client.messages.parse>>;
+  let message: Awaited<ReturnType<typeof client.messages.create>>;
   try {
-    message = await client.messages.parse({
+    message = await client.messages.create({
       model: options.model ?? DEFAULT_MODEL,
       max_tokens: 2048,
       temperature: 0,
       system: buildSystemPrompt(registry),
       messages: [{ role: 'user', content: buildUserPrompt(input) }],
-      output_config: { format: zodOutputFormat(PlanSchema) },
     });
   } catch (error) {
     throw mapPlannerError(error);
   }
 
   try {
-    const plan = PlanSchema.parse(message.parsed_output);
+    const responseText = extractReasoning(message.content);
+    const plan = PlanSchema.parse(extractJsonObject(responseText));
     return {
       plan,
-      reasoning: extractReasoning(message.content),
+      reasoning: '',
       usage: {
         promptTokens: message.usage?.input_tokens,
         completionTokens: message.usage?.output_tokens,
@@ -196,6 +227,9 @@ export async function planImageTask(
       latencyMs: Date.now() - started,
     };
   } catch (error) {
+    if (error instanceof PlannerError) {
+      throw error;
+    }
     if (error instanceof ZodError) {
       throw new PlannerError(
         'PLANNER_INVALID_PLAN',
