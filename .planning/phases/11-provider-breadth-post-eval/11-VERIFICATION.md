@@ -1,7 +1,7 @@
 ---
 phase: 11-provider-breadth-post-eval
 verified: 2026-05-03T23:16:43Z
-status: human_needed
+status: passed
 score: 19/19 must-haves verified
 overrides_applied: 0
 re_verification:
@@ -27,13 +27,15 @@ human_verification:
   - test: "Run a text-heavy generation task after live evals."
     expected: "Trace selects generate:ideogram for text-heavy generation and exposes ocr_text_presence quality scores."
     why_human: "Ideogram live generation and OCR-scored eval output are external-service dependent."
+human_verification_status: completed
+human_verification_artifact: 11-HUMAN-UAT.md
 ---
 
 # Phase 11: Provider Breadth (Post-Eval) Verification Report
 
 **Phase Goal:** Users can route through Photoroom, fal.ai, Flux Kontext, and Ideogram for capabilities where they measurably outperform existing providers
 **Verified:** 2026-05-03T23:16:43Z
-**Status:** human_needed
+**Status:** passed
 **Re-verification:** Yes - after gap closure and review fixes
 
 ## Goal Achievement
@@ -62,7 +64,7 @@ human_verification:
 | 18 | Code review findings do not block phase goal | VERIFIED with warnings | Current `11-REVIEW.md` has 0 critical and 3 warnings. WR-01/WR-02/WR-03 are robustness/contract warnings, not observed blockers for the verified Phase 11 route surfaces. |
 | 19 | Automated test/build baseline is green | VERIFIED | I ran `npm run build` and targeted Vitest suites: 4 files, 47 tests passed. Orchestrator also reports `npm test` passed: 48 files, 298 tests, 0 failed, and schema drift `drift_detected=false`. |
 
-**Score:** 19/19 truths verified automatically; live provider UAT still required.
+**Score:** 19/19 truths verified automatically; live provider UAT completed in `11-HUMAN-UAT.md`.
 
 ### Required Artifacts
 
@@ -108,17 +110,17 @@ human_verification:
 | Targeted Phase 11 regressions | `npx vitest run tests/capabilities/photoroom-composite-layers.test.ts tests/eval/run.test.ts tests/eval/apply-results.test.ts tests/task/dag-executor.test.ts` | 4 files, 47 tests passed | PASS |
 | Full test suite | `npm test` | Orchestrator reports 48 files, 298 tests, 0 failed | PASS |
 | Schema drift | schema drift check | Orchestrator reports `drift_detected=false` | PASS |
-| Live provider evals | `npm run eval` with real provider keys | Not run by verifier | HUMAN |
+| Live provider evals | `npm run eval` with real provider keys | Passed; see `11-HUMAN-UAT.md` | PASS |
 
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
 |---|---|---|---|---|
-| PROV-01 | 11-01, 11-02, 11-03 | Photoroom registered for `extract_subject` and `composite_layers` product photography | VERIFIED automated; HUMAN live route | Both adapters are implemented/registered; composite shadow route and valid eval case are aligned. Live image_task route still needs credential-backed confirmation. |
-| PROV-02 | 11-01, 11-02 | fal.ai registered as faster/cheaper mirror for Replicate-class capabilities | VERIFIED automated; HUMAN live route | `edit_prompt:fal`, eval coverage, score application, and trace transparency exist. Live latency/cost displacement needs real fal eval. |
-| PROV-03 | 11-01, 11-02 | Flux Kontext registered for `edit_prompt` | VERIFIED automated; HUMAN live route | fal adapter uses `fal-ai/flux-pro/kontext` and is registered as `edit_prompt:fal`. |
-| PROV-04 | 11-01, 11-02 | Ideogram registered for `generate` with measured text-fidelity score | VERIFIED automated; HUMAN live route | `generate:ideogram`, OCR eval cases, and score application are wired. |
-| PROV-05 | 11-02, 11-03 | Each new provider has at least one eval case before `quality.score` is populated | VERIFIED automated; HUMAN live eval | Valid eval cases exist and the run-time contract lint prevents known invalid score population. Live scores require provider keys. |
+| PROV-01 | 11-01, 11-02, 11-03 | Photoroom registered for `extract_subject` and `composite_layers` product photography | VERIFIED | Both adapters are implemented/registered; composite shadow route and valid eval case are aligned. Live route UAT passed in `11-HUMAN-UAT.md`. |
+| PROV-02 | 11-01, 11-02 | fal.ai registered as faster/cheaper mirror for Replicate-class capabilities | VERIFIED | `edit_prompt:fal`, eval coverage, score application, and trace transparency exist. Live route UAT passed in `11-HUMAN-UAT.md`. |
+| PROV-03 | 11-01, 11-02 | Flux Kontext registered for `edit_prompt` | VERIFIED | fal adapter uses `fal-ai/flux-pro/kontext` and is registered as `edit_prompt:fal`; live route UAT passed in `11-HUMAN-UAT.md`. |
+| PROV-04 | 11-01, 11-02 | Ideogram registered for `generate` with measured text-fidelity score | VERIFIED | `generate:ideogram`, OCR eval cases, score application, and live route UAT passed in `11-HUMAN-UAT.md`. |
+| PROV-05 | 11-02, 11-03 | Each new provider has at least one eval case before `quality.score` is populated | VERIFIED | Valid eval cases exist, run-time contract lint prevents invalid score population, and live eval UAT passed in `11-HUMAN-UAT.md`. |
 
 No orphaned Phase 11 requirements were found beyond PROV-01 through PROV-05 in `.planning/REQUIREMENTS.md`.
 
@@ -132,35 +134,35 @@ No orphaned Phase 11 requirements were found beyond PROV-01 through PROV-05 in `
 | `src/capabilities/photoroom-composite-layers.ts` | 105 | Non-object layer entries can throw raw TypeError | WARNING | Current review WR-03. Malformed callers get inconsistent errors; existing valid route is unaffected. |
 | `src/capabilities/validation.ts` | 82 | Non-object layer entries can throw raw TypeError | WARNING | Current review WR-03. Should be hardened in follow-up. |
 
-### Human Verification Required
+### Human Verification Completed
 
 #### 1. Live Phase 11 Provider Evals
 
 **Test:** Set `PHOTOROOM_API_KEY`, `FAL_KEY`, and `IDEOGRAM_API_KEY`, then run `npm run eval`.
 **Expected:** Results include scored entries for `extract_subject:photoroom`, `composite_layers:photoroom`, `edit_prompt:fal`, and `generate:ideogram`; `list_capabilities` shows quality scores for all four.
-**Why human:** Requires external provider credentials and live provider APIs.
+**Result:** Passed; see `11-HUMAN-UAT.md`.
 
 #### 2. Product-Photography Best-Tier Routing
 
 **Test:** Call `image_task` with `{ goal: "product photo on a clean white surface with soft shadow", input_images: ["/path/to/product.jpg"], constraints: { quality_tier: "best" } }` after live evals.
 **Expected:** Trace shows `composite_layers` selected with `provider=photoroom`, `metadata.api="image-editing"`, `metadata.shadowApplied=true`, `metadata.qualityMeasured=true`, and non-empty `metadata.qualityScores`.
-**Why human:** Requires live eval-derived scores plus planner/runtime behavior with real credentials.
+**Result:** Passed; see `11-HUMAN-UAT.md`.
 
 #### 3. fal.ai Fast-Tier Routing
 
 **Test:** Run a fast-tier edit task matching the Replicate-class/Flux Kontext route after live evals.
 **Expected:** Trace selects `edit_prompt:fal` when fal.ai's measured latency/cost wins above the quality floor.
-**Why human:** Requires live fal.ai latency/cost/quality evidence.
+**Result:** Passed; see `11-HUMAN-UAT.md`.
 
 #### 4. Ideogram Text-Heavy Routing
 
 **Test:** Run a text-heavy generation task after live evals.
 **Expected:** Trace selects `generate:ideogram` and surfaces `ocr_text_presence` in `metadata.qualityScores`.
-**Why human:** Requires live Ideogram generation and OCR-scored eval results.
+**Result:** Passed; see `11-HUMAN-UAT.md`.
 
 ### Gaps Summary
 
-No automated blockers remain. The previous Photoroom composite gaps are closed in code and tests. The phase cannot be marked `passed` yet because the goal is explicitly about routing through live external providers where they measurably outperform incumbents, and that requires credential-backed evals plus live `image_task` route checks.
+No automated blockers remain. The previous Photoroom composite gaps are closed in code and tests. Credential-backed evals plus route UAT are complete in `11-HUMAN-UAT.md`.
 
 ---
 
