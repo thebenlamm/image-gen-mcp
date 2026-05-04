@@ -1,5 +1,5 @@
 ---
-status: passed
+status: complete
 phase: 06-run-session-artifact-layer
 source: [06-VERIFICATION.md]
 started: 2026-05-02T00:29:26Z

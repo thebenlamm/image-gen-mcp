@@ -1,5 +1,5 @@
 ---
-status: passed
+status: complete
 phase: 05-capability-layer-image-op-first-2-caps
 source: [05-VERIFICATION.md]
 started: 2026-05-01T21:08:00Z

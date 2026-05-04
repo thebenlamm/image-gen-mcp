@@ -1,136 +1,105 @@
 # Image-Gen MCP — Goal-Shaped Image System
 
-## What This Is
+## Current State
 
-A personal Model Context Protocol server providing a complete image asset pipeline across multiple AI providers (OpenAI, Gemini, Replicate, Together AI, Grok). Serves as the single image tool for all Claude Code sessions, eliminating per-project image tooling.
+**Shipped version:** v2.0 Goal-Shaped Image MCP, shipped 2026-05-04.
 
-**v2.0 expands** the surface from narrow text-to-image + post-processing tools into a **goal-shaped capability-routed system** — `image_task` accepts a natural-language goal, internally plans a DAG of operations, and executes across providers chosen by a measured capability registry. Existing v1.0 tools (`generate_image`, `process_image`, `generate_asset`) remain unchanged for users who want narrow, predictable primitives.
+Image-Gen MCP is a personal Model Context Protocol server for creating image assets across local primitives and external AI providers. It now supports both narrow, predictable asset tools and flexible goal handoff:
+
+1. `generate_image`, `process_image`, and `generate_asset` remain the stable v1.0 primitive/asset-pipeline surface.
+2. `image_op` directly invokes registered `(op, provider)` capabilities for debugging and power use.
+3. `image_task` accepts a natural-language image goal, validates or plans a DAG, executes it through the capability registry, and returns a final image path plus a structured trace.
 
 ## Core Value
 
 Two value props, one MCP:
-1. **Guaranteed primitives** (v1.0): Narrow tools with predictable behavior — `generate_asset(prompt, assetType)` returns a finished file.
-2. **Flexible goal handoff** (v2.0): `image_task(goal, inputs?, constraints?)` plans + executes multi-step workflows the calling LLM doesn't have to chain manually.
 
-## Current Milestone: v2.0 Goal-Shaped Image MCP
+1. **Guaranteed primitives:** Narrow tools with predictable behavior; `generate_asset(prompt, assetType)` returns a finished file.
+2. **Flexible goal handoff:** `image_task(goal, inputs?, constraints?)` plans and executes multi-step workflows the calling LLM does not need to chain manually.
 
-**Goal:** Add `image_task` (goal-handoff tool with internal planner + DAG executor) and `image_op` (escape-hatch tool for direct op invocation), turning the MCP from a thin provider wrapper into a capability-routed image system. Existing v1.0 surface stays intact.
-
-**Target features:**
-- Capability registry parallel to ImageProvider (no breaking changes to existing 5 providers)
-- `image_op` MCP tool: direct invocation of any (op, provider) pair for debugging and power use
-- `image_task` MCP tool: goal-shaped input → Haiku-planned DAG → executed via capability registry → final image + structured trace
-- Run/session artifact layer with intermediate artifacts under `<outputDir>/.runs/<runId>/`
-- Eval harness with golden fixtures and programmatic scoring (pixelmatch, alpha coverage, OCR round-trip) — populates capability quality scores so the planner routes on measurement, not vibes
-- Op primitives: `extract_subject`, `edit_prompt`, `edit_mask`, `composite_layers`, `transform`, `enhance_upscale`, `analyze_dimensions/palette/ocr`
-- Template fast-paths: `ASSET_PRESETS` imported by reference into the planner template table; planner LLM skipped for matching goals
-- Provider breadth: Photoroom, fal.ai, Flux Kontext, Ideogram — added against measured registry, eval-gated
-
-**Plan reference:** `/Users/benlamm/.claude/plans/ok-let-s-do-it-zany-seahorse.md`
-
-## Requirements
+## Shipped Capabilities
 
 ### Validated
 
-- ✓ Single `generate_image` tool generates images from text prompts
-- ✓ 5 provider implementations (OpenAI, Gemini, Replicate, Together AI, Grok)
-- ✓ Provider self-registration at startup with graceful API key detection
-- ✓ Unified size abstraction (square/landscape/portrait) across all providers
-- ✓ Auto-generated filenames with date/provider/hash pattern
-- ✓ Configurable output directory via `IMAGE_GEN_OUTPUT_DIR`
-- ✓ Configurable default provider via `IMAGE_GEN_DEFAULT_PROVIDER`
-- ✓ Output path control (`outputPath` and `outputDir` parameters)
-- ✓ Style parameter for generation prompts
-- ✓ Image post-processing (resize, crop, aspect crop, circle mask) via `process_image`
-- ✓ Asset type presets (profile_pic, post_image, hero_photo, avatar, scene, avery_*) via `generate_asset`
-- ✓ Combined generate + process pipeline (`generate_asset` tool)
-- ✓ `image_op` run/session artifact layer with unique run IDs, atomic intermediates under `.runs/<runId>/`, manifests, trace paths, and startup retention sweep (Phase 6)
-- ✓ Deterministic eval harness + golden set with measured-quality routing: per-capability registry quality from `npm run eval`, real tesseract.js OCR scoring, alpha-coverage and pixel-delta scorers, OCR cases require machine-readable `expectedText` (Phase 7)
-- ✓ Full op primitive taxonomy for `image_op`: `transform`, `composite_layers`, `enhance_upscale`, `analyze_dimensions`, `analyze_palette`, and `analyze_ocr`, with data-result contract, discovery via `list_capabilities`, and deterministic eval coverage where applicable (Phase 8)
-- ✓ `image_task` template fast-paths and executor controls: `ASSET_PRESETS`-derived templates skip the planner, explicit product/logo/upscale templates are available, sub-cent budgets require template routing, and DAG execution runs independent nodes with bounded parallelism/sharp concurrency (Phase 10)
+- ✓ Text-to-image generation through OpenAI, Gemini, Replicate, Together AI, and Grok providers.
+- ✓ Output path control, configurable output directory, style prompts, size abstraction, and size-aware provider selection.
+- ✓ Image post-processing through sharp: resize, crop, aspect crop, and circle mask.
+- ✓ Asset presets through `generate_asset`: profile images, posts, hero images, avatars, scenes, and Avery labels.
+- ✓ Capability registry parallel to `ImageProvider`, with plain-string providers, invoke contracts, constraints, cost/latency metadata, and model-version quality invalidation.
+- ✓ `image_op` direct operation tool with registered capability lookup, preflight validation, saved outputs, run IDs, manifests, and path-only traces.
+- ✓ Run/session artifact layer with atomic intermediate writes under `.runs/<runId>/`, retention sweep, and trace/manifest contracts.
+- ✓ Deterministic eval harness with golden fixtures, pixelmatch, alpha coverage, tesseract OCR scoring, result JSON, score application, and unscored-provider guardrails.
+- ✓ Full op primitive taxonomy: `extract_subject`, `edit_prompt`, `generate`, `composite_layers`, `transform`, `enhance_upscale`, `analyze_dimensions`, `analyze_palette`, and `analyze_ocr`.
+- ✓ `image_task` with Haiku planning, strict plan schema, 12-pass validation, input-root containment, DAG execution, retry/skip semantics, best partials, and binary/base64 response guards.
+- ✓ Template fast paths for preset/profile/product/logo/upscale goals, with `ASSET_PRESETS` imported by reference and planner calls skipped when templates match.
+- ✓ Bounded executor parallelism with sharp/libvips concurrency capped at 2.
+- ✓ Provider breadth through Photoroom, fal Flux Kontext, and Ideogram, backed by deterministic eval cases and live provider UAT.
 
-### Active (v2.0)
+### Active
 
-See `.planning/REQUIREMENTS.md` for full requirement list with REQ-IDs. Categories:
-- **CAP** — Capability layer + registry
-- **OP** — `image_op` escape-hatch tool
-- **RUN** — Run/session artifact layer
-- **EVAL** — Eval harness + golden set
-- **TASK** — `image_task` planner + DAG executor
-- **TMPL** — Template fast-paths + executor parallelism
-- **PROV** — Provider breadth
+No active milestone requirements. The next milestone should start from a fresh requirements file via `$gsd-new-milestone`.
 
 ### Superseded
 
-- ~~Provider fallback chain (CORE-04/05/06)~~ — Superseded by capability registry + planner routing in v2.0
-- ~~Reference image support via referenceImage param (REF-01/02/05/06/07)~~ — Superseded by `input_images` first-class on `image_op` and `image_task`
-- ~~OpenAI edit API for reference images (REF-03)~~ — Subsumed by CAP-02 (`edit_prompt` cap on gpt-image-1)
-- ~~Gemini multi-modal reference (REF-04)~~ — Becomes a future capability registration
+- ~~Provider fallback chain (CORE-04/05/06)~~ — Superseded by capability registry + planner routing.
+- ~~Reference image support via `referenceImage` / `referenceWeight`~~ — Superseded by first-class `input_images` on `image_op` and `image_task`.
+- ~~OpenAI edit API for reference images as a provider fallback path~~ — Subsumed by `edit_prompt` on `gpt-image-1`.
+- ~~Gemini multi-modal reference as v1 provider logic~~ — Reframed as future capability registration if needed.
 
 ### Out of Scope
 
-- Video/animation — still images only
-- Cloud storage (S3, CDN) — local disk only, personal tool
-- User-facing UI — MCP server consumed by Claude Code only
-- Caching/deduplication — same prompt generates new image every time
-- Cost tracking dashboard — trace returns per-run cost; no cross-run aggregation
-- NSFW filtering — rely on provider-side content policies
-- JPEG/WebP output — PNG only (transparency needed for circle masks and intermediates)
-- Batch generation tool — orthogonal to v2.0 goal-shaped design; deferred to a later milestone
-- Replicate reference support — model-dependent, defer
+- Video/animation — still images only.
+- Cloud storage (S3, CDN) — local disk only, personal tool.
+- User-facing UI — MCP server consumed by coding agents.
+- Caching/deduplication — same prompt can generate new output.
+- Cross-run cost dashboard — traces expose per-run estimates; no analytics layer.
+- NSFW filtering — rely on provider-side content policies.
+- JPEG/WebP output — PNG remains the primary output because transparency matters for masks and intermediates.
+- Batch generation tool — deferred until there is a concrete workflow need.
 
 ## Context
 
-- **Existing codebase**: v1.0 shipped with `generate_image`, `process_image`, `generate_asset`, 5 providers, sharp + Zod
-- **Primary consumer**: socialstory project (needs character assets, scene images, profile pics) — plus general-purpose use across all Claude Code sessions
-- **Architecture**: Provider registry pattern with factory functions. v2.0 adds parallel CapabilityRegistry — no changes to existing ImageProvider interface.
-- **New deps for v2.0**: `@imgly/background-removal-node`, `@anthropic-ai/sdk`, `pixelmatch`, `tesseract.js`
-- **New env var**: `ANTHROPIC_API_KEY` (planner), `IMAGE_GEN_RUN_RETENTION_HOURS` (intermediate artifact cleanup)
-- **OpenAI default**: Currently `gpt-image-1` (rolled back from `gpt-image-2` pending org verification at https://platform.openai.com/settings/organization/general)
+- **Tech stack:** TypeScript ES2022/NodeNext, strict mode, MCP SDK, sharp, Zod, Vitest.
+- **Primary consumer:** local coding-agent sessions that need image generation, editing, analysis, and prepared assets without per-project image tooling.
+- **Current codebase size:** 14,860 TypeScript lines across `src/`, `tests/`, and `scripts/`.
+- **Automated verification:** 48 Vitest files, 304 tests passing at v2.0 close.
+- **Provider credentials:** Optional provider keys unlock OpenAI, Gemini, Replicate, Together AI, Grok, Photoroom, fal, and Ideogram surfaces.
+- **OpenAI default:** Currently `gpt-image-1`; `gpt-image-2` remains available when org verification and billing allow it.
 
 ## Constraints
 
-- **Tech stack**: TypeScript ES2022/NodeNext (ESM), strict mode, MCP SDK, sharp, Zod
-- **MCP stdio response size**: Bounded — trace returns paths only, never base64 image data
-- **Sharp/libvips concurrency**: Capped at 2 in DAG executor to prevent OOM on parallel composites
-- **Personal tool**: Opinionated defaults over configuration surface area
-- **Atomic commits**: Each phase and capability addition is independently shippable
+- MCP stdio responses must stay bounded: traces return paths and compact metadata, never base64 image data.
+- DAG execution keeps sharp/libvips concurrency capped at 2 to avoid memory spikes.
+- Provider routing must prefer measured eval quality when available; second providers need valid eval evidence before production routing.
+- Local filesystem inputs may be constrained with `IMAGE_GEN_INPUT_ROOT` for planner-driven workflows.
+- Planning docs are milestone-scoped: completed roadmaps/requirements are archived under `.planning/milestones/`, and new milestones start with fresh requirements.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Grok as default provider | Best quality for Ben's use cases (early call) | Reversed — Grok mangles text; default is OpenAI gpt-image-1 |
-| sharp for image processing | Standard Node.js library, no ImageMagick dependency | Validated in v1.0 |
-| PNG-only output | Transparency needed for circle masks | Validated in v1.0 |
-| Buffer-in/Buffer-out processing pattern | Composability and testability | Validated in v1.0 |
-| Tagged union for ProcessingOperation | Type-safe operation dispatch | Validated in v1.0 |
-| Path priority (outputPath > outputDir > env > default) | Predictable resolution | Validated in v1.0 |
-| **CapabilityRegistry parallel to ImageProvider (NOT optional methods)** | Five existing providers untouched; "extract-only" providers don't need fake `generate()` stubs | v2.0 — Pending |
-| **Drop ProviderName enum at capability layer (use plain string)** | Closed unions break every provider add | v2.0 — Pending |
-| **Anthropic Claude Haiku as planner LLM** | Flexible enough for novel goals, $0.001-0.003/call | v2.0 — Pending |
-| **Templates seed from ASSET_PRESETS by reference (not forked)** | Fixes propagate; v1.0 + v2.0 stay in sync | v2.0 — Phase 10 validated |
-| **Trace returns paths only, never base64** | MCP stdio response size bound | v2.0 — Phase 6 validated for `image_op`; Phase 9 extends to `image_task` |
-| **Eval harness blocks second provider per op** | Without measured scores the planner picks on vibes | v2.0 — Phase 7 validated; Phase 8 eval gate now fails missing local caps and exact-score regressions |
-| **Data-returning capabilities do not write image artifacts** | Analysis ops should return typed data and leave `trace.artifactPath` empty | v2.0 — Phase 8 validated for dimensions, palette, OCR |
-| **`generate_asset` is NOT deprecated** | Two value props: flexible (`image_task`) vs guaranteed (`generate_asset`) | v2.0 — Pending |
+| Keep v1 primitive tools alongside v2 goal handoff | Predictable primitives and flexible delegation serve different use cases | ✓ Validated |
+| CapabilityRegistry parallel to ImageProvider | Existing providers stay stable; extract/analyze-only providers do not need fake `generate()` methods | ✓ Validated |
+| Plain-string capability providers | Closed provider enums break every new integration | ✓ Validated |
+| Trace returns paths only, never base64 | Keeps MCP responses bounded and auditable | ✓ Validated |
+| Eval-gated second providers | Planner routing should use measured evidence, not provider vibes | ✓ Validated |
+| Haiku planner for non-template `image_task` goals | Cheap enough for routing, flexible enough for novel goals | ✓ Validated |
+| Templates import `ASSET_PRESETS` by reference | v1 preset fixes propagate to v2 templates | ✓ Validated |
+| Sub-cent budgets require template routing | Planner calls alone can violate very low budgets | ✓ Validated |
+| Sharp/libvips concurrency capped at 2 | Prevents parallel DAGs from creating avoidable memory pressure | ✓ Validated |
+| Photoroom composite narrowed to single-subject Image Editing API | Avoids silently pretending Photoroom supports arbitrary layer placement | ✓ Validated |
+| Provider failure does not silently fallback | Trace should expose chosen provider behavior honestly | ✓ Validated |
 
-## Evolution
+## Next Milestone Goals
 
-This document evolves at phase transitions and milestone boundaries.
+Not defined yet. Use `$gsd-new-milestone` to decide whether the next milestone should focus on UX, provider calibration, batch workflows, richer asset presets, or operational hardening.
 
-**After each phase transition** (via `/gsd-transition`):
-1. Requirements invalidated? → Move to Out of Scope with reason
-2. Requirements validated? → Move to Validated with phase reference
-3. New requirements emerged? → Add to Active
-4. Decisions to log? → Add to Key Decisions
-5. "What This Is" still accurate? → Update if drifted
+## Archives
 
-**After each milestone** (via `/gsd-complete-milestone`):
-1. Full review of all sections
-2. Core Value check — still the right priority?
-3. Audit Out of Scope — reasons still valid?
-4. Update Context with current state
+- v2.0 roadmap archive: `.planning/milestones/v2.0-ROADMAP.md`
+- v2.0 requirements archive: `.planning/milestones/v2.0-REQUIREMENTS.md`
+- v2.0 audit: `.planning/milestones/v2.0-MILESTONE-AUDIT.md`
+- v2.0 milestone summary: `.planning/MILESTONES.md`
 
 ---
-*Last updated: 2026-05-03 — Phase 10 template fast-paths and bounded DAG execution complete; `image_task` now skips the planner for known templates and enforces template-only sub-cent budgets*
+*Last updated: 2026-05-04 after v2.0 milestone*
