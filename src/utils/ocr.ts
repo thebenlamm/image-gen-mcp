@@ -1,6 +1,7 @@
 import { createWorker } from 'tesseract.js';
 
 type Worker = Awaited<ReturnType<typeof createWorker>>;
+type WorkerParameters = Parameters<Worker['setParameters']>[0];
 
 const pool = new Map<string, Promise<Worker>>();
 const queues = new Map<string, Promise<unknown>>();
@@ -9,9 +10,12 @@ const queues = new Map<string, Promise<unknown>>();
  * Per-call mode: create -> recognize -> terminate. Used by eval scoring where
  * worker reuse is intentionally not a hot path.
  */
-export async function recognizeOnce(path: string, lang = 'eng') {
+export async function recognizeOnce(path: string, lang = 'eng', parameters?: WorkerParameters) {
   const worker = await createWorker(lang);
   try {
+    if (parameters) {
+      await worker.setParameters(parameters);
+    }
     const result = await worker.recognize(path);
     return result.data;
   } finally {

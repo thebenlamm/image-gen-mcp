@@ -1,5 +1,9 @@
+import * as fs from 'fs/promises';
+import * as os from 'os';
+import * as path from 'path';
 import pixelmatch from 'pixelmatch';
 import sharp from 'sharp';
+import { PSM } from 'tesseract.js';
 import type {
   AnalyzeDimensionsResult,
   AnalyzeOcrResult,
@@ -16,6 +20,10 @@ function clamp01(value: number): number {
 
 function normalizeOcrText(value: string): string {
   return value.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function ocrContains(recognizedText: string, expectedText: string): boolean {
+  return normalizeOcrText(recognizedText).includes(normalizeOcrText(expectedText));
 }
 
 async function normalizedRaw(path: string): Promise<Buffer> {
@@ -78,17 +86,22 @@ export async function scoreOcrTextPresence(
     };
   }
 
+  const needle = normalizeOcrText(expectedText);
   try {
     const data = await recognizeOnce(outputPath, 'eng');
-    const recognizedText = normalizeOcrText(data.text);
-    const needle = normalizeOcrText(expectedText);
-    if (recognizedText.includes(needle)) {
+    if (ocrContains(data.text, expectedText)) {
       return {
         scorer: 'ocr_text_presence',
         status: 'scored',
         value: 1,
       };
     }
+
+    const fallback = await scoreOcrTextPresenceWithPreprocessing(outputPath, expectedText);
+    if (fallback) {
+      return fallback;
+    }
+
     return {
       scorer: 'ocr_text_presence',
       status: 'scored',
@@ -102,6 +115,90 @@ export async function scoreOcrTextPresence(
       reason: error instanceof Error ? error.message : String(error),
     };
   }
+}
+
+async function scoreOcrTextPresenceWithPreprocessing(
+  outputPath: string,
+  expectedText: string,
+): Promise<EvalScore | undefined> {
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'image-gen-ocr-score-'));
+  try {
+    const metadata = await sharp(outputPath).metadata();
+    const width = metadata.width ?? 0;
+    const height = metadata.height ?? 0;
+    const variants: Array<{
+      name: string;
+      psm: PSM;
+      crop?: { left: number; top: number; width: number; height: number };
+      threshold?: boolean;
+      resizeWidth: number;
+      linear: { a: number; b: number };
+      whitelist?: boolean;
+    }> = [
+      {
+        name: 'full-block',
+        psm: PSM.SINGLE_BLOCK,
+        threshold: true,
+        resizeWidth: 2000,
+        linear: { a: 1.5, b: -20 },
+      },
+      {
+        name: 'single-word',
+        psm: PSM.SINGLE_WORD,
+        threshold: true,
+        resizeWidth: 2600,
+        linear: { a: 1.8, b: -50 },
+        whitelist: true,
+      },
+    ];
+    if (width >= 16 && height >= 16) {
+      variants.push({
+        name: 'upper-band',
+        psm: PSM.SINGLE_WORD,
+        resizeWidth: 2600,
+        linear: { a: 1.8, b: -50 },
+        whitelist: true,
+        crop: {
+          left: 0,
+          top: Math.floor(height * 0.1),
+          width,
+          height: Math.max(1, Math.floor(height * 0.55)),
+        },
+      });
+    }
+
+    for (const variant of variants) {
+      const preprocessedPath = path.join(tmpDir, `${variant.name}.png`);
+      let image = sharp(outputPath);
+      if (variant.crop) {
+        image = image.extract(variant.crop);
+      }
+      image = image
+        .resize({ width: variant.resizeWidth, withoutEnlargement: false })
+        .grayscale()
+        .normalize()
+        .linear(variant.linear.a, variant.linear.b);
+      if (variant.threshold) {
+        image = image.threshold(128);
+      }
+      await image.png().toFile(preprocessedPath);
+      const data = await recognizeOnce(preprocessedPath, 'eng', {
+        tessedit_pageseg_mode: variant.psm,
+        ...(variant.whitelist ? { tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ ' } : {}),
+      });
+      if (ocrContains(data.text, expectedText)) {
+        return {
+          scorer: 'ocr_text_presence',
+          status: 'scored',
+          value: 1,
+        };
+      }
+    }
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
+
+  return undefined;
 }
 
 export function scoreOcrTextPresenceInText(
@@ -123,9 +220,7 @@ export function scoreOcrTextPresenceInText(
     };
   }
 
-  const recognizedText = normalizeOcrText(text);
-  const needle = normalizeOcrText(expectedText);
-  if (recognizedText.includes(needle)) {
+  if (ocrContains(text, expectedText)) {
     return {
       scorer: 'ocr_text_presence',
       status: 'scored',
