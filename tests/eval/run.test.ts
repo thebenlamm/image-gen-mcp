@@ -334,6 +334,35 @@ describe('eval runner', () => {
     }
   });
 
+  it('allows sharp composite eval cases to use params.input as a pixel_delta scorer baseline', async () => {
+    const cases = await import('../../src/eval/cases.js');
+    const loadSpy = vi.spyOn(cases, 'loadEvalCases').mockResolvedValue([
+      {
+        id: 'sharp-composite-baseline',
+        op: 'composite_layers',
+        provider: 'sharp',
+        fixtureId: 'composite-golden',
+        params: {
+          input: 'eval/fixtures/composite-golden.png',
+          maxPixelDelta: 0.05,
+          canvas: { width: 512, height: 512, background: { r: 255, g: 255, b: 255, alpha: 1 } },
+          layers: [{ input: 'eval/fixtures/composite-overlay.png', x: 192, y: 192, anchor: 'top-left' }],
+        },
+        scorers: ['pixel_delta'],
+      },
+    ]);
+    try {
+      registerFakeLocalEvalCapabilities();
+
+      const result = await readResult(await runEval());
+      const entry = result.results.find((e: any) => e.caseId === 'sharp-composite-baseline');
+      expect(entry?.status).toBe('scored');
+      expect(entry?.scores.some((score: any) => score.scorer === 'pixel_delta')).toBe(true);
+    } finally {
+      loadSpy.mockRestore();
+    }
+  });
+
   it('writes results then fails when any eval case errors', async () => {
     let calls = 0;
     registerFakeLocalEvalCapabilities();

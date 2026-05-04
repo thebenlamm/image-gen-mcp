@@ -39,6 +39,10 @@ function getInputPath(evalCase: EvalCase): string | undefined {
   return input;
 }
 
+function usesInputAsScorerBaseline(evalCase: EvalCase): boolean {
+  return evalCase.provider === 'sharp' && evalCase.scorers.includes('pixel_delta');
+}
+
 function optionalNumber(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
@@ -102,14 +106,13 @@ export async function runEval(): Promise<string> {
 
     // Case→adapter contract lint (D-12, CR-03 G3): refuse to invoke and score
     // a case whose params shape does not match the resolved capability's
-    // declared constraints. Specifically, if the capability says it does not
-    // require a top-level input image (requiresInputImage=false), and the
-    // case nonetheless supplies one, the case is using a contract the adapter
-    // does not consume; any resulting score would be invalid for routing.
+    // declared constraints. A sharp pixel_delta case may still supply params.input
+    // as the scorer baseline; the adapter does not consume it, but the scorer does.
     if (
       capability.constraints.requiresInputImage === false &&
       typeof evalCase.params.input === 'string' &&
-      evalCase.params.input.trim().length > 0
+      evalCase.params.input.trim().length > 0 &&
+      !usesInputAsScorerBaseline(evalCase)
     ) {
       results.push({
         caseId: evalCase.id,
