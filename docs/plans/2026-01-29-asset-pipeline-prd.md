@@ -145,7 +145,7 @@ Generates multiple images in one call. For producing all assets a story or proje
 }
 ```
 
-**Manifest output** (written to `outputDir/manifest.json`):
+**Manifest output** (written to the configured output directory):
 ```json
 {
   "generated": "2026-01-29T18:30:00Z",
@@ -410,7 +410,7 @@ No date prefix, no hash — just the ID. Clean, predictable paths that can be re
 Keeping things opinionated — these are hardcoded, not configurable:
 
 - **Asset type presets** (profile_pic = square + circle mask + 200x200). Change them in code, not env vars.
-- **Manifest format.** Always JSON, always `manifest.json` in the output directory.
+- **Manifest format.** Always JSON, always written in the output directory.
 - **Filename slug generation.** Always lowercase, hyphenated, 50 char max.
 - **PNG output format.** Everything is PNG. No JPEG/WebP toggle — PNG handles transparency (needed for circle masks) and quality is not a concern for this use case.
 
@@ -450,7 +450,7 @@ Add the `process_image` tool and the sharp dependency.
 Add `generate_asset` — the high-level tool combining generation + processing.
 
 **Changes:**
-- Define asset type presets in `assets/presets.ts`
+- Define asset type presets in `src/utils/presets.ts`
 - Implement `generate_asset` tool that calls generation → processing pipeline
 - Asset types: `profile_pic`, `post_image`, `hero_photo`, `avatar`, `scene`
 - When `outputPath` uses an asset ID, produce clean filenames (no date/hash prefix)
