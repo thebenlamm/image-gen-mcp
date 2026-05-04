@@ -36,18 +36,18 @@
 
 ### Capability Layer (CAP)
 
-- [ ] **CAP-01**: Developer can register a capability via `CapabilityRegistry.register({op, provider, modelVersion, constraints, cost, latencyMsP50, invoke})` without modifying `ImageProvider`
-- [ ] **CAP-02**: An "extract-only" provider can register without implementing `ImageProvider.generate()` (no fake stubs)
-- [ ] **CAP-03**: `CapabilityRegistry` exposes `get(op, provider)`, `list(op)`, `listByProvider(provider)` for routing
-- [ ] **CAP-04**: Capability `quality.scores` is `undefined` until populated by eval; planner cannot route on quality without scores
-- [ ] **CAP-05**: Changing a capability's `modelVersion` invalidates its `quality.scores` (must be re-evaluated before planner trusts it)
+- [x] **CAP-01**: Developer can register a capability via `CapabilityRegistry.register({op, provider, modelVersion, constraints, cost, latencyMsP50, invoke})` without modifying `ImageProvider`
+- [x] **CAP-02**: An "extract-only" provider can register without implementing `ImageProvider.generate()` (no fake stubs)
+- [x] **CAP-03**: `CapabilityRegistry` exposes `get(op, provider)`, `list(op)`, `listByProvider(provider)` for routing
+- [x] **CAP-04**: Capability `quality.scores` is `undefined` until populated by eval; planner cannot route on quality without scores
+- [x] **CAP-05**: Changing a capability's `modelVersion` invalidates its `quality.scores` (must be re-evaluated before planner trusts it)
 
 ### image_op Tool (OP)
 
-- [ ] **OP-01**: User can call `image_op` MCP tool with `{op, provider, params}` and receive `{output, runId, trace}`
-- [ ] **OP-02**: `image_op` validates `(op, provider)` is registered; clear error if capability missing
-- [ ] **OP-03**: `image_op` surfaces capability-constraint violations (prompt too long, unsupported size) before calling the provider
-- [ ] **OP-04**: `image_op` accepts image inputs as file paths and saves outputs via existing `resolveOutputPath` rules
+- [x] **OP-01**: User can call `image_op` MCP tool with `{op, provider, params}` and receive `{output, runId, trace}`
+- [x] **OP-02**: `image_op` validates `(op, provider)` is registered; clear error if capability missing
+- [x] **OP-03**: `image_op` surfaces capability-constraint violations (prompt too long, unsupported size) before calling the provider
+- [x] **OP-04**: `image_op` accepts image inputs as file paths and saves outputs via existing `resolveOutputPath` rules
 
 ### Run / Session Artifact Layer (RUN)
 
@@ -67,8 +67,8 @@
 
 ### Op Primitives (PRIM)
 
-- [ ] **PRIM-01**: `extract_subject` capability available via `@imgly/background-removal-node` (local, no API key required)
-- [ ] **PRIM-02**: `edit_prompt` capability available via OpenAI `gpt-image-1` edit endpoint
+- [x] **PRIM-01**: `extract_subject` capability available via `@imgly/background-removal-node` (local, no API key required)
+- [x] **PRIM-02**: `edit_prompt` capability available via OpenAI `gpt-image-1` edit endpoint
 - [x] **PRIM-03**: `composite_layers` capability available via sharp (local, deterministic, alpha-aware)
 - [x] **PRIM-04**: `transform` capability available via sharp, wrapping existing `processing.ts` operations
 - [x] **PRIM-05**: `enhance_upscale` capability available via Replicate Real-ESRGAN
@@ -161,15 +161,15 @@ After Phase 9 (image_task ships):
 | PROC-01..06 | 2 | Complete |
 | ASSET-01..07 | 3 | Complete |
 | CORE-04/05/06, REF-01..07 | — | Superseded by v2.0 |
-| CAP-01, CAP-02, CAP-03, CAP-04, CAP-05 | 5 | Pending (v2.0 P5) |
-| OP-01, OP-02, OP-03, OP-04 | 5 | Pending (v2.0 P5) |
-| PRIM-01, PRIM-02 | 5 | Pending (v2.0 P5) |
-| RUN-01, RUN-02, RUN-03, RUN-04, RUN-05 | 6 | Pending (v2.0 P6) |
-| EVAL-01, EVAL-02, EVAL-03, EVAL-04, EVAL-05 | 7 | Pending (v2.0 P7) |
-| PRIM-03, PRIM-04, PRIM-05, PRIM-06, PRIM-07, PRIM-08 | 8 | Pending (v2.0 P8) |
+| CAP-01, CAP-02, CAP-03, CAP-04, CAP-05 | 5 | Complete |
+| OP-01, OP-02, OP-03, OP-04 | 5 | Complete |
+| PRIM-01, PRIM-02 | 5 | Complete |
+| RUN-01, RUN-02, RUN-03, RUN-04, RUN-05 | 6 | Complete |
+| EVAL-01, EVAL-02, EVAL-03, EVAL-04, EVAL-05 | 7 | Complete |
+| PRIM-03, PRIM-04, PRIM-05, PRIM-06, PRIM-07, PRIM-08 | 8 | Complete |
 | TASK-01..TASK-10 | 9 | Complete |
 | TMPL-01, TMPL-02, TMPL-03, TMPL-04 | 10 | Complete |
-| PROV-01, PROV-02, PROV-03, PROV-04, PROV-05 | 11 | Pending (v2.0 P11) |
+| PROV-01, PROV-02, PROV-03, PROV-04, PROV-05 | 11 | Complete |
 
 **Coverage (v2.0):**
 - v2.0 requirements total: 46 (CAP 5, OP 4, RUN 5, EVAL 5, PRIM 8, TASK 10, TMPL 4, PROV 5)

@@ -105,6 +105,27 @@ describe('fal edit_prompt capability', () => {
     });
   });
 
+  it('maps AbortError on queue status fetch to retryable TIMEOUT', async () => {
+    const input = await writePng();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({
+        request_id: 'req-123',
+        status: 'IN_QUEUE',
+        status_url: 'https://fal/status',
+        response_url: 'https://fal/response',
+      }))
+      .mockRejectedValueOnce(Object.assign(new Error('aborted'), { name: 'AbortError' }));
+    vi.stubGlobal('fetch', fetchMock);
+    const capability = createFalEditPromptCapability();
+    if (!capability) throw new Error('expected capability');
+
+    await expect(capability.invoke({ params: { input, prompt: 'edit' } })).rejects.toMatchObject({
+      code: 'TIMEOUT',
+      retryable: true,
+      message: 'fal request timed out after 30s',
+    });
+  });
+
   it('maps AbortError on image download to retryable TIMEOUT', async () => {
     const input = await writePng();
     const fetchMock = vi.fn()

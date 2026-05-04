@@ -91,6 +91,12 @@ describe('SC#2 image_task dry_run', () => {
     expect(parsed.plan.steps).toHaveLength(3);
     expect(parsed.total_cost_usd).toBe(plan.estimatedTotalCostUsd);
     expect(mockInvoke).not.toHaveBeenCalled();
+    const manifest = JSON.parse(await fs.readFile(
+      path.join(outputRoot, '.runs', parsed.runId, 'manifest.json'),
+      'utf8',
+    ));
+    expect(manifest.status).toBe('success');
+    expect(manifest.totals).toMatchObject({ success: 0, failure: 0, skipped: 0 });
   });
 
   it('returns INPUT_PATH_OUTSIDE_ROOT before provider invocation for unsafe dry-run input_images', async () => {
@@ -121,6 +127,12 @@ describe('SC#2 image_task dry_run', () => {
     expect(codes).toContain('INPUT_PATH_OUTSIDE_ROOT');
     expect(parsed.dry_run).not.toBe(true);
     expect(mockInvoke).not.toHaveBeenCalled();
+    const manifest = JSON.parse(await fs.readFile(
+      path.join(outputRoot, '.runs', parsed.runId, 'manifest.json'),
+      'utf8',
+    ));
+    expect(manifest.status).toBe('error');
+    expect(manifest.error).toMatch(/outside IMAGE_GEN_INPUT_ROOT/);
   });
 });
 
@@ -141,6 +153,12 @@ describe('SC#3 image_task budget cap', () => {
     expect(parsed.error.cap_usd).toBe(0.02);
     expect(parsed.trace).toEqual([]);
     expect(mockInvoke).not.toHaveBeenCalled();
+    const manifest = JSON.parse(await fs.readFile(
+      path.join(outputRoot, '.runs', parsed.runId, 'manifest.json'),
+      'utf8',
+    ));
+    expect(manifest.status).toBe('error');
+    expect(manifest.error).toContain('exceeds budget cap 0.02');
   });
 });
 

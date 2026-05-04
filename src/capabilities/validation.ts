@@ -6,6 +6,10 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
 export function validateCapabilityParams(
   capability: Capability,
   params: Record<string, unknown>
@@ -67,7 +71,10 @@ export function validateCapabilityParams(
       throw new Error(`composite_layers provider supports exactly one layer (got ${layers.length})`);
     }
     if (capability.constraints.supportsMultipleInputs === false) {
-      const layer = layers[0] as Record<string, unknown>;
+      const layer = layers[0];
+      if (!isRecord(layer)) {
+        throw new Error('composite_layers.layers[0] must be an object');
+      }
       const placementFields = ['x', 'y', 'scale', 'opacity', 'anchor'].filter((field) => layer[field] !== undefined);
       if (placementFields.length > 0) {
         throw new Error(
@@ -79,7 +86,10 @@ export function validateCapabilityParams(
       throw new Error(`composite_layers layers exceed cap of 16 (got ${layers.length})`);
     }
     for (let index = 0; index < layers.length; index += 1) {
-      const layer = layers[index] as Record<string, unknown>;
+      const layer = layers[index];
+      if (!isRecord(layer)) {
+        throw new Error(`composite_layers.layers[${index}] must be an object`);
+      }
       if (typeof layer.input !== 'string' || layer.input.trim() === '') {
         throw new Error(`composite_layers.layers[${index}].input must be a non-empty string`);
       }

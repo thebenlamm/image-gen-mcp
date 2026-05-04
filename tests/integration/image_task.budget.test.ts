@@ -75,6 +75,12 @@ describe('image_task budget gate', () => {
     expect(parsed.error.code).toBe('BUDGET_CAP_REQUIRES_TEMPLATE');
     expect(parsed.error.code).not.toBe('PLANNER_AUTH');
     expect(JSON.stringify(parsed)).not.toContain('PLANNER_AUTH');
+    const manifest = JSON.parse(await fs.readFile(
+      path.join(outputRoot, '.runs', parsed.runId, 'manifest.json'),
+      'utf8',
+    ));
+    expect(manifest.status).toBe('error');
+    expect(manifest.error).toBe(parsed.error.message);
   });
 
   it('allows sub-cent template goals and marks plannerMethod=template', async () => {

@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Core Enhancements** - Enhanced generation with output control, style modifiers, and size-aware provider selection
 - [x] **Phase 2: Post-Processing** - Image processing operations (resize, crop, aspect crop, circle mask)
 - [x] **Phase 3: Asset Pipeline** - High-level asset generation with presets
-- [~] **Phase 4: Reference Images** - SUPERSEDED by v2.0 Phase 5 (REF-* requirements subsumed by CAP/OP/PRIM)
+- [x] **Phase 4: Reference Images** - RESOLVED as superseded by v2.0 Phase 5 (REF-* requirements subsumed by CAP/OP/PRIM)
 
 ### v2.0 — Goal-Shaped Image MCP
 
@@ -248,7 +248,7 @@ Phases execute in numeric order with one parallelization window:
 | 1. Core Enhancements | 2/2 | ✓ Complete | 2026-01-30 |
 | 2. Post-Processing | 2/2 | ✓ Complete | 2026-01-30 |
 | 3. Asset Pipeline | 2/2 | ✓ Complete | 2026-01-30 |
-| 4. Reference Images | 0/2 | Superseded by v2.0 P5 | - |
+| 4. Reference Images | 0/2 | ✓ Complete | 2026-05-04 |
 
 **v2.0 Status (Goal-Shaped Image MCP)**
 
@@ -256,8 +256,8 @@ Phases execute in numeric order with one parallelization window:
 |-------|----------------|--------|-----------|
 | 5. Capability Layer + image_op | 3/3 | ✓ Complete | 2026-05-01 |
 | 6. Run/Session Artifact Layer | 2/2 | ✓ Complete | 2026-05-02 |
-| 7. Eval Harness + Golden Set | 0/2 | Not started (parallel with 8) | - |
-| 8. Op Primitives Expansion | 0/2-3 | Not started (parallel with 7) | - |
+| 7. Eval Harness + Golden Set | 3/3 | ✓ Complete | 2026-05-02 |
+| 8. Op Primitives Expansion | 2/2 | ✓ Complete | 2026-05-02 |
 | 9. image_task Planner + DAG Executor | 4/4 | ✓ Complete | 2026-05-03 |
-| 10. Template Fast-Paths + Parallelism | 2/2 | Complete    | 2026-05-03 |
-| 11. Provider Breadth (Post-Eval) | 3/3 | Complete    | 2026-05-04 |
+| 10. Template Fast-Paths + Parallelism | 2/2 | ✓ Complete | 2026-05-03 |
+| 11. Provider Breadth (Post-Eval) | 3/3 | ✓ Complete | 2026-05-04 |

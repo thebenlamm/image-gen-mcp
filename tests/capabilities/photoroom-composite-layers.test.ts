@@ -86,6 +86,28 @@ describe('photoroom composite_layers capability', () => {
     expect(formKeys.some((key) => String(key).startsWith('imageGenMcp.'))).toBe(false);
   });
 
+  it('maps canvas.background to Photoroom background.color when provider-specific background is absent', async () => {
+    const input = await writePng();
+    const output = Buffer.from('photoroom composite png');
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      arrayBuffer: async () => output.buffer.slice(output.byteOffset, output.byteOffset + output.byteLength),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const capability = createPhotoroomCompositeLayersCapability();
+    if (!capability) throw new Error('expected capability');
+
+    await capability.invoke({
+      params: {
+        canvas: { width: 100, height: 80, background: { r: 12, g: 34, b: 56, alpha: 1 } },
+        layers: [{ input }],
+      },
+    });
+
+    const formArg = fetchMock.mock.calls[0][1].body as FormData;
+    expect(formArg.get('background.color')).toBe('0c2238');
+  });
+
   it('maps HTTP non-OK responses to retryable PROVIDER_FAILURE', async () => {
     const input = await writePng();
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
@@ -163,6 +185,25 @@ describe('photoroom composite_layers capability', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('rejects malformed layer entries before the network call', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const capability = createPhotoroomCompositeLayersCapability();
+    if (!capability) throw new Error('expected capability');
+
+    await expect(capability.invoke({
+      params: {
+        canvas: { width: 64, height: 64 },
+        layers: ['not-an-object'],
+      },
+    })).rejects.toMatchObject({
+      code: 'CONSTRAINT_VIOLATION',
+      retryable: false,
+      message: expect.stringContaining('layers[0] must be an object'),
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('exposes the documented composite_layers:photoroom contract through validateCapabilityParams', () => {
     const capability = createPhotoroomCompositeLayersCapability();
     if (!capability) throw new Error('expected capability');
@@ -176,5 +217,9 @@ describe('photoroom composite_layers capability', () => {
       canvas: { width: 100, height: 80 },
       layers: [{ input: '/tmp/whatever.png', x: 0 }],
     })).toThrow(/placement fields/);
+    expect(() => validateCapabilityParams(capability, {
+      canvas: { width: 100, height: 80 },
+      layers: ['not-an-object'],
+    })).toThrow(/layers\[0\] must be an object/);
   });
 });

@@ -126,13 +126,7 @@ No orphaned Phase 11 requirements were found beyond PROV-01 through PROV-05 in `
 
 ### Anti-Patterns Found
 
-| File | Line | Pattern | Severity | Impact |
-|---|---:|---|---|---|
-| `src/capabilities/photoroom-composite-layers.ts` | 174 | Ignores canonical `canvas.background` while accepting it in shared shape | WARNING | Current review WR-01. A plan using `canvas.background` may get default/transparent provider output unless it uses `params.background.color`. Does not block the verified single-subject shadow path. |
-| `src/capabilities/ideogram-generate.ts` | 122 | Initial provider POST has no timeout | WARNING | Current review WR-02. A stalled request can hang live calls. |
-| `src/capabilities/fal-edit-prompt.ts` | 90 | fal status/result fetches have no per-request timeout | WARNING | Current review WR-02. Poll loop timeout does not cover a stuck individual fetch. |
-| `src/capabilities/photoroom-composite-layers.ts` | 105 | Non-object layer entries can throw raw TypeError | WARNING | Current review WR-03. Malformed callers get inconsistent errors; existing valid route is unaffected. |
-| `src/capabilities/validation.ts` | 82 | Non-object layer entries can throw raw TypeError | WARNING | Current review WR-03. Should be hardened in follow-up. |
+No current warning-level anti-patterns remain after the 2026-05-04 review fix. The former warnings for Photoroom `canvas.background`, Ideogram/fal request timeouts, and malformed layer validation are closed in `11-REVIEW-FIX.md` with targeted regression coverage.
 
 ### Human Verification Completed
 

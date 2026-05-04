@@ -38,6 +38,10 @@ interface PhotoroomCompositeParams {
   };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
 function resolveOptionalEnv(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
   if (!trimmed || /^\$\{[^}]+\}$/.test(trimmed)) {
@@ -62,6 +66,37 @@ function rejectUnsupportedPlacement(layer: PhotoroomCompositeLayer): void {
       false,
     );
   }
+}
+
+function colorComponent(value: unknown): number | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return undefined;
+  }
+  return Math.max(0, Math.min(255, Math.round(value)));
+}
+
+function hexComponent(value: number): string {
+  return value.toString(16).padStart(2, '0');
+}
+
+function canvasBackgroundColor(background: unknown): string | undefined {
+  if (typeof background === 'string' && background.trim()) {
+    return background.trim().replace(/^#/, '');
+  }
+  if (!isRecord(background)) {
+    return undefined;
+  }
+  const alpha = typeof background.alpha === 'number' ? background.alpha : 1;
+  if (alpha <= 0) {
+    return undefined;
+  }
+  const r = colorComponent(background.r);
+  const g = colorComponent(background.g);
+  const b = colorComponent(background.b);
+  if (r === undefined || g === undefined || b === undefined) {
+    return undefined;
+  }
+  return `${hexComponent(r)}${hexComponent(g)}${hexComponent(b)}`;
 }
 
 async function imageMimeType(buffer: Buffer): Promise<string> {
@@ -103,6 +138,9 @@ async function validateParams(params: PhotoroomCompositeParams): Promise<{ canva
   }
   for (let index = 0; index < layers.length; index += 1) {
     const layer = layers[index];
+    if (!isRecord(layer)) {
+      throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', `composite_layers.layers[${index}] must be an object`, false);
+    }
     if (typeof layer.input !== 'string' || !layer.input.trim()) {
       throw new CapabilityInvokeError('CONSTRAINT_VIOLATION', `composite_layers.layers[${index}].input must be a non-empty string`, false);
     }
@@ -173,6 +211,11 @@ export function createPhotoroomCompositeLayersCapability(): Capability | null {
       }
       if (typeof params.background?.color === 'string') {
         form.set('background.color', params.background.color.replace(/^#/, ''));
+      } else {
+        const color = canvasBackgroundColor(params.canvas?.background);
+        if (color) {
+          form.set('background.color', color);
+        }
       }
       if (typeof params.background?.prompt === 'string') {
         form.set('background.prompt', params.background.prompt);

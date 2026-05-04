@@ -88,7 +88,22 @@ async function sleep(ms: number): Promise<void> {
 }
 
 async function fetchFalJson(url: string, apiKey: string): Promise<FalQueueResponse> {
-  const response = await fetch(url, { headers: { Authorization: `Key ${apiKey}` } });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: { Authorization: `Key ${apiKey}` },
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new CapabilityInvokeError('TIMEOUT', 'fal request timed out after 30s', true);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
   const body = await parseJsonResponse(response);
   if (!response.ok) {
     throw new CapabilityInvokeError('PROVIDER_FAILURE', `fal request failed with status ${response.status}`, true);

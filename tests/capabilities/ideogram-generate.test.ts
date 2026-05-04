@@ -91,6 +91,18 @@ describe('ideogram generate capability', () => {
     });
   });
 
+  it('maps AbortError on initial generate request to retryable TIMEOUT', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(Object.assign(new Error('aborted'), { name: 'AbortError' })));
+    const capability = createIdeogramGenerateCapability();
+    if (!capability) throw new Error('expected capability');
+
+    await expect(capability.invoke({ params: { prompt: 'A sign' } })).rejects.toMatchObject({
+      code: 'TIMEOUT',
+      retryable: true,
+      message: 'Ideogram generate timed out after 30s',
+    });
+  });
+
   it('maps AbortError on image download to retryable TIMEOUT', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse({ data: [{ url: 'https://ideogram/image.png', seed: 42 }] }))

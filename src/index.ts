@@ -485,7 +485,6 @@ server.tool(
     }).optional(),
     dry_run: z.boolean().optional().describe('When true, return the validated plan and estimated totals without invoking any provider.'),
     runId: z.string().optional().describe('Reuse an existing runId; otherwise auto-generated.'),
-    seed: z.number().optional().describe('Optional planner seed for reproducible plan choice.'),
     outputDir: z.string().optional(),
     outputPath: z.string().optional(),
   },
@@ -515,7 +514,6 @@ export interface ImageTaskArgs {
   constraints?: TaskConstraints;
   dry_run?: boolean;
   runId?: string;
-  seed?: number;
   outputDir?: string;
   outputPath?: string;
 }
@@ -858,6 +856,38 @@ function imageTaskErrorResponse(
   };
 }
 
+async function writeImageTaskTerminalManifest(args: {
+  runDir: string;
+  runId: string;
+  startedAt: number;
+  status: 'success' | 'error';
+  invocation: RunManifest['invocation'];
+  error?: string;
+  plan?: Plan;
+  planner?: {
+    model: string;
+    tokens: { input?: number; output?: number };
+    latency_ms: number;
+  };
+  totals?: RunManifest['totals'];
+}): Promise<void> {
+  const endedAt = Date.now();
+  await writeManifest(args.runDir, {
+    schemaVersion: 1,
+    runId: args.runId,
+    startedAt: new Date(args.startedAt).toISOString(),
+    endedAt: new Date(endedAt).toISOString(),
+    status: args.status,
+    invocation: args.invocation,
+    nodes: [],
+    ...(args.plan !== undefined ? { plan: args.plan } : {}),
+    ...(args.planner !== undefined ? { planner: args.planner } : {}),
+    ...(args.totals !== undefined ? { totals: args.totals } : {}),
+    totalDurationMs: endedAt - args.startedAt,
+    ...(args.error !== undefined ? { error: args.error } : {}),
+  });
+}
+
 function imageTaskPlannerErrorResponse(runId: string, err: unknown): { content: Array<{ type: 'text'; text: string }> } {
   if (err instanceof PlannerError) {
     return imageTaskErrorResponse(runId, {
@@ -997,6 +1027,14 @@ export async function handleImageTask(args: ImageTaskArgs): Promise<{
     templateMatched: templateMatch !== null,
   });
   if (!gate.ok) {
+    await writeImageTaskTerminalManifest({
+      runDir,
+      runId,
+      startedAt,
+      status: 'error',
+      invocation: baseInvocation,
+      error: gate.error.message,
+    }).catch(() => {});
     return imageTaskErrorResponse(runId, gate.error);
   }
 
@@ -1010,7 +1048,7 @@ export async function handleImageTask(args: ImageTaskArgs): Promise<{
         goal: args.goal,
         inputImages,
         constraints: args.constraints,
-      }, capabilityRegistry, { seed: args.seed } as never);
+      }, capabilityRegistry);
       plan = planner.plan;
       plannerInfo = {
         model: 'claude-haiku-4-5',
@@ -1021,6 +1059,14 @@ export async function handleImageTask(args: ImageTaskArgs): Promise<{
         latency_ms: planner.latencyMs,
       };
     } catch (err) {
+      await writeImageTaskTerminalManifest({
+        runDir,
+        runId,
+        startedAt,
+        status: 'error',
+        invocation: baseInvocation,
+        error: err instanceof Error ? err.message : String(err),
+      }).catch(() => {});
       return imageTaskPlannerErrorResponse(runId, err);
     }
   }
@@ -1031,10 +1077,37 @@ export async function handleImageTask(args: ImageTaskArgs): Promise<{
     registry: capabilityRegistry,
   });
   if (!validation.ok) {
+    const first = validation.errors[0];
+    await writeImageTaskTerminalManifest({
+      runDir,
+      runId,
+      startedAt,
+      status: 'error',
+      invocation: baseInvocation,
+      plan,
+      planner: plannerInfo,
+      error: first?.message ?? 'Plan validation failed',
+    }).catch(() => {});
     return imageTaskValidationErrorResponse(runId, validation);
   }
 
   if (args.dry_run === true) {
+    await writeImageTaskTerminalManifest({
+      runDir,
+      runId,
+      startedAt,
+      status: 'success',
+      invocation: baseInvocation,
+      plan,
+      planner: plannerInfo,
+      totals: {
+        cost_usd: plan.estimatedTotalCostUsd,
+        latency_ms: plan.estimatedTotalLatencyMs,
+        success: 0,
+        failure: 0,
+        skipped: 0,
+      },
+    }).catch(() => {});
     return dryRunResponse(plan, runId, plannerMethod);
   }
 
@@ -1049,6 +1122,16 @@ export async function handleImageTask(args: ImageTaskArgs): Promise<{
       goal: args.goal,
     });
   } catch (err) {
+    await writeImageTaskTerminalManifest({
+      runDir,
+      runId,
+      startedAt,
+      status: 'error',
+      invocation: baseInvocation,
+      plan,
+      planner: plannerInfo,
+      error: err instanceof Error ? err.message : String(err),
+    }).catch(() => {});
     return imageTaskErrorResponse(runId, err instanceof Error ? err.message : String(err));
   }
 

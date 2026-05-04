@@ -119,11 +119,24 @@ export function createIdeogramGenerateCapability(): Capability | null {
       form.set('rendering_speed', 'DEFAULT');
       form.set('num_images', '1');
 
-      const response = await fetch(ENDPOINT, {
-        method: 'POST',
-        headers: { 'Api-Key': apiKey },
-        body: form,
-      });
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+      let response: Response;
+      try {
+        response = await fetch(ENDPOINT, {
+          method: 'POST',
+          headers: { 'Api-Key': apiKey },
+          body: form,
+          signal: controller.signal,
+        });
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw new CapabilityInvokeError('TIMEOUT', 'Ideogram generate timed out after 30s', true);
+        }
+        throw error;
+      } finally {
+        clearTimeout(timer);
+      }
       const responseBody = await parseJsonResponse(response);
       if (!response.ok) {
         throw new CapabilityInvokeError(

@@ -27,7 +27,7 @@ Phase 9 achieves the goal-shaped `image_task` contract. The MCP tool is register
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | `image_task` is registered and accepts `{goal, input_images?, constraints?, dry_run?, runId?, seed?, outputDir?, outputPath?}` | VERIFIED | `src/index.ts` registers the tool and `handleImageTask` orchestrates planner -> validator -> dry-run/executor. |
+| 1 | `image_task` is registered and accepts `{goal, input_images?, constraints?, dry_run?, runId?, outputDir?, outputPath?}` | VERIFIED | `src/index.ts` registers the tool and `handleImageTask` orchestrates planner -> validator -> dry-run/executor. The previously ignored `seed` field was removed in the 2026-05-04 review fix. |
 | 2 | Constraints include output size/format, quality tier, budget cap, latency cap, and style refs | VERIFIED | `src/index.ts` exposes the constraints schema and passes constraints to planner/validator. |
 | 3 | Planner uses Anthropic Haiku structured output and PlanSchema | VERIFIED | `src/task/planner.ts` uses Anthropic structured output and defensive `PlanSchema.parse`. |
 | 4 | Planner output is validated against registry and execution contract | VERIFIED | `src/task/plan-validator.ts` checks registry/provider availability, params, missing deps for `$nodes.*.output`, and op/outputKind compatibility. |
