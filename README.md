@@ -4,8 +4,8 @@ An MCP (Model Context Protocol) server for multi-provider image generation. Work
 
 ## Features
 
-- **5 providers** — OpenAI, Google Gemini, Replicate, Together AI, xAI Grok
-- **5 tools** — `generate_image`, `process_image`, `generate_asset`, `image_op`, `image_task`
+- **8 providers** — OpenAI, Google Gemini, Replicate, Together AI, xAI Grok, Photoroom, fal.ai, Ideogram
+- **6 tools** — `generate_image`, `process_image`, `generate_asset`, `image_op`, `image_task`, `list_capabilities`
 - **Goal-shaped MCP tool** — `image_task`: hand off a natural-language image goal, receive the final image plus a structured DAG trace
 - **Capability operations** — Directly invoke `extract_subject`, `edit_prompt`, `composite_layers`, `generate`, transform, upscale, and analysis ops through `image_op`
 - **Asset presets** — One-call generation of profile pics, post images, hero photos, avatars, and scenes
@@ -45,6 +45,9 @@ The plugin automatically registers the MCP server. Set API keys for the remote p
 
 ```bash
 export OPENAI_API_KEY=sk-...
+export OPENAI_DEFAULT_MODEL=gpt-image-1
+export OPENAI_EDIT_MODEL=gpt-image-1.5
+export ANTHROPIC_API_KEY=sk-ant-...
 export GEMINI_API_KEY=...
 export REPLICATE_API_TOKEN=...
 export TOGETHER_API_KEY=...
@@ -52,6 +55,7 @@ export XAI_API_KEY=...
 export PHOTOROOM_API_KEY=...
 export FAL_KEY=...
 export IDEOGRAM_API_KEY=...
+export IMAGE_GEN_INPUT_ROOT=/absolute/path/to/allowed-inputs
 ```
 
 Restart Claude Code and the tools will be available.
@@ -83,13 +87,18 @@ Add to `~/.claude/settings.json`:
       "env": {
         "IMAGE_GEN_DEFAULT_PROVIDER": "openai",
         "IMAGE_GEN_OUTPUT_DIR": "~/Downloads/generated-images",
+        "IMAGE_GEN_INPUT_ROOT": "/absolute/path/to/allowed-inputs",
         "OPENAI_API_KEY": "sk-...",
+        "OPENAI_DEFAULT_MODEL": "gpt-image-1",
         "OPENAI_EDIT_MODEL": "gpt-image-1.5",
         "ANTHROPIC_API_KEY": "sk-ant-...",
         "GEMINI_API_KEY": "...",
         "REPLICATE_API_TOKEN": "...",
         "TOGETHER_API_KEY": "...",
-        "XAI_API_KEY": "..."
+        "XAI_API_KEY": "...",
+        "PHOTOROOM_API_KEY": "...",
+        "FAL_KEY": "...",
+        "IDEOGRAM_API_KEY": "..."
       }
     }
   }
@@ -109,8 +118,18 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
       "env": {
         "IMAGE_GEN_DEFAULT_PROVIDER": "openai",
         "IMAGE_GEN_OUTPUT_DIR": "~/Downloads/generated-images",
+        "IMAGE_GEN_INPUT_ROOT": "/absolute/path/to/allowed-inputs",
         "OPENAI_API_KEY": "sk-...",
-        "OPENAI_EDIT_MODEL": "gpt-image-1.5"
+        "OPENAI_DEFAULT_MODEL": "gpt-image-1",
+        "OPENAI_EDIT_MODEL": "gpt-image-1.5",
+        "ANTHROPIC_API_KEY": "sk-ant-...",
+        "GEMINI_API_KEY": "...",
+        "REPLICATE_API_TOKEN": "...",
+        "TOGETHER_API_KEY": "...",
+        "XAI_API_KEY": "...",
+        "PHOTOROOM_API_KEY": "...",
+        "FAL_KEY": "...",
+        "IDEOGRAM_API_KEY": "..."
       }
     }
   }
@@ -412,14 +431,19 @@ Invoke a registered image capability directly by operation and provider. This is
 | `composite_layers` | `sharp` | `params.canvas`, `params.layers[]` | Deterministic local PNG composition using sharp. |
 | `composite_layers` | `photoroom` | `PHOTOROOM_API_KEY`, `params.canvas`, `params.layers[]` | Single-subject product composition through Photoroom Image Editing API. Accepts `params.canvas`, exactly ONE entry in `params.layers`, optional `params.shadow.enabled` for shadow/relighting, optional `params.canvas.background` RGB color, and optional `params.background.color`/`params.background.prompt`. Rejects per-layer placement fields (`x`, `y`, `scale`, `opacity`, `anchor`) because Photoroom's API does not consume them; use `composite_layers:sharp` for placement. Delivers PROV-01's `(with shadow)` qualifier through Image Editing shadow. |
 | `generate` | `ideogram` | `IDEOGRAM_API_KEY`, `params.prompt` | Generates a PNG through Ideogram 3.0 and downloads the ephemeral image URL. |
+| `transform` | `sharp` | `params.input`, `params.operations[]` | Applies deterministic local transforms such as resize, crop, rotate, flip, blur, sharpen, grayscale, and format conversion. |
+| `enhance_upscale` | `replicate` | `REPLICATE_API_TOKEN`, `params.input` | Runs a Replicate image upscaler/enhancer and downloads the resulting image. |
+| `analyze_dimensions` | `sharp` | `params.input` | Reads image dimensions and metadata locally. |
+| `analyze_palette` | `sharp` | `params.input` | Extracts dominant color information locally. |
+| `analyze_ocr` | `tesseract` | `params.input` | Runs local OCR and returns detected text metadata. |
 
-Photoroom, fal, and Ideogram are exposed through `image_op` once their API keys are present. `image_task` will only prefer them once Phase 11 eval cases populate quality scores. The Photoroom `composite_layers` adapter delivers the `(with shadow)` qualifier through the Image Editing API; the `extract_subject` adapter uses the simpler Remove Background API and produces a flat alpha cutout.
+Photoroom, fal, and Ideogram are exposed through `image_op` once their API keys are present. `image_task` uses eval-populated `quality.scores` when choosing among competing providers. The Photoroom `composite_layers` adapter delivers the `(with shadow)` qualifier through the Image Editing API; the `extract_subject` adapter uses the simpler Remove Background API and produces a flat alpha cutout.
 
 #### Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `op` | string | Yes | Operation name. Currently `extract_subject` or `edit_prompt`. |
+| `op` | string | Yes | Operation name: `extract_subject`, `edit_prompt`, `composite_layers`, `transform`, `enhance_upscale`, `analyze_dimensions`, `analyze_palette`, `analyze_ocr`, or `generate`. |
 | `provider` | string | Yes | Capability provider. Use `list_capabilities` to see registered pairs such as `@imgly/local`, `openai`, `sharp`, `replicate`, `tesseract`, `photoroom`, `fal`, or `ideogram`. |
 | `params` | object | No | Operation-specific parameters. |
 | `outputPath` | string | No | Exact output file path (must end in `.png`). |
@@ -491,6 +515,12 @@ Example:
 
 ---
 
+### `list_capabilities`
+
+Lists the registered `(op, provider)` pairs available in the current process, including provider constraints, latency/cost hints, and eval-populated quality scores when available. Use this tool before calling `image_op` if provider availability may depend on API keys or local optional binaries.
+
+---
+
 ### `image_task`
 
 Hand off a natural-language image goal and receive a final image plus a structured trace. The MCP plans a DAG of capability invocations using Anthropic Claude Haiku, validates it, executes it, and returns paths only — never base64.
@@ -548,9 +578,9 @@ Set `constraints.budget_cap_usd` to enforce a maximum estimated cost. If the pla
 
 The trace always returns filesystem paths only — never base64 image data. Intermediate artifacts live under `<outputDir>/.runs/<runId>/`.
 
-#### Phase 11 Provider Breadth (Post-Eval)
+#### Provider Breadth Evals
 
-Run the Phase 11 provider evals after configuring provider keys:
+Run the provider evals after configuring provider keys:
 
 ```bash
 PHOTOROOM_API_KEY=... FAL_KEY=... IDEOGRAM_API_KEY=... npm run eval
@@ -587,18 +617,18 @@ Example Photoroom composite trace node:
 }
 ```
 
-#### Live Human Verification (Phase 11 Gate)
+#### Live Human Verification
 
-Run after the four Phase 11 gap-closure plans land. Required env vars must point at real provider credentials:
+Run this when verifying provider-breadth routing with real provider credentials:
 
 ```bash
-# 1. Run all Phase 11 evals (Photoroom extract + composite, fal Flux Kontext, Ideogram).
+# 1. Run all provider-breadth evals (Photoroom extract + composite, fal Flux Kontext, Ideogram).
 PHOTOROOM_API_KEY=sk-... \
 FAL_KEY=fal_... \
 IDEOGRAM_API_KEY=... \
 npm run eval
 
-# 2. Confirm the registry now shows quality.scores for all four Phase 11 surfaces.
+# 2. Confirm the registry now shows quality.scores for all four provider-breadth surfaces.
 npm run start &
 # In another terminal, send a list_capabilities MCP request through your client and
 # confirm extract_subject:photoroom, composite_layers:photoroom, edit_prompt:fal,
@@ -651,7 +681,7 @@ The requested provider doesn't have an API key configured. Either:
 `image_op` could not find the requested `(op, provider)` pair. Check the provider name exactly:
 - `extract_subject` uses `@imgly/local`
 - `edit_prompt` uses `openai` and requires `OPENAI_API_KEY`
-- Phase 11 provider-breadth capabilities require their own API keys: `PHOTOROOM_API_KEY`, `FAL_KEY`, or `IDEOGRAM_API_KEY`
+- Provider-breadth capabilities require their own API keys: `PHOTOROOM_API_KEY`, `FAL_KEY`, or `IDEOGRAM_API_KEY`
 
 ### "The model '${OPENAI_EDIT_MODEL}' does not exist"
 

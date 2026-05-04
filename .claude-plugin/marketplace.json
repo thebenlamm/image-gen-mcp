@@ -4,13 +4,13 @@
     "name": "Ben Lamm"
   },
   "metadata": {
-    "description": "Multi-provider image generation tools for Claude Code"
+    "description": "Multi-provider image generation, editing, compositing, and image-task tools for Claude Code"
   },
   "plugins": [
     {
       "name": "image-gen",
       "source": "./",
-      "description": "Generate images with OpenAI, Gemini, Replicate, Together AI, and Grok via MCP"
+      "description": "Generate, edit, composite, analyze, and route image tasks with OpenAI, Gemini, Replicate, Together AI, Grok, Photoroom, fal.ai, and Ideogram via MCP"
     }
   ]
 }

@@ -1,13 +1,13 @@
 {
   "name": "image-gen",
-  "description": "Multi-provider image generation MCP supporting OpenAI, Gemini, Replicate, Together AI, and Grok",
+  "description": "Multi-provider image generation, editing, compositing, and image-task MCP for Claude Code",
   "version": "1.0.0",
   "author": {
     "name": "Ben Lamm"
   },
   "license": "MIT",
   "repository": "https://github.com/thebenlamm/image-gen-mcp",
-  "keywords": ["mcp", "image-generation", "openai", "gemini", "replicate", "grok"],
+  "keywords": ["mcp", "image-generation", "image-editing", "openai", "gemini", "replicate", "grok", "photoroom", "fal", "ideogram"],
   "mcpServers": {
     "image-gen": {
       "command": "node",
