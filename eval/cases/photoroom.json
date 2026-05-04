@@ -9,24 +9,6 @@
     "requiredEnv": ["PHOTOROOM_API_KEY"]
   },
   {
-    "id": "extract-photoroom-person-hair-edge",
-    "op": "extract_subject",
-    "provider": "photoroom",
-    "fixtureId": "person-hair-edge",
-    "params": { "input": "${fixture.path}" },
-    "scorers": ["alpha_coverage"],
-    "requiredEnv": ["PHOTOROOM_API_KEY"]
-  },
-  {
-    "id": "extract-photoroom-low-contrast",
-    "op": "extract_subject",
-    "provider": "photoroom",
-    "fixtureId": "low-contrast-shape",
-    "params": { "input": "${fixture.path}" },
-    "scorers": ["alpha_coverage"],
-    "requiredEnv": ["PHOTOROOM_API_KEY"]
-  },
-  {
     "id": "composite-photoroom-product-with-shadow",
     "op": "composite_layers",
     "provider": "photoroom",

@@ -208,7 +208,7 @@ describe('eval runner', () => {
 
     const skippedIdeogram = result.results.filter((entry: any) => entry.provider === 'ideogram');
 
-    expect(skippedIdeogram).toHaveLength(2);
+    expect(skippedIdeogram).toHaveLength(1);
     expect(skippedIdeogram.every((entry: any) => entry.status === 'skipped')).toBe(true);
     expect(
       skippedIdeogram.every((entry: any) => entry.error === 'missing required env: IDEOGRAM_API_KEY'),
@@ -225,12 +225,12 @@ describe('eval runner', () => {
     })));
 
     const result = await readResult(await runEval());
-    const ideogramFreshRoast = result.results.find(
-      (entry: any) => entry.caseId === 'generate-ideogram-text-fresh-roast',
+    const ideogramOpen = result.results.find(
+      (entry: any) => entry.caseId === 'generate-ideogram-text-poster-open',
     );
 
-    expect(ideogramFreshRoast?.status).toBe('scored');
-    expect(ideogramFreshRoast?.scores).toContainEqual({
+    expect(ideogramOpen?.status).toBe('scored');
+    expect(ideogramOpen?.scores).toContainEqual({
       scorer: 'ocr_text_presence',
       status: 'scored',
       value: 1,
@@ -243,7 +243,7 @@ describe('eval runner', () => {
 
     const skippedPhotoroom = result.results.filter((entry: any) => entry.provider === 'photoroom');
 
-    expect(skippedPhotoroom).toHaveLength(4);
+    expect(skippedPhotoroom).toHaveLength(2);
     expect(skippedPhotoroom.every((entry: any) => entry.status === 'skipped')).toBe(true);
     expect(skippedPhotoroom.every(
       (entry: any) => entry.error === 'missing required env: PHOTOROOM_API_KEY',

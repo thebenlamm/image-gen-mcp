@@ -58,13 +58,13 @@ describe('eval cases loader', () => {
     const falCases = cases.filter((c) => c.provider === 'fal');
     const ideogramCases = cases.filter((c) => c.provider === 'ideogram');
 
-    expect(photoroomCases).toHaveLength(4);
-    expect(photoroomCases.filter((c) => c.op === 'extract_subject')).toHaveLength(3);
+    expect(photoroomCases).toHaveLength(2);
+    expect(photoroomCases.filter((c) => c.op === 'extract_subject')).toHaveLength(1);
     expect(photoroomCases.filter((c) => c.op === 'composite_layers')).toHaveLength(1);
     expect(photoroomCases.every((c) => c.requiredEnv?.includes('PHOTOROOM_API_KEY'))).toBe(true);
     expect(falCases).toHaveLength(2);
     expect(falCases.every((c) => c.requiredEnv?.includes('FAL_KEY'))).toBe(true);
-    expect(ideogramCases).toHaveLength(2);
+    expect(ideogramCases).toHaveLength(1);
     expect(ideogramCases.every((c) => c.op === 'generate')).toBe(true);
     expect(ideogramCases.every((c) => c.requiredEnv?.includes('IDEOGRAM_API_KEY'))).toBe(true);
   });
