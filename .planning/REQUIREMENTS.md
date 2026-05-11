@@ -57,7 +57,7 @@
 | MOCK-01 | Phase 13 | Complete |
 | MOCK-02 | Phase 13 | Complete |
 | BATCH-01 | Phase 14 | Pending |
-| BATCH-02 | Phase 14 | Pending |
+| BATCH-02 | Phase 14 | Complete |
 | BATCH-03 | Phase 14 | Pending |
 | BATCH-04 | Phase 14 | Pending |
 | STYLE-01 | Phase 15 | Pending |
