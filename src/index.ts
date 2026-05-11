@@ -29,6 +29,7 @@ import {
   type RunManifest,
 } from './runs/index.js';
 import { registry, type ProviderName, type ImageProvider } from './providers/index.js';
+import { resolveDefaultProvider, resolveProvider, buildEffectivePrompt } from './provider-utils.js';
 import { createOpenAIProvider } from './providers/openai.js';
 import { createGeminiProvider } from './providers/gemini.js';
 import { createReplicateProvider } from './providers/replicate.js';
@@ -65,61 +66,9 @@ for (const provider of providers) {
 
 registerBuiltInCapabilities();
 
-const VALID_PROVIDERS: ProviderName[] = ['openai', 'gemini', 'replicate', 'together', 'grok'];
-
-function resolveDefaultProvider(): ProviderName {
-  const envValue = process.env.IMAGE_GEN_DEFAULT_PROVIDER?.trim();
-  if (envValue) {
-    if (VALID_PROVIDERS.includes(envValue as ProviderName)) {
-      return envValue as ProviderName;
-    }
-    const available = registry.getAvailable();
-    // If no providers available, main() exits before tools are called — 'grok' is a safe static fallback
-    const fallback = available[0] || 'grok';
-    console.error(`Warning: IMAGE_GEN_DEFAULT_PROVIDER='${envValue}' is not a valid provider. Valid: ${VALID_PROVIDERS.join(', ')}. Falling back to '${fallback}'.`);
-    return fallback;
-  }
-  return 'grok';
-}
-
 const DEFAULT_PROVIDER = resolveDefaultProvider();
 
-// Shared helpers for generate_image and generate_asset
-function resolveProvider(
-  requested: ProviderName | undefined,
-  needsSize: boolean,
-): { provider: ImageProvider; providerName: ProviderName; sizeDropped?: boolean } | { error: string; providerName: ProviderName } {
-  let providerName = requested || DEFAULT_PROVIDER;
-  let provider = registry.get(providerName);
-
-  // Only auto-fallback to a size-capable provider when no explicit provider was requested
-  if (provider && needsSize && !provider.supportsSize) {
-    if (!requested) {
-      const sizeCapable = registry.getSizeCapable();
-      if (sizeCapable.length > 0) {
-        providerName = sizeCapable[0];
-        provider = registry.get(providerName);
-      }
-    } else {
-      // User explicitly chose this provider — proceed without size rather than silently switching
-      return { provider, providerName, sizeDropped: true };
-    }
-  }
-
-  if (!provider) {
-    const available = registry.getAvailable();
-    return {
-      providerName,
-      error: `Provider '${providerName}' is not available. Available providers: ${available.join(', ')}`,
-    };
-  }
-
-  return { provider, providerName };
-}
-
-function buildEffectivePrompt(prompt: string, style?: string): string {
-  return style ? `${style}, ${prompt}` : prompt;
-}
+// resolveProvider and buildEffectivePrompt are imported from ./provider-utils.js
 
 // Factory: creates a fully configured McpServer instance.
 // Each SSE client needs its own McpServer, so tool registration is in here.
@@ -155,7 +104,7 @@ server.tool(
     style: z.string().optional().describe('Style modifier prepended to the generation prompt (e.g., "watercolor painting", "pixel art", "photorealistic")'),
   },
   async ({ prompt, provider, model, size, outputPath, outputDir, style }) => {
-    const resolved = resolveProvider(provider, !!size);
+    const resolved = resolveProvider(provider, !!size, DEFAULT_PROVIDER);
     if ('error' in resolved) {
       return {
         content: [{
@@ -346,7 +295,7 @@ server.tool(
     }
 
     // Resolve provider
-    const resolved = resolveProvider(provider, !!preset.generationSize);
+    const resolved = resolveProvider(provider, !!preset.generationSize, DEFAULT_PROVIDER);
     if ('error' in resolved) {
       return {
         content: [{
