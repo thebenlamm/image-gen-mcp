@@ -56,10 +56,10 @@
 | ROUTE-03 | Phase 12 | Complete |
 | MOCK-01 | Phase 13 | Complete |
 | MOCK-02 | Phase 13 | Complete |
-| BATCH-01 | Phase 14 | Pending |
+| BATCH-01 | Phase 14 | Complete |
 | BATCH-02 | Phase 14 | Complete |
-| BATCH-03 | Phase 14 | Pending |
-| BATCH-04 | Phase 14 | Pending |
+| BATCH-03 | Phase 14 | Complete |
+| BATCH-04 | Phase 14 | Complete |
 | STYLE-01 | Phase 15 | Pending |
 | STYLE-02 | Phase 15 | Pending |
 | STYLE-03 | Phase 15 | Pending |
