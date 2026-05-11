@@ -4,7 +4,7 @@ Guidance for Codex and other coding agents working in this repository or using t
 
 ## What This MCP Provides
 
-Image Gen MCP exposes six MCP tools:
+Image Gen MCP exposes seven MCP tools:
 
 - `generate_image` — text-to-image through OpenAI, Gemini, Replicate, Together, or Grok
 - `process_image` — local sharp resize/crop/aspect/circle-mask operations
@@ -12,6 +12,7 @@ Image Gen MCP exposes six MCP tools:
 - `image_op` — direct capability invocation by `(op, provider)`
 - `image_task` — natural-language image goal handoff with template/Haiku planning and DAG execution
 - `list_capabilities` — capability discovery with constraints, cost, latency, and quality
+- `generate_batch` — bulk text-to-image generation with one MCP approval, per-item failure isolation, and a batch-scoped run artifact
 
 Use `generate_asset` for known preset outputs. Use `image_op` when the operation/provider is explicit. Use `image_task` when the user describes an outcome and wants the MCP to plan and execute the steps.
 
@@ -23,6 +24,7 @@ Use `generate_asset` for known preset outputs. Use `image_op` when the operation
 - Use `dry_run: true` with `image_task` to preview provider routing and estimated cost.
 - If `IMAGE_GEN_INPUT_ROOT` is set, input image paths must resolve under that root.
 - Provider availability depends on API keys. Call `list_capabilities` when unsure.
+- `generate_batch` runs all items under one MCP approval. Per-item failures are isolated and reported inline; remaining items continue. Check the response `status` field (`'success'`/`'partial'`/`'error'`) and `items` array for per-item outcomes.
 
 ## Mockup Workflow
 
