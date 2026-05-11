@@ -24,6 +24,23 @@ Use `generate_asset` for known preset outputs. Use `image_op` when the operation
 - If `IMAGE_GEN_INPUT_ROOT` is set, input image paths must resolve under that root.
 - Provider availability depends on API keys. Call `list_capabilities` when unsure.
 
+## Mockup Workflow
+
+`image_task` with goal `"brand-mockup"` triggers a deterministic template that separates scene generation from wordmark compositing. The generate step receives a prompt with explicit negative typography instructions so the AI model produces a clean scene with no text. The SVG wordmark is then placed over the scene using `composite_layers:sharp`, preserving pixel-perfect type fidelity without relying on the AI to render lettering.
+
+Pass the SVG path as `input_images[0]`. The composite node places the wordmark at bottom-left (30% scale, 40px padding) by default. Example with `dry_run: true` to preview the plan before executing:
+
+```json
+{
+  "goal": "brand-mockup",
+  "input_images": ["/Users/me/brand/wordmark.svg"],
+  "constraints": { "output_size": "square" },
+  "dry_run": true
+}
+```
+
+For precise wordmark placement (custom `x`, `y`, `anchor`, `scale`), use `image_op` with `composite_layers:sharp` directly after generating the scene. The template requires `OPENAI_API_KEY` for the generate step; `composite_layers:sharp` runs locally with no API key.
+
 ## Capability Operations
 
 Supported operation names:
