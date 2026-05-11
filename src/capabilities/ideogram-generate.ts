@@ -104,6 +104,10 @@ export function createIdeogramGenerateCapability(): Capability | null {
     },
     cost: { perCallUsd: 0.08 },
     latencyMsP50: 8000,
+    quality: {
+      unscoredJustification:
+        'v1 text-to-image provider in production via generate_image; routing parity with v1 surface is a transparency gate, not a quality gate. Eval cases pending future milestone.',
+    },
     async invoke(input) {
       const prompt = input.params.prompt;
       if (typeof prompt !== 'string' || !prompt.trim()) {
