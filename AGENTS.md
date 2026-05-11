@@ -6,13 +6,13 @@ Guidance for Codex and other coding agents working in this repository or using t
 
 Image Gen MCP exposes seven MCP tools:
 
-- `generate_image` — text-to-image through OpenAI, Gemini, Replicate, Together, or Grok
+- `generate_image` — text-to-image through OpenAI, Gemini, Replicate, Together, or Grok; pass `reference_image` to anchor scene geometry and lighting via `edit_prompt:openai` (gpt-image-1.5)
 - `process_image` — local sharp resize/crop/aspect/circle-mask operations
 - `generate_asset` — one-call preset asset generation and post-processing
 - `image_op` — direct capability invocation by `(op, provider)`
 - `image_task` — natural-language image goal handoff with template/Haiku planning and DAG execution
 - `list_capabilities` — capability discovery with constraints, cost, latency, and quality
-- `generate_batch` — bulk text-to-image generation with one MCP approval, per-item failure isolation, and a batch-scoped run artifact
+- `generate_batch` — bulk text-to-image generation with one MCP approval, per-item failure isolation, and a batch-scoped run artifact; pass `reference_image` to apply the same style anchor to all items
 
 Use `generate_asset` for known preset outputs. Use `image_op` when the operation/provider is explicit. Use `image_task` when the user describes an outcome and wants the MCP to plan and execute the steps.
 
@@ -25,6 +25,8 @@ Use `generate_asset` for known preset outputs. Use `image_op` when the operation
 - If `IMAGE_GEN_INPUT_ROOT` is set, input image paths must resolve under that root.
 - Provider availability depends on API keys. Call `list_capabilities` when unsure.
 - `generate_batch` runs all items under one MCP approval. Per-item failures are isolated and reported inline; remaining items continue. Check the response `status` field (`'success'`/`'partial'`/`'error'`) and `items` array for per-item outcomes.
+- When `reference_image` is set on `generate_image` or `generate_batch`, the call routes through `edit_prompt:openai` (gpt-image-1.5) instead of v1 raw generation. Requires `OPENAI_API_KEY`; returns `{ success: false, error: '...' }` if the capability is not registered. The `provider` and `model` parameters are ignored when `reference_image` is active.
+- Responses from `generate_image` and `generate_batch` include `"routedVia": "edit_prompt"` and `"referenceImage"` when style anchoring was used, confirming which path executed (STYLE-03 routing transparency).
 
 ## Mockup Workflow
 
@@ -42,6 +44,33 @@ Pass the SVG path as `input_images[0]`. The composite node places the wordmark a
 ```
 
 For precise wordmark placement (custom `x`, `y`, `anchor`, `scale`), use `image_op` with `composite_layers:sharp` directly after generating the scene. The template requires `OPENAI_API_KEY` for the generate step; `composite_layers:sharp` runs locally with no API key.
+
+## Style Anchoring
+
+Pass `reference_image` to `generate_image` or `generate_batch` to anchor scene geometry and lighting from a reference while varying content via a new prompt. The call transparently routes through `edit_prompt:openai` (gpt-image-1.5) — the same capability exposed by `image_op`.
+
+```json
+{
+  "prompt": "a tabby cat sitting in the same warm golden-hour light",
+  "reference_image": "/Users/me/Pictures/golden-hour-scene.jpg",
+  "size": "square"
+}
+```
+
+The response confirms routing:
+
+```json
+{
+  "success": true,
+  "path": "/Users/me/Downloads/generated-images/...",
+  "provider": "openai",
+  "model": "gpt-image-1.5",
+  "routedVia": "edit_prompt",
+  "referenceImage": "/Users/me/Pictures/golden-hour-scene.jpg"
+}
+```
+
+For `generate_batch`, pass `reference_image` at the batch level — it applies to every item. Per-item results also include `"routedVia": "edit_prompt"`. Path validation uses `IMAGE_GEN_INPUT_ROOT` if set; violations return `CONSTRAINT_VIOLATION`.
 
 ## Capability Operations
 
