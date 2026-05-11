@@ -17,9 +17,9 @@ export interface RunManifest {
   runId: string;
   startedAt: string;
   endedAt?: string;
-  status: 'in_progress' | 'success' | 'error';
+  status: 'in_progress' | 'success' | 'partial' | 'error';
   invocation: {
-    tool: 'image_op' | 'image_task';
+    tool: 'image_op' | 'image_task' | 'generate_batch';
     op?: string;
     provider?: string;
     params?: Record<string, unknown>;
@@ -28,6 +28,7 @@ export interface RunManifest {
     goal?: string;
     inputImages?: Record<string, string>;
     constraints?: { budget_cap_usd?: number; latency_cap_ms?: number };
+    batchItems?: Array<{ prompt: string; outputPath?: string }>;
   };
   nodes: RunManifestNode[];
   finalOutput?: string;
