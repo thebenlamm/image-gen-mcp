@@ -49,10 +49,10 @@ src/
 
 **Tool Surface:**
 
-- `generate_image`: raw text-to-image generation through OpenAI, Gemini, Replicate, Together, or Grok.
+- `generate_image`: raw text-to-image generation through OpenAI, Gemini, Replicate, Together, or Grok. Pass `reference_image` (absolute path to a PNG/JPEG/WebP) to anchor scene geometry and lighting from the reference while varying content via prompt — routes through `edit_prompt:openai` (gpt-image-1.5) when set.
 - `process_image`: local sharp post-processing.
 - `generate_asset`: text-to-image plus preset processing.
-- `generate_batch`: bulk text-to-image for an array of items under one MCP approval, with per-item failure isolation.
+- `generate_batch`: bulk text-to-image for an array of items under one MCP approval, with per-item failure isolation. Pass `reference_image` to apply the same style anchor to every item in the batch — all items route through `edit_prompt:openai` (gpt-image-1.5).
 - `image_op`: direct registered capability invocation.
 - `image_task`: natural-language goal -> template or Haiku plan -> validated DAG -> execution.
 - `list_capabilities`: available `(op, provider)` pairs with constraints, cost, latency, and quality.
@@ -134,6 +134,18 @@ Use generate_batch to generate multiple images in one approved call:
   "outputDir": "/Users/me/Downloads/batch-output"
 }
 ```
+
+Use generate_image with reference_image to anchor a scene's geometry and lighting from an existing image while varying content via prompt:
+
+```json
+{
+  "prompt": "a golden retriever playing fetch on the beach",
+  "reference_image": "/Users/me/Pictures/reference-lighting.png",
+  "size": "landscape"
+}
+```
+
+The response includes `"routedVia": "edit_prompt"`, `"model": "gpt-image-1.5"`, and `"referenceImage"` to confirm the style-anchor path was used. Pass `reference_image` to `generate_batch` to apply the same anchor to every item. Requires `OPENAI_API_KEY`. When `reference_image` is set, the `provider` and `model` parameters are ignored — the call routes through `edit_prompt:openai` only.
 
 For `image_task`, use `dry_run: true` when the user wants to preview routing, estimated cost, or provider choice before spending provider credits.
 
