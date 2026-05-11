@@ -9,11 +9,42 @@ const FAKE_PNG = Buffer.from(
   'hex',
 );
 
-// Fake provider used across tests
-const mockGenerate = vi.fn(async () => ({
-  buffer: FAKE_PNG,
-  model: 'test-model',
-  revisedPrompt: undefined,
+// Use vi.hoisted so mocks are available when vi.mock factories are hoisted
+const { mockGenerate, mockEditInvoke, mockCapGet } = vi.hoisted(() => ({
+  mockGenerate: vi.fn(async () => ({
+    buffer: Buffer.from(
+      '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000a49444154789c63000100000500010d0a2db40000000049454e44ae426082',
+      'hex',
+    ),
+    model: 'test-model',
+    revisedPrompt: undefined,
+  })),
+  mockEditInvoke: vi.fn(),
+  mockCapGet: vi.fn(),
+}));
+
+// Capabilities mock for style-anchor tests
+vi.mock('../../src/capabilities/index.js', () => ({
+  capabilityRegistry: {
+    get: mockCapGet,
+    list: vi.fn(() => []),
+    has: vi.fn(() => false),
+    register: vi.fn(),
+    listScored: vi.fn(() => []),
+    listByProvider: vi.fn(() => []),
+    unregister: vi.fn(),
+  },
+  CapabilityInvokeError: class CapabilityInvokeError extends Error {
+    code: string;
+    retryable: boolean;
+    constructor(code: string, message: string, retryable: boolean) {
+      super(message);
+      this.name = 'CapabilityInvokeError';
+      this.code = code;
+      this.retryable = retryable;
+    }
+  },
+  registerBuiltInCapabilities: vi.fn(),
 }));
 
 // Mock provider-utils to return the fake provider without needing real API keys
@@ -51,6 +82,10 @@ describe('generate_batch', () => {
   beforeEach(async () => {
     tmp = await withTmpOutputDir();
     mockGenerate.mockClear();
+    mockCapGet.mockReset();
+    mockEditInvoke.mockReset();
+    // Default: no capability registered (v1 path tests don't need it)
+    mockCapGet.mockReturnValue(undefined);
   });
 
   afterEach(async () => {
@@ -239,5 +274,113 @@ describe('generate_batch', () => {
     for (const item of parsed.items) {
       expect(item.provider).toBe('gemini');
     }
+  });
+});
+
+describe('generate_batch with reference_image (style anchoring)', () => {
+  let tmp: TmpOutputDir;
+
+  beforeEach(async () => {
+    tmp = await withTmpOutputDir();
+    mockGenerate.mockReset();
+    mockCapGet.mockReset();
+    mockEditInvoke.mockReset();
+  });
+
+  afterEach(async () => {
+    await tmp.restore();
+  });
+
+  it('reference_image routes all items through edit_prompt:openai', async () => {
+    mockCapGet.mockReturnValue({ invoke: mockEditInvoke });
+    mockEditInvoke.mockResolvedValue({
+      kind: 'image',
+      buffer: FAKE_PNG,
+      model: 'gpt-image-1.5',
+      revisedPrompt: 'revised',
+      metadata: { input: '/tmp/ref.png' },
+    });
+
+    const result = await handleGenerateBatch({
+      items: [
+        { prompt: 'a cat' },
+        { prompt: 'a dog' },
+        { prompt: 'a bird' },
+      ],
+      reference_image: '/tmp/ref.png',
+      outputDir: tmp.dir,
+    });
+
+    const parsed = parseResponse(result);
+    expect(parsed.status).toBe('success');
+    expect(parsed.routedVia).toBe('edit_prompt');
+    expect(parsed.referenceImage).toBe('/tmp/ref.png');
+    expect(mockEditInvoke).toHaveBeenCalledTimes(3);
+    expect(mockGenerate).not.toHaveBeenCalled();
+    for (const item of parsed.items) {
+      expect(item.success).toBe(true);
+      expect(item.routedVia).toBe('edit_prompt');
+      expect(item.provider).toBe('openai');
+    }
+  });
+
+  it('per-item failure isolation with reference_image — item[1] fails, others succeed', async () => {
+    mockCapGet.mockReturnValue({ invoke: mockEditInvoke });
+    mockEditInvoke
+      .mockResolvedValueOnce({ kind: 'image', buffer: FAKE_PNG, model: 'gpt-image-1.5', metadata: {} })
+      .mockRejectedValueOnce(new Error('API timeout'))
+      .mockResolvedValueOnce({ kind: 'image', buffer: FAKE_PNG, model: 'gpt-image-1.5', metadata: {} });
+
+    const result = await handleGenerateBatch({
+      items: [
+        { prompt: 'a cat' },
+        { prompt: 'a dog' },
+        { prompt: 'a bird' },
+      ],
+      reference_image: '/tmp/ref.png',
+      outputDir: tmp.dir,
+    });
+
+    const parsed = parseResponse(result);
+    expect(parsed.status).toBe('partial');
+    expect(parsed.items[0].success).toBe(true);
+    expect(parsed.items[1].success).toBe(false);
+    expect(parsed.items[1].error).toContain('API timeout');
+    expect(parsed.items[2].success).toBe(true);
+  });
+
+  it('missing capability produces per-item error for all items', async () => {
+    mockCapGet.mockReturnValue(undefined);
+
+    const result = await handleGenerateBatch({
+      items: [{ prompt: 'a cat' }, { prompt: 'a dog' }],
+      reference_image: '/tmp/ref.png',
+      outputDir: tmp.dir,
+    });
+
+    const parsed = parseResponse(result);
+    expect(parsed.status).toBe('error');
+    expect(parsed.summary.succeeded).toBe(0);
+    expect(parsed.summary.failed).toBe(2);
+    for (const item of parsed.items) {
+      expect(item.success).toBe(false);
+      expect(item.error).toContain('OPENAI_API_KEY');
+    }
+  });
+
+  it('without reference_image — regression: v1 path used, no routedVia or referenceImage in response', async () => {
+    mockGenerate.mockResolvedValue({ buffer: FAKE_PNG, model: 'test-model' });
+
+    const result = await handleGenerateBatch({
+      items: [{ prompt: 'a cat' }, { prompt: 'a dog' }],
+      outputDir: tmp.dir,
+    });
+
+    const parsed = parseResponse(result);
+    expect(parsed.status).toBe('success');
+    expect(parsed.routedVia).toBeUndefined();
+    expect(parsed.referenceImage).toBeUndefined();
+    expect(mockCapGet).not.toHaveBeenCalled();
+    expect(mockGenerate).toHaveBeenCalledTimes(2);
   });
 });
