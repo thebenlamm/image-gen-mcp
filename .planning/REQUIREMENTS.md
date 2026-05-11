@@ -53,7 +53,7 @@
 |-------------|-------|--------|
 | ROUTE-01 | Phase 12 | Complete |
 | ROUTE-02 | Phase 12 | Complete |
-| ROUTE-03 | Phase 12 | Pending |
+| ROUTE-03 | Phase 12 | Complete |
 | MOCK-01 | Phase 13 | Pending |
 | MOCK-02 | Phase 13 | Pending |
 | BATCH-01 | Phase 14 | Pending |
