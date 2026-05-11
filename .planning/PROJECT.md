@@ -1,5 +1,17 @@
 # Image-Gen MCP — Goal-Shaped Image System
 
+## Current Milestone: v2.1 Brand Workflow Improvements
+
+**Goal:** Close the gaps that make image-gen-mcp impractical for multi-image brand asset workflows — batch friction, text fidelity, style consistency, and routing transparency.
+
+**Target features:**
+- `generate_batch` tool for single-approval batched generation with batch-scoped run artifacts
+- `generate` as a first-class op in `list_capabilities` with per-provider cost/latency/quality rows
+- Two-stage SVG composite image_task template for pixel-perfect text fidelity in mockups
+- Style anchoring via `reference_image` parameter on generate calls to anchor scene geometry/lighting
+
+---
+
 ## Current State
 
 **Shipped version:** v2.0 Goal-Shaped Image MCP, shipped 2026-05-04.
@@ -37,7 +49,7 @@ Two value props, one MCP:
 
 ### Active
 
-No active milestone requirements. The next milestone should start from a fresh requirements file via `$gsd-new-milestone`.
+See REQUIREMENTS.md for v2.1 milestone requirements.
 
 ### Superseded
 
@@ -55,7 +67,7 @@ No active milestone requirements. The next milestone should start from a fresh r
 - Cross-run cost dashboard — traces expose per-run estimates; no analytics layer.
 - NSFW filtering — rely on provider-side content policies.
 - JPEG/WebP output — PNG remains the primary output because transparency matters for masks and intermediates.
-- Batch generation tool — deferred until there is a concrete workflow need.
+- ~~Batch generation tool — deferred until there is a concrete workflow need.~~ — Promoted to v2.1 milestone after brand workflow beta feedback confirmed the need.
 
 ## Context
 
@@ -92,7 +104,7 @@ No active milestone requirements. The next milestone should start from a fresh r
 
 ## Next Milestone Goals
 
-Not defined yet. Use `$gsd-new-milestone` to decide whether the next milestone should focus on UX, provider calibration, batch workflows, richer asset presets, or operational hardening.
+Defined — see Current Milestone section above. v2.1 focus: brand workflow improvements (batch, routing transparency, text fidelity, style anchoring).
 
 ## Archives
 
@@ -102,4 +114,4 @@ Not defined yet. Use `$gsd-new-milestone` to decide whether the next milestone s
 - v2.0 milestone summary: `.planning/MILESTONES.md`
 
 ---
-*Last updated: 2026-05-04 after v2.0 milestone*
+*Last updated: 2026-05-11 — v2.1 milestone started*

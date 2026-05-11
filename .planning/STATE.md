@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: Goal-Shaped Image MCP
-status: completed
-stopped_at: Completed 11-03-PLAN.md
-last_updated: "2026-05-04T03:46:14.759Z"
-last_activity: 2026-05-04
+milestone: v2.1
+milestone_name: Brand Workflow Improvements
+status: planning
+last_updated: "2026-05-11T20:53:13.093Z"
+last_activity: 2026-05-11
 progress:
-  total_phases: 11
-  completed_phases: 11
-  total_plans: 27
-  completed_plans: 27
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-04)
 
 ## Current Position
 
-Phase: None
-Plan: None
-Status: v2.0 milestone complete; ready for `$gsd-new-milestone`
-Last activity: 2026-05-04
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-11 — Milestone v2.1 started
 
 ## Performance Metrics
 
