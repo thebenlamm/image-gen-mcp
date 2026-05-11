@@ -34,6 +34,19 @@ function makeRegistry(includeUpscale = true) {
   };
 }
 
+function makeRegistryWithGenerate() {
+  const base = makeRegistry();
+  const generateCap = makeCapability('generate', 'openai');
+  return {
+    get: (op: CapabilityOp, provider: string) =>
+      base.get(op, provider) ?? (op === 'generate' && provider === 'openai' ? generateCap : undefined),
+    list: (op?: CapabilityOp) => [
+      ...base.list(op),
+      ...(op === undefined || op === 'generate' ? [generateCap] : []),
+    ],
+  };
+}
+
 function makeExpandedRegistry() {
   const registry = makeRegistry();
   const capabilities = [
@@ -202,5 +215,110 @@ describe('matchTemplate', () => {
       'logo-cleanup',
       'upscale-export',
     ]));
+  });
+});
+
+describe('brand-mockup template', () => {
+  it('matches brand-mockup when generate:openai is registered', () => {
+    const match = matchTemplate(
+      { goal: 'brand-mockup', inputImages: { image_0: '/logo.svg' } },
+      makeRegistryWithGenerate(),
+    );
+
+    expect(match?.templateId).toBe('brand-mockup');
+    expect(match?.plan.nodes.map((n) => n.op)).toEqual(['generate', 'composite_layers']);
+    expect(match?.plan.terminalNodeId).toBe('composite');
+  });
+
+  it('also matches brand_mockup (underscore form)', () => {
+    const match = matchTemplate(
+      { goal: 'brand_mockup', inputImages: { image_0: '/logo.svg' } },
+      makeRegistryWithGenerate(),
+    );
+
+    expect(match?.templateId).toBe('brand_mockup');
+  });
+
+  it('scene node prompt contains all five negative typography terms', () => {
+    const match = matchTemplate(
+      { goal: 'brand-mockup', inputImages: { image_0: '/logo.svg' } },
+      makeRegistryWithGenerate(),
+    );
+    const scenePrompt = match!.plan.nodes[0]!.params.prompt as string;
+
+    expect(scenePrompt).toContain('no text');
+    expect(scenePrompt).toContain('no labels');
+    expect(scenePrompt).toContain('no typography');
+    expect(scenePrompt).toContain('no words');
+    expect(scenePrompt).toContain('no lettering');
+  });
+
+  it('composite node layers[1] references the SVG input ref', () => {
+    const match = matchTemplate(
+      { goal: 'brand-mockup', inputImages: { image_0: '/logo.svg' } },
+      makeRegistryWithGenerate(),
+    );
+    const compositeNode = match!.plan.nodes[1]!;
+    const layers = compositeNode.params.layers as Array<{ input: string }>;
+
+    expect(layers[1]!.input).toBe('$inputs.image_0');
+  });
+
+  it('composite node dependsOn includes scene', () => {
+    const match = matchTemplate(
+      { goal: 'brand-mockup', inputImages: { image_0: '/logo.svg' } },
+      makeRegistryWithGenerate(),
+    );
+    const compositeNode = match!.plan.nodes[1]!;
+
+    expect(compositeNode.dependsOn).toContain('scene');
+  });
+
+  it('returns null when inputImages is empty', () => {
+    const result = matchTemplate(
+      { goal: 'brand-mockup', inputImages: {} },
+      makeRegistryWithGenerate(),
+    );
+
+    expect(result).toBeNull();
+  });
+
+  it('returns null when generate:openai is not registered', () => {
+    const result = matchTemplate(
+      { goal: 'brand-mockup', inputImages: { image_0: '/logo.svg' } },
+      makeRegistry(), // makeRegistry() has no generate:openai
+    );
+
+    expect(result).toBeNull();
+  });
+
+  it('maps output_size landscape to 1792x1024 canvas and passes size param to generate', () => {
+    const match = matchTemplate(
+      {
+        goal: 'brand-mockup',
+        inputImages: { image_0: '/logo.svg' },
+        constraints: { output_size: 'landscape' },
+      },
+      makeRegistryWithGenerate(),
+    );
+    const sceneNode = match!.plan.nodes[0]!;
+    const compositeNode = match!.plan.nodes[1]!;
+
+    expect(sceneNode.params.size).toBe('landscape');
+    expect(compositeNode.params.canvas).toMatchObject({ width: 1792, height: 1024 });
+  });
+
+  it('emits a plan that passes PlanSchema.parse', () => {
+    const match = matchTemplate(
+      { goal: 'brand-mockup', inputImages: { image_0: '/logo.svg' } },
+      makeRegistryWithGenerate(),
+    );
+
+    expect(() => PlanSchema.parse(match!.plan)).not.toThrow();
+  });
+
+  it('includes brand-mockup and brand_mockup in listTemplateIds()', () => {
+    expect(listTemplateIds()).toContain('brand-mockup');
+    expect(listTemplateIds()).toContain('brand_mockup');
   });
 });
