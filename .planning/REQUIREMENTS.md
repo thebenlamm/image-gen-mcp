@@ -51,24 +51,24 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ROUTE-01 | — | Pending |
-| ROUTE-02 | — | Pending |
-| ROUTE-03 | — | Pending |
-| MOCK-01 | — | Pending |
-| MOCK-02 | — | Pending |
-| BATCH-01 | — | Pending |
-| BATCH-02 | — | Pending |
-| BATCH-03 | — | Pending |
-| BATCH-04 | — | Pending |
-| STYLE-01 | — | Pending |
-| STYLE-02 | — | Pending |
-| STYLE-03 | — | Pending |
+| ROUTE-01 | Phase 12 | Pending |
+| ROUTE-02 | Phase 12 | Pending |
+| ROUTE-03 | Phase 12 | Pending |
+| MOCK-01 | Phase 13 | Pending |
+| MOCK-02 | Phase 13 | Pending |
+| BATCH-01 | Phase 14 | Pending |
+| BATCH-02 | Phase 14 | Pending |
+| BATCH-03 | Phase 14 | Pending |
+| BATCH-04 | Phase 14 | Pending |
+| STYLE-01 | Phase 15 | Pending |
+| STYLE-02 | Phase 15 | Pending |
+| STYLE-03 | Phase 15 | Pending |
 
 **Coverage:**
 - v2.1 requirements: 12 total
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 12 ⚠️
+- Mapped to phases: 12 (100%)
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-05-11*
-*Last updated: 2026-05-11 after initial definition*
+*Last updated: 2026-05-11 — traceability filled after roadmap creation*
