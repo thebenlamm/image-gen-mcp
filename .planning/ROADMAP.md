@@ -37,7 +37,7 @@
 
 - [x] **Phase 12: Routing Transparency** - Register generate capabilities so list_capabilities shows all v1 providers with cost/latency/quality rows (completed 2026-05-11)
 - [x] **Phase 13: Mockup Workflow** - Add image_task template for two-stage SVG composite mockup with pixel-perfect text fidelity (completed 2026-05-11)
-- [ ] **Phase 14: Batch Generation** - Add generate_batch tool for single-approval batched generation with batch-scoped run artifacts
+- [ ] **Phase 14: Batch Generation** - Add generate_batch tool for single-approval batched generation with batch-scoped run artifacts (Planning in progress)
 - [ ] **Phase 15: Style Anchoring** - Add reference_image parameter to generate_image and generate_batch to anchor scene geometry and lighting
 
 ## Phase Details
@@ -106,7 +106,7 @@
 | 11. Provider Breadth (Post-Eval) | v2.0 | 3/3 | Complete | 2026-05-04 |
 | 12. Routing Transparency | v2.1 | 3/3 | Complete   | 2026-05-11 |
 | 13. Mockup Workflow | v2.1 | 2/2 | Complete   | 2026-05-11 |
-| 14. Batch Generation | v2.1 | 0/? | Not started | - |
+| 14. Batch Generation | v2.1 | 0/2 | Planning in progress | - |
 | 15. Style Anchoring | v2.1 | 0/? | Not started | - |
 
 ## Archives
