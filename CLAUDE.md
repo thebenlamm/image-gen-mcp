@@ -102,6 +102,21 @@ Use image_op to extract the subject from /Users/me/Pictures/product.png with pro
 Use image_task with goal "remove the background and place this product on a clean white studio surface with a soft shadow, 2000px square" and input_images ["/Users/me/Pictures/product.jpg"].
 ```
 
+```text
+Use image_task with goal "brand-mockup" and input_images containing the SVG wordmark path to generate a clean photorealistic scene and composite the wordmark automatically — no text is rendered by the AI model.
+```
+
+```json
+{
+  "goal": "brand-mockup",
+  "input_images": ["/Users/me/brand/wordmark.svg"],
+  "constraints": { "output_size": "square" },
+  "dry_run": true
+}
+```
+
+The template generates a scene with explicit negative typography instructions (no text, no labels, no lettering), then overlays the SVG at bottom-left (30% scale, 40px padding) via composite_layers:sharp. Use dry_run: true to preview routing and cost before executing. For precise wordmark placement (custom x, y, anchor, scale), use image_op with composite_layers:sharp directly after generating the scene.
+
 For `image_task`, use `dry_run: true` when the user wants to preview routing, estimated cost, or provider choice before spending provider credits.
 
 ## Adding a New Provider
