@@ -9,6 +9,7 @@ Image Gen MCP is a Model Context Protocol server for image generation, editing, 
 It exposes:
 
 - v1 tools: `generate_image`, `process_image`, `generate_asset`
+- v1 batch tool: `generate_batch`
 - v2 direct capability tool: `image_op`
 - v2 goal handoff tool: `image_task`
 - discovery tool: `list_capabilities`
@@ -51,6 +52,7 @@ src/
 - `generate_image`: raw text-to-image generation through OpenAI, Gemini, Replicate, Together, or Grok.
 - `process_image`: local sharp post-processing.
 - `generate_asset`: text-to-image plus preset processing.
+- `generate_batch`: bulk text-to-image for an array of items under one MCP approval, with per-item failure isolation.
 - `image_op`: direct registered capability invocation.
 - `image_task`: natural-language goal -> template or Haiku plan -> validated DAG -> execution.
 - `list_capabilities`: available `(op, provider)` pairs with constraints, cost, latency, and quality.
@@ -116,6 +118,22 @@ Use image_task with goal "brand-mockup" and input_images containing the SVG word
 ```
 
 The template generates a scene with explicit negative typography instructions (no text, no labels, no lettering), then overlays the SVG at bottom-left (30% scale, 40px padding) via composite_layers:sharp. Use dry_run: true to preview routing and cost before executing. For precise wordmark placement (custom x, y, anchor, scale), use image_op with composite_layers:sharp directly after generating the scene.
+
+```text
+Use generate_batch to generate multiple images in one approved call:
+```
+
+```json
+{
+  "items": [
+    { "prompt": "a red fox in a snowy forest, digital painting" },
+    { "prompt": "a lighthouse at sunset, oil painting", "outputPath": "/Users/me/Desktop/lighthouse.png" },
+    { "prompt": "a bowl of ramen, studio food photography" }
+  ],
+  "provider": "openai",
+  "outputDir": "/Users/me/Downloads/batch-output"
+}
+```
 
 For `image_task`, use `dry_run: true` when the user wants to preview routing, estimated cost, or provider choice before spending provider credits.
 
