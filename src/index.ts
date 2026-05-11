@@ -30,6 +30,7 @@ import {
 } from './runs/index.js';
 import { registry, type ProviderName, type ImageProvider } from './providers/index.js';
 import { resolveDefaultProvider, resolveProvider, buildEffectivePrompt } from './provider-utils.js';
+import { handleGenerateBatch } from './batch.js';
 import { createOpenAIProvider } from './providers/openai.js';
 import { createGeminiProvider } from './providers/gemini.js';
 import { createReplicateProvider } from './providers/replicate.js';
@@ -396,6 +397,44 @@ server.tool(
       };
     }
   }
+);
+
+server.tool(
+  'generate_batch',
+  'Generate multiple images from an array of prompts in a single approved call. All items share the same provider, style, and size settings. Per-item failures are isolated: remaining items continue and failures are reported inline. Returns a batch run ID, summary counts, and per-item results. Existing output files are overwritten.',
+  {
+    items: z
+      .array(
+        z.object({
+          prompt: z.string().describe('Text description of the image to generate'),
+          outputPath: z.string().optional().describe('Exact output file path for this item (must end in .png)'),
+        }),
+      )
+      .min(1)
+      .max(50)
+      .describe('Array of generation requests (1–50 items)'),
+    provider: z
+      .enum(['openai', 'gemini', 'replicate', 'together', 'grok'])
+      .optional()
+      .describe('Provider to use for all items (default: IMAGE_GEN_DEFAULT_PROVIDER)'),
+    style: z.string().optional().describe('Style modifier prepended to every item prompt (e.g., "watercolor painting")'),
+    size: z
+      .enum(['square', 'landscape', 'portrait'])
+      .optional()
+      .describe('Image size/aspect ratio applied to all items'),
+    outputDir: z
+      .string()
+      .optional()
+      .describe('Default output directory for all items without an explicit outputPath'),
+    max_concurrent: z
+      .number()
+      .int()
+      .min(1)
+      .max(8)
+      .optional()
+      .describe('Maximum concurrent API calls (default 3; reduce for rate-limited providers)'),
+  },
+  handleGenerateBatch,
 );
 
 server.tool(
