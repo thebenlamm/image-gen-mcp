@@ -2,6 +2,7 @@ import { createRunId, resolveRunDir, writeManifest, type RunManifestNode } from 
 import { resolveOutputPath, saveImage } from './utils/image.js';
 import { resolveProvider, buildEffectivePrompt, resolveDefaultProvider } from './provider-utils.js';
 import type { ProviderName } from './providers/index.js';
+import { CapabilityInvokeError, capabilityRegistry } from './capabilities/index.js';
 
 export interface BatchItem {
   prompt: string;
@@ -15,6 +16,7 @@ export interface GenerateBatchArgs {
   size?: 'square' | 'landscape' | 'portrait';
   outputDir?: string;
   max_concurrent?: number;
+  reference_image?: string;  // batch-level; applied to every item
 }
 
 export interface BatchItemResult {
@@ -25,6 +27,7 @@ export interface BatchItemResult {
   provider: string;
   model?: string;
   revisedPrompt?: string;
+  routedVia?: 'edit_prompt';
 }
 
 interface BatchItemResultInternal extends BatchItemResult {
@@ -47,7 +50,7 @@ export async function runWithConcurrency<T>(
 export async function handleGenerateBatch(
   args: GenerateBatchArgs,
 ): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
-  const { items, provider, style, size, outputDir, max_concurrent = 3 } = args;
+  const { items, provider, style, size, outputDir, max_concurrent = 3, reference_image } = args;
   const startedAt = Date.now();
 
   // Validate items
@@ -95,29 +98,60 @@ export async function handleGenerateBatch(
     const itemStartedAt = Date.now();
     try {
       const effectivePrompt = buildEffectivePrompt(item.prompt, style);
-      const result = await imageProvider.generate({ prompt: effectivePrompt, size: effectiveSize });
-      const filePath = await resolveOutputPath({
-        outputPath: item.outputPath,
-        outputDir,
-        prompt: item.prompt,
-        provider: providerName,
-      });
-      await saveImage(result.buffer, filePath);
-      return {
-        index,
-        success: true,
-        path: filePath,
-        provider: providerName,
-        model: result.model,
-        revisedPrompt: result.revisedPrompt,
-        durationMs: Date.now() - itemStartedAt,
-      };
+
+      if (reference_image) {
+        const editCap = capabilityRegistry.get('edit_prompt', 'openai');
+        if (!editCap) {
+          throw new Error('Style anchoring requires edit_prompt:openai capability (OPENAI_API_KEY not configured)');
+        }
+        const capResult = await editCap.invoke({
+          params: { input: reference_image, prompt: effectivePrompt, size: effectiveSize },
+          outputPath: item.outputPath,
+          outputDir,
+        });
+        if (capResult.kind !== 'image') throw new Error('edit_prompt returned non-image result');
+        const filePath = await resolveOutputPath({
+          outputPath: item.outputPath,
+          outputDir,
+          prompt: item.prompt,
+          provider: 'openai',
+        });
+        await saveImage(capResult.buffer, filePath);
+        return {
+          index,
+          success: true,
+          path: filePath,
+          provider: 'openai',
+          model: capResult.model,
+          revisedPrompt: capResult.revisedPrompt,
+          routedVia: 'edit_prompt' as const,
+          durationMs: Date.now() - itemStartedAt,
+        };
+      } else {
+        const result = await imageProvider.generate({ prompt: effectivePrompt, size: effectiveSize });
+        const filePath = await resolveOutputPath({
+          outputPath: item.outputPath,
+          outputDir,
+          prompt: item.prompt,
+          provider: providerName,
+        });
+        await saveImage(result.buffer, filePath);
+        return {
+          index,
+          success: true,
+          path: filePath,
+          provider: providerName,
+          model: result.model,
+          revisedPrompt: result.revisedPrompt,
+          durationMs: Date.now() - itemStartedAt,
+        };
+      }
     } catch (err) {
       return {
         index,
         success: false,
         error: err instanceof Error ? err.message : String(err),
-        provider: providerName,
+        provider: reference_image ? 'openai' : providerName,
         durationMs: Date.now() - itemStartedAt,
       };
     }
@@ -179,6 +213,10 @@ export async function handleGenerateBatch(
     summary: { total: items.length, succeeded, failed },
     items: responseItems,
   };
+  if (reference_image) {
+    response.routedVia = 'edit_prompt';
+    response.referenceImage = reference_image;
+  }
   if (sizeDropped) {
     response.warning = `Provider '${providerName}' does not support size parameter; size was ignored.`;
   }
