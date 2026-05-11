@@ -52,7 +52,7 @@
   3. image_task can route a generate node to a specific provider using quality.scores evidence from the generate capability registry entries
 **Plans**: 3 plans
 - [ ] 12-01-PLAN.md — Create OpenAI, Gemini, Together generate capability adapters
-- [ ] 12-02-PLAN.md — Create Grok (with 1024-char limit enforcement) and Replicate generate capability adapters
+- [x] 12-02-PLAN.md — Create Grok (with 1024-char limit enforcement) and Replicate generate capability adapters
 - [ ] 12-03-PLAN.md — Register all 6 generate caps (including Ideogram fix) and add smoke test
 
 ### Phase 13: Mockup Workflow
@@ -102,7 +102,7 @@
 | 9. image_task Planner + DAG Executor | v2.0 | 4/4 | Complete | 2026-05-03 |
 | 10. Template Fast-Paths + Parallelism | v2.0 | 2/2 | Complete | 2026-05-03 |
 | 11. Provider Breadth (Post-Eval) | v2.0 | 3/3 | Complete | 2026-05-04 |
-| 12. Routing Transparency | v2.1 | 0/3 | Planning complete | - |
+| 12. Routing Transparency | v2.1 | 1/3 | In Progress|  |
 | 13. Mockup Workflow | v2.1 | 0/? | Not started | - |
 | 14. Batch Generation | v2.1 | 0/? | Not started | - |
 | 15. Style Anchoring | v2.1 | 0/? | Not started | - |

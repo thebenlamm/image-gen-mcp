@@ -4,14 +4,14 @@ milestone: v2.1
 milestone_name: Brand Workflow Improvements
 status: executing
 stopped_at: v2.1 roadmap created; ready to plan Phase 12
-last_updated: "2026-05-11T21:30:56.380Z"
-last_activity: 2026-05-11 -- Phase 12 planning complete
+last_updated: "2026-05-11T21:36:08.935Z"
+last_activity: 2026-05-11
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 3
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 33
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** Two value props — guaranteed primitives (v1.0) and flexible goal handoff (v2.0).
-**Current focus:** Phase 12 — Routing Transparency (ready to plan)
+**Current focus:** Phase 12 — routing-transparency
 
 ## Current Position
 
-Phase: 12 of 15 (Routing Transparency)
-Plan: —
+Phase: 12 (routing-transparency) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-05-11 -- Phase 12 planning complete
+Last activity: 2026-05-11
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -50,6 +50,7 @@ Progress: [░░░░░░░░░░] 0%
 | 15 - Style Anchoring | TBD | - | - |
 
 *Updated after each plan completion*
+| Phase 12-routing-transparency P02 | 8 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -62,6 +63,8 @@ Key v2.1 constraints from prior decisions:
 - Trace returns paths only, never base64 — batch manifests follow same contract
 - Sharp/libvips concurrency capped at 2 — batch executor must respect this limit
 - Provider failure does not silently fallback — per-item batch failures recorded in manifest, not swallowed
+- [Phase ?]: Enforced Grok 1024-char prompt limit at runtime inside invoke() to cover image_op bypass of planner constraint checks
+- [Phase ?]: Replicate adapter has zero fetch() calls — v1 ReplicateProvider already fetches URL internally and returns Buffer
 
 ### Pending Todos
 
@@ -73,6 +76,6 @@ None currently.
 
 ## Session Continuity
 
-Last session: 2026-05-11
+Last session: 2026-05-11T21:36:00.882Z
 Stopped at: v2.1 roadmap created; ready to plan Phase 12
 Resume file: None
