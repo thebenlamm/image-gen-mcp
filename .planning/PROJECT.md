@@ -1,20 +1,14 @@
 # Image-Gen MCP — Goal-Shaped Image System
 
-## Current Milestone: v2.1 Brand Workflow Improvements
+## Current Milestone: None — v2.1 shipped 2026-05-11
 
-**Goal:** Close the gaps that make image-gen-mcp impractical for multi-image brand asset workflows — batch friction, text fidelity, style consistency, and routing transparency.
-
-**Target features:**
-- `generate_batch` tool for single-approval batched generation with batch-scoped run artifacts
-- `generate` as a first-class op in `list_capabilities` with per-provider cost/latency/quality rows
-- Two-stage SVG composite image_task template for pixel-perfect text fidelity in mockups
-- Style anchoring via `reference_image` parameter on generate calls to anchor scene geometry/lighting
+Use `$gsd-new-milestone` to start the next milestone.
 
 ---
 
 ## Current State
 
-**Shipped version:** v2.0 Goal-Shaped Image MCP, shipped 2026-05-04.
+**Shipped version:** v2.1 Brand Workflow Improvements, shipped 2026-05-11.
 
 Image-Gen MCP is a personal Model Context Protocol server for creating image assets across local primitives and external AI providers. It now supports both narrow, predictable asset tools and flexible goal handoff:
 
