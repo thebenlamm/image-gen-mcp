@@ -83,6 +83,140 @@ export function createServer(): McpServer {
   return server;
 }
 
+export interface GenerateImageArgs {
+  prompt: string;
+  provider?: ProviderName;
+  model?: string;
+  size?: 'square' | 'landscape' | 'portrait';
+  outputPath?: string;
+  outputDir?: string;
+  style?: string;
+  reference_image?: string;
+}
+
+export async function handleGenerateImage(
+  args: GenerateImageArgs,
+): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
+  const { prompt, provider, model, size, outputPath, outputDir, style, reference_image } = args;
+
+  const effectivePrompt = buildEffectivePrompt(prompt, style);
+
+  // Style-anchor branch: route through edit_prompt:openai when reference_image is set
+  if (reference_image) {
+    const editCap = capabilityRegistry.get('edit_prompt', 'openai');
+    if (!editCap) {
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify({
+          success: false,
+          error: 'Style anchoring requires edit_prompt:openai capability. Ensure OPENAI_API_KEY is configured.',
+        }) }],
+      };
+    }
+    try {
+      const result = await editCap.invoke({
+        params: { input: reference_image, prompt: effectivePrompt, size },
+        outputPath,
+        outputDir,
+      });
+      if (result.kind !== 'image') {
+        throw new Error('edit_prompt returned non-image result');
+      }
+      const filePath = await resolveOutputPath({ outputPath, outputDir, prompt, provider: 'openai' });
+      await saveImage(result.buffer, filePath);
+      const response: Record<string, unknown> = {
+        success: true,
+        path: filePath,
+        provider: 'openai',
+        model: result.model,
+        routedVia: 'edit_prompt',
+        referenceImage: reference_image,
+        revisedPrompt: result.revisedPrompt,
+      };
+      if (model) {
+        response.warning = 'model parameter ignored when reference_image is set; routing through edit_prompt:openai (gpt-image-1.5)';
+      }
+      return { content: [{ type: 'text' as const, text: JSON.stringify(response) }] };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isCapError = error instanceof CapabilityInvokeError;
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify({
+          success: false,
+          error: isCapError
+            ? { message, code: (error as CapabilityInvokeError).code, retryable: (error as CapabilityInvokeError).retryable }
+            : { message },
+          referenceImage: reference_image,
+        }) }],
+      };
+    }
+  }
+
+  // Existing v1 generation path
+  const resolved = resolveProvider(provider, !!size, DEFAULT_PROVIDER);
+  if ('error' in resolved) {
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify({ success: false, error: resolved.error }),
+      }],
+    };
+  }
+  const imageProvider = resolved.provider;
+  const providerName = resolved.providerName;
+  const effectiveSize = resolved.sizeDropped ? undefined : size;
+
+  try {
+    const result = await imageProvider.generate({
+      prompt: effectivePrompt,
+      model,
+      size: effectiveSize,
+    });
+
+    const filePath = await resolveOutputPath({
+      outputPath,
+      outputDir,
+      prompt,
+      provider: providerName,
+    });
+    await saveImage(result.buffer, filePath);
+
+    const response: Record<string, unknown> = {
+      success: true,
+      path: filePath,
+      provider: providerName,
+      model: result.model,
+      revisedPrompt: result.revisedPrompt,
+    };
+    if (resolved.sizeDropped) {
+      response.warning = `Provider '${providerName}' does not support size parameter; size was ignored.`;
+    }
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(response),
+        },
+      ],
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify({
+            success: false,
+            error: message,
+            provider: providerName,
+            availableProviders: registry.getAvailable(),
+          }),
+        },
+      ],
+    };
+  }
+}
+
 function registerTools(server: McpServer): void {
 
 // Define the generate_image tool
@@ -103,74 +237,11 @@ server.tool(
     outputPath: z.string().optional().describe('Exact output file path (must end in .png)'),
     outputDir: z.string().optional().describe('Output directory (filename auto-generated)'),
     style: z.string().optional().describe('Style modifier prepended to the generation prompt (e.g., "watercolor painting", "pixel art", "photorealistic")'),
+    reference_image: z.string().optional().describe(
+      'Absolute path to a reference image (PNG/JPEG/WebP) that anchors scene geometry and lighting. When set, routes through edit_prompt (gpt-image-1.5). Provider and model params are ignored.'
+    ),
   },
-  async ({ prompt, provider, model, size, outputPath, outputDir, style }) => {
-    const resolved = resolveProvider(provider, !!size, DEFAULT_PROVIDER);
-    if ('error' in resolved) {
-      return {
-        content: [{
-          type: 'text' as const,
-          text: JSON.stringify({ success: false, error: resolved.error }),
-        }],
-      };
-    }
-    const imageProvider = resolved.provider;
-    const providerName = resolved.providerName;
-    const effectiveSize = resolved.sizeDropped ? undefined : size;
-
-    try {
-      const effectivePrompt = buildEffectivePrompt(prompt, style);
-
-      const result = await imageProvider.generate({
-        prompt: effectivePrompt,
-        model,
-        size: effectiveSize,
-      });
-
-      const filePath = await resolveOutputPath({
-        outputPath,
-        outputDir,
-        prompt,
-        provider: providerName,
-      });
-      await saveImage(result.buffer, filePath);
-
-      const response: Record<string, unknown> = {
-        success: true,
-        path: filePath,
-        provider: providerName,
-        model: result.model,
-        revisedPrompt: result.revisedPrompt,
-      };
-      if (resolved.sizeDropped) {
-        response.warning = `Provider '${providerName}' does not support size parameter; size was ignored.`;
-      }
-
-      return {
-        content: [
-          {
-            type: 'text' as const,
-            text: JSON.stringify(response),
-          },
-        ],
-      };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return {
-        content: [
-          {
-            type: 'text' as const,
-            text: JSON.stringify({
-              success: false,
-              error: message,
-              provider: providerName,
-              availableProviders: registry.getAvailable(),
-            }),
-          },
-        ],
-      };
-    }
-  }
+  (args) => handleGenerateImage(args),
 );
 
 // Define the process_image tool
@@ -433,6 +504,9 @@ server.tool(
       .max(8)
       .optional()
       .describe('Maximum concurrent API calls (default 3; reduce for rate-limited providers)'),
+    reference_image: z.string().optional().describe(
+      'Absolute path to a reference image (PNG/JPEG/WebP) that anchors scene geometry and lighting for all items. When set, every item routes through edit_prompt:openai (gpt-image-1.5).'
+    ),
   },
   handleGenerateBatch,
 );
