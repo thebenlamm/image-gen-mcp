@@ -60,9 +60,9 @@
 | BATCH-02 | Phase 14 | Complete |
 | BATCH-03 | Phase 14 | Complete |
 | BATCH-04 | Phase 14 | Complete |
-| STYLE-01 | Phase 15 | Pending |
-| STYLE-02 | Phase 15 | Pending |
-| STYLE-03 | Phase 15 | Pending |
+| STYLE-01 | Phase 15 | Complete |
+| STYLE-02 | Phase 15 | Complete |
+| STYLE-03 | Phase 15 | Complete |
 
 **Coverage:**
 - v2.1 requirements: 12 total
