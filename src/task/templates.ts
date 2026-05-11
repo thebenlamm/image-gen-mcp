@@ -163,6 +163,65 @@ const upscaleExport: TemplateBuilder = (input) => {
   };
 };
 
+const brandMockup: TemplateBuilder = (input) => {
+  const svgRef = firstInputRef(input);
+  if (!svgRef) return null;
+
+  const canvasBySize = {
+    square: { width: 1024, height: 1024 },
+    landscape: { width: 1792, height: 1024 },
+    portrait: { width: 1024, height: 1792 },
+  } as const;
+  const canvas = canvasBySize[input.constraints?.output_size ?? 'square'];
+
+  const scenePrompt = `${input.goal}, photorealistic product scene, clean surfaces, no text, no labels, no typography, no words, no lettering`;
+
+  const generateParams: Record<string, unknown> = { prompt: scenePrompt };
+  if (input.constraints?.output_size && input.constraints.output_size !== 'square') {
+    generateParams.size = input.constraints.output_size;
+  }
+
+  const nodes: PlanNode[] = [
+    {
+      id: 'scene',
+      op: 'generate',
+      provider: 'openai',
+      params: generateParams,
+      dependsOn: [],
+      outputKind: 'image',
+      costUsd: 0.04,
+      latencyMs: 12000,
+      reason: 'template:brand-mockup generate clean scene',
+    },
+    {
+      id: 'composite',
+      op: 'composite_layers',
+      provider: 'sharp',
+      params: {
+        canvas: { ...canvas, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+        layers: [
+          { input: '$nodes.scene.output', anchor: 'top-left', x: 0, y: 0, scale: 1.0 },
+          { input: svgRef, anchor: 'bottom-left', x: 40, y: canvas.height - 40, scale: 0.3 },
+        ],
+      },
+      dependsOn: ['scene'],
+      outputKind: 'image',
+      costUsd: 0,
+      latencyMs: 400,
+      reason: 'template:brand-mockup composite SVG wordmark',
+    },
+  ];
+
+  return {
+    version: 1,
+    goal: input.goal,
+    nodes,
+    terminalNodeId: 'composite',
+    estimatedTotalCostUsd: 0.04,
+    estimatedTotalLatencyMs: 12400,
+  };
+};
+
 const TEMPLATE_BUILDERS: Record<string, TemplateBuilder> = {
   ...Object.fromEntries(
     (Object.keys(ASSET_PRESETS) as AssetType[]).map(
@@ -175,6 +234,8 @@ const TEMPLATE_BUILDERS: Record<string, TemplateBuilder> = {
   logo_cleanup: logoCleanup,
   'upscale-export': upscaleExport,
   upscale_export: upscaleExport,
+  'brand-mockup': brandMockup,
+  brand_mockup: brandMockup,
 };
 
 export function matchTemplate(
