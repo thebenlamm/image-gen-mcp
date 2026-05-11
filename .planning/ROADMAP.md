@@ -63,7 +63,9 @@
   1. Invoking image_task with a mockup goal produces a validated two-step plan: generate a clean scene image, then composite an SVG wordmark at caller-specified placement parameters
   2. The generate step's prompt contains no text or typography instructions (text fidelity is handled by the SVG layer, not the AI model)
   3. CLAUDE.md and AGENTS.md include a concrete mockup example showing the goal string, input_images reference for the SVG, and expected plan structure
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 13-01-PLAN.md — Add `brand-mockup` template to `templates.ts` and unit test for match + prompt sanitization
+- [ ] 13-02-PLAN.md — Update CLAUDE.md and AGENTS.md with mockup pattern documentation and concrete example
 **UI hint**: yes
 
 ### Phase 14: Batch Generation
@@ -103,7 +105,7 @@
 | 10. Template Fast-Paths + Parallelism | v2.0 | 2/2 | Complete | 2026-05-03 |
 | 11. Provider Breadth (Post-Eval) | v2.0 | 3/3 | Complete | 2026-05-04 |
 | 12. Routing Transparency | v2.1 | 3/3 | Complete   | 2026-05-11 |
-| 13. Mockup Workflow | v2.1 | 0/? | Not started | - |
+| 13. Mockup Workflow | v2.1 | 0/2 | Planning in progress | - |
 | 14. Batch Generation | v2.1 | 0/? | Not started | - |
 | 15. Style Anchoring | v2.1 | 0/? | Not started | - |
 
