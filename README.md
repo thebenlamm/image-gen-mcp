@@ -5,8 +5,12 @@ An MCP (Model Context Protocol) server for multi-provider image generation. Work
 ## Features
 
 - **8 providers** — OpenAI, Google Gemini, Replicate, Together AI, xAI Grok, Photoroom, fal.ai, Ideogram
-- **6 tools** — `generate_image`, `process_image`, `generate_asset`, `image_op`, `image_task`, `list_capabilities`
+- **7 tools** — `generate_image`, `generate_batch`, `process_image`, `generate_asset`, `image_op`, `image_task`, `list_capabilities`
+- **Batch generation** — `generate_batch`: submit an array of prompts in one tool call with per-item failure isolation and a batch run manifest
+- **Style anchoring** — Pass `reference_image` to `generate_image` or `generate_batch` to anchor scene geometry and lighting; routes transparently through `edit_prompt` (gpt-image-1.5)
 - **Goal-shaped MCP tool** — `image_task`: hand off a natural-language image goal, receive the final image plus a structured DAG trace
+- **Brand mockup template** — Goal `"brand-mockup"` in `image_task` produces a two-stage plan: AI generates a clean scene (no text), then sharp composites your SVG wordmark over it
+- **Routing transparency** — `list_capabilities` surfaces all 6 generate providers (openai, gemini, grok, replicate, together, ideogram) with cost/latency metadata so `image_task` can route by evidence
 - **Capability operations** — Directly invoke `extract_subject`, `edit_prompt`, `composite_layers`, `generate`, transform, upscale, and analysis ops through `image_op`
 - **Asset presets** — One-call generation of profile pics, post images, hero photos, avatars, and scenes
 - **Image processing** — Resize, crop, aspect crop, and circle mask operations
@@ -256,6 +260,30 @@ Use image_op to edit /path/to/photo.png with OpenAI: change the background to a 
 Use image_task with goal "remove the background and place this product on a clean white studio surface, 2000px square" and input_images ["/path/to/product.jpg"]
 ```
 
+### Generate a Brand Mockup
+
+```
+Use image_task with goal "brand-mockup: coffee mug on a warm kitchen counter" and input_images ["/path/to/logo.svg"]
+```
+
+The brand-mockup template generates a clean scene (no AI text rendering), then composites your SVG wordmark over it in one plan. Use `dry_run: true` to preview routing before spending credits.
+
+### Batch Generate Multiple Images
+
+```
+Use generate_batch with items [{"prompt": "sunset over mountains"}, {"prompt": "misty forest at dawn"}, {"prompt": "coastal cliffs at golden hour"}] and outputDir "/Users/you/Downloads/generated-images"
+```
+
+One permission approval, parallel generation, per-item failure isolation. If one item fails the others still complete.
+
+### Anchor Style from a Reference Image
+
+```
+Use generate_image with prompt "same scene but with snow" and reference_image "/path/to/original.png"
+```
+
+Routes through `edit_prompt:openai` (gpt-image-1.5) to preserve scene geometry and lighting. The response includes `routedVia: "edit_prompt"` and `model: "gpt-image-1.5"` so routing is transparent.
+
 ## Tool Reference
 
 ### `generate_image`
@@ -268,9 +296,10 @@ Generate an image from a text prompt.
 |-----------|------|----------|-------------|
 | `prompt` | string | Yes | Text description of the image to generate |
 | `provider` | string | No | `openai`, `gemini`, `replicate`, `together`, `grok` |
-| `model` | string | No | Provider-specific model (see table below) |
+| `model` | string | No | Provider-specific model (see table below). Ignored when `reference_image` is set. |
 | `size` | string | No | `square` (default), `landscape`, `portrait` |
 | `style` | string | No | Style modifier prepended to prompt (e.g., `"watercolor painting"`, `"pixel art"`) |
+| `reference_image` | string | No | Path to a reference image. When set, routes through `edit_prompt:openai` (gpt-image-1.5) to anchor scene geometry and lighting. Requires `OPENAI_API_KEY`. |
 | `outputPath` | string | No | Exact output file path (must end in `.png`) |
 | `outputDir` | string | No | Output directory (filename auto-generated) |
 
@@ -296,6 +325,18 @@ Generate an image from a text prompt.
 }
 ```
 
+When `reference_image` is set, the response includes routing metadata:
+
+```json
+{
+  "success": true,
+  "path": "/Users/you/Downloads/generated-images/2026-05-11-openai-scene-with-snow-a1b2c3.png",
+  "routedVia": "edit_prompt",
+  "referenceImage": "/path/to/original.png",
+  "model": "gpt-image-1.5"
+}
+```
+
 #### Size Mappings
 
 | Size | OpenAI | Gemini | Replicate/Together |
@@ -303,6 +344,42 @@ Generate an image from a text prompt.
 | `square` | 1024x1024 | 1:1 | 1:1 |
 | `landscape` | 1792x1024 | 16:9 | 16:9 |
 | `portrait` | 1024x1792 | 9:16 | 9:16 |
+
+---
+
+### `generate_batch`
+
+Submit an array of generation requests as a single tool call. One permission approval, parallel execution with a configurable concurrency cap, per-item failure isolation, and a batch-scoped run manifest.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `items` | array | Yes | 1–50 items, each `{ prompt: string, outputPath?: string }` |
+| `provider` | string | No | Applies to every item. Same values as `generate_image`. |
+| `style` | string | No | Style modifier prepended to every item's prompt |
+| `size` | string | No | `square` (default), `landscape`, `portrait` |
+| `reference_image` | string | No | Path to a reference image applied to every item. Routes each item through `edit_prompt:openai` (gpt-image-1.5). Requires `OPENAI_API_KEY`. |
+| `outputDir` | string | No | Default output directory for items without an explicit `outputPath` |
+| `max_concurrent` | integer | No | Parallel request cap, 1–8 (default 3) |
+
+#### Response
+
+```json
+{
+  "batchRunId": "run-2026-05-11T18-21-00-000Z-abc123",
+  "status": "success",
+  "summary": { "total": 3, "succeeded": 3, "failed": 0 },
+  "items": [
+    { "index": 0, "success": true, "path": "/path/to/output-0.png", "provider": "openai", "model": "gpt-image-1" },
+    { "index": 1, "success": true, "path": "/path/to/output-1.png", "provider": "openai", "model": "gpt-image-1" },
+    { "index": 2, "success": true, "path": "/path/to/output-2.png", "provider": "openai", "model": "gpt-image-1" }
+  ],
+  "manifestPath": "/path/to/.runs/run-.../manifest.json"
+}
+```
+
+`status` is `"success"` when all items succeed, `"partial"` when some fail, or `"error"` when all fail. Failed items include `"success": false` and `"error": "<message>"` — remaining items always continue regardless.
 
 ---
 
@@ -431,6 +508,11 @@ Invoke a registered image capability directly by operation and provider. This is
 | `composite_layers` | `sharp` | `params.canvas`, `params.layers[]` | Deterministic local PNG composition using sharp. |
 | `composite_layers` | `photoroom` | `PHOTOROOM_API_KEY`, `params.canvas`, `params.layers[]` | Single-subject product composition through Photoroom Image Editing API. Accepts `params.canvas`, exactly ONE entry in `params.layers`, optional `params.shadow.enabled` for shadow/relighting, optional `params.canvas.background` RGB color, and optional `params.background.color`/`params.background.prompt`. Rejects per-layer placement fields (`x`, `y`, `scale`, `opacity`, `anchor`) because Photoroom's API does not consume them; use `composite_layers:sharp` for placement. Delivers PROV-01's `(with shadow)` qualifier through Image Editing shadow. |
 | `generate` | `ideogram` | `IDEOGRAM_API_KEY`, `params.prompt` | Generates a PNG through Ideogram 3.0 and downloads the ephemeral image URL. |
+| `generate` | `openai` | `OPENAI_API_KEY`, `params.prompt` | Generates a PNG through OpenAI gpt-image-1. |
+| `generate` | `gemini` | `GEMINI_API_KEY`, `params.prompt` | Generates a PNG through Gemini. |
+| `generate` | `grok` | `XAI_API_KEY`, `params.prompt` | Generates a PNG through xAI Grok. Prompt must be ≤ 1024 characters. |
+| `generate` | `replicate` | `REPLICATE_API_TOKEN`, `params.prompt` | Generates a PNG through Replicate. |
+| `generate` | `together` | `TOGETHER_API_KEY`, `params.prompt` | Generates a PNG through Together AI. |
 | `transform` | `sharp` | `params.input`, `params.operations[]` | Applies deterministic local transforms such as resize, crop, rotate, flip, blur, sharpen, grayscale, and format conversion. |
 | `enhance_upscale` | `replicate` | `REPLICATE_API_TOKEN`, `params.input` | Runs a Replicate image upscaler/enhancer and downloads the resulting image. |
 | `analyze_dimensions` | `sharp` | `params.input` | Reads image dimensions and metadata locally. |
@@ -518,6 +600,8 @@ Example:
 ### `list_capabilities`
 
 Lists the registered `(op, provider)` pairs available in the current process, including provider constraints, latency/cost hints, and eval-populated quality scores when available. Use this tool before calling `image_op` if provider availability may depend on API keys or local optional binaries.
+
+As of v2.1, all six text-to-image providers appear as `(generate, provider)` rows alongside the existing op capabilities. This lets `image_task` route generate nodes using cost/latency evidence, and gives you a single place to see every capability the server can invoke.
 
 ---
 
