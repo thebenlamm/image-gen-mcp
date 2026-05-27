@@ -82,12 +82,7 @@ function describeFetchError(err: unknown): string {
 
 function wrapFetchError(err: unknown): CapabilityInvokeError {
   const message = `OpenAI edit network error: ${describeFetchError(err)}`;
-  const wrapped = new CapabilityInvokeError('PROVIDER_FAILURE', message, true);
-  // Attach the original error as `cause` so callers can introspect the
-  // underlying network failure (CapabilityInvokeError's constructor doesn't
-  // accept ErrorOptions, so we assign post-construction).
-  Object.assign(wrapped, { cause: err });
-  return wrapped;
+  return new CapabilityInvokeError('PROVIDER_FAILURE', message, true, undefined, { cause: err });
 }
 
 function isPositiveFiniteInt(value: unknown): value is number {

@@ -102,8 +102,9 @@ export class CapabilityInvokeError extends Error {
     message: string,
     public readonly retryable: boolean,
     public readonly suggestion?: string,
+    options?: ErrorOptions,
   ) {
-    super(message);
+    super(message, options);
     this.name = 'CapabilityInvokeError';
   }
 }
