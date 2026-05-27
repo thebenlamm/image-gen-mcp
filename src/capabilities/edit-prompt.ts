@@ -85,17 +85,19 @@ function wrapFetchError(err: unknown): CapabilityInvokeError {
   return new CapabilityInvokeError('PROVIDER_FAILURE', message, true, undefined, { cause: err });
 }
 
-function isPositiveFiniteInt(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0;
+function isPositiveInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0;
 }
 
 function resolveTimeoutMs(params: Record<string, unknown>): number {
   const raw = params.timeout_ms;
   if (raw === undefined) return DEFAULT_TIMEOUT_MS;
-  if (!isPositiveFiniteInt(raw)) {
+  // Match the MCP zod schema (.int().min(1000).max(300000)) so direct
+  // capability callers see the same validation as tool-schema callers.
+  if (!isPositiveInteger(raw)) {
     throw new CapabilityInvokeError(
       'CONSTRAINT_VIOLATION',
-      `edit_prompt timeout_ms must be a positive number (got ${typeof raw === 'number' ? raw : typeof raw})`,
+      `edit_prompt timeout_ms must be a positive integer (got ${typeof raw === 'number' ? raw : typeof raw})`,
       false,
     );
   }
@@ -143,9 +145,11 @@ function resolveRetryInitialDelayMs(params: Record<string, unknown>): number {
 }
 
 function backoffDelayMs(attempt: number, initialDelayMs: number): number {
+  // Exponential backoff with ±25% jitter. For initialDelayMs >= 0 this is
+  // always in [0.75 * base, 1.25 * base] so no non-negative clamp is needed.
   const base = initialDelayMs * Math.pow(2, attempt);
   const jitter = base * 0.25 * (Math.random() * 2 - 1);
-  return Math.max(0, base + jitter);
+  return base + jitter;
 }
 
 function sleep(ms: number): Promise<void> {

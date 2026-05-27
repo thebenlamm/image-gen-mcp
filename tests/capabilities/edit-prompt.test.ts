@@ -435,4 +435,72 @@ describe('edit_prompt capability — configurable timeout (fix #3)', () => {
       capability.invoke({ params: { input, prompt: 'p', timeout_ms: 'fast' } }),
     ).rejects.toMatchObject({ code: 'CONSTRAINT_VIOLATION' });
   });
+
+  it('rejects non-integer timeout_ms (matches MCP zod schema .int())', async () => {
+    const input = await writeJpeg();
+    vi.stubGlobal('fetch', vi.fn());
+    const capability = createEditPromptCapability();
+    if (!capability) throw new Error('expected capability');
+
+    await expect(
+      capability.invoke({ params: { input, prompt: 'p', timeout_ms: 1500.5 } }),
+    ).rejects.toMatchObject({
+      code: 'CONSTRAINT_VIOLATION',
+      message: expect.stringContaining('positive integer'),
+    });
+  });
+});
+
+describe('edit_prompt capability — retry_initial_delay_ms validation', () => {
+  it('rejects negative retry_initial_delay_ms', async () => {
+    const input = await writeJpeg();
+    vi.stubGlobal('fetch', vi.fn());
+    const capability = createEditPromptCapability();
+    if (!capability) throw new Error('expected capability');
+
+    await expect(
+      capability.invoke({ params: { input, prompt: 'p', retry_initial_delay_ms: -1 } }),
+    ).rejects.toMatchObject({
+      code: 'CONSTRAINT_VIOLATION',
+      message: expect.stringContaining('retry_initial_delay_ms'),
+    });
+  });
+
+  it('rejects non-numeric retry_initial_delay_ms', async () => {
+    const input = await writeJpeg();
+    vi.stubGlobal('fetch', vi.fn());
+    const capability = createEditPromptCapability();
+    if (!capability) throw new Error('expected capability');
+
+    await expect(
+      capability.invoke({ params: { input, prompt: 'p', retry_initial_delay_ms: 'fast' } }),
+    ).rejects.toMatchObject({ code: 'CONSTRAINT_VIOLATION' });
+  });
+
+  it('rejects non-finite retry_initial_delay_ms (NaN, Infinity)', async () => {
+    const input = await writeJpeg();
+    vi.stubGlobal('fetch', vi.fn());
+    const capability = createEditPromptCapability();
+    if (!capability) throw new Error('expected capability');
+
+    await expect(
+      capability.invoke({ params: { input, prompt: 'p', retry_initial_delay_ms: Number.NaN } }),
+    ).rejects.toMatchObject({ code: 'CONSTRAINT_VIOLATION' });
+    await expect(
+      capability.invoke({ params: { input, prompt: 'p', retry_initial_delay_ms: Number.POSITIVE_INFINITY } }),
+    ).rejects.toMatchObject({ code: 'CONSTRAINT_VIOLATION' });
+  });
+
+  it('accepts retry_initial_delay_ms: 0 (no delay)', async () => {
+    const input = await writeJpeg();
+    const png = await smallPng();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(okJsonResponse(png)));
+    const capability = createEditPromptCapability();
+    if (!capability) throw new Error('expected capability');
+
+    const result = await capability.invoke({
+      params: { input, prompt: 'p', retry_initial_delay_ms: 0 },
+    });
+    expect(result.kind).toBe('image');
+  });
 });

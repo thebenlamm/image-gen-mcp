@@ -53,6 +53,7 @@ src/
 - `process_image`: local sharp post-processing.
 - `generate_asset`: text-to-image plus preset processing.
 - `generate_batch`: bulk text-to-image for an array of items under one MCP approval, with per-item failure isolation. Pass `reference_image` to apply the same style anchor to every item in the batch — all items route through `edit_prompt:openai` (gpt-image-1.5). Each item retries up to 2× on transient errors (5xx, 429, network). Failed items return a structured `error: { message, code?, retryable?, errorClass? }` so callers can route on `code === 'TIMEOUT'` vs `'PROVIDER_FAILURE'`. Optional `timeout_ms` is threaded to every item (default 90000 ms).
+- `edit_prompt:openai` retry tuning: `max_retries` (0–10, default 2) and `retry_initial_delay_ms` (default 1000) are accepted on `image_op` `params` but intentionally not exposed at the `generate_image` / `generate_batch` tool schemas — they're caller-side knobs for direct capability invocation, not LLM-facing parameters. Use `image_op` if you need to override them.
 - `image_op`: direct registered capability invocation.
 - `image_task`: natural-language goal -> template or Haiku plan -> validated DAG -> execution.
 - `list_capabilities`: available `(op, provider)` pairs with constraints, cost, latency, and quality.
