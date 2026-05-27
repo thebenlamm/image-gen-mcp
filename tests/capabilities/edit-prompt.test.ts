@@ -251,6 +251,38 @@ describe('edit_prompt capability — retries (fix #2)', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
+  it('does NOT retry empty data[] from OpenAI (likely content-policy block)', async () => {
+    const input = await writeJpeg();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      text: async () => JSON.stringify({ data: [] }),
+    } as unknown as Response);
+    vi.stubGlobal('fetch', fetchMock);
+    const capability = createEditPromptCapability();
+    if (!capability) throw new Error('expected capability');
+
+    await expect(
+      capability.invoke({ params: { input, prompt: 'p', retry_initial_delay_ms: 1 } }),
+    ).rejects.toMatchObject({ code: 'PROVIDER_FAILURE', retryable: false });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT retry data[0] missing b64_json (malformed response)', async () => {
+    const input = await writeJpeg();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      text: async () => JSON.stringify({ data: [{ revised_prompt: 'x' }] }),
+    } as unknown as Response);
+    vi.stubGlobal('fetch', fetchMock);
+    const capability = createEditPromptCapability();
+    if (!capability) throw new Error('expected capability');
+
+    await expect(
+      capability.invoke({ params: { input, prompt: 'p', retry_initial_delay_ms: 1 } }),
+    ).rejects.toMatchObject({ code: 'PROVIDER_FAILURE', retryable: false });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('does NOT retry CONSTRAINT_VIOLATION (caller-side bad input)', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);

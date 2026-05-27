@@ -257,7 +257,10 @@ export function createEditPromptCapability(): Capability | null {
 
         const imageData = responseBody.data?.[0];
         if (!imageData?.b64_json) {
-          throw new CapabilityInvokeError('PROVIDER_FAILURE', 'No image data returned from OpenAI edit', true);
+          // Deterministic 200 OK with no image: usually a content-policy / safety
+          // filter block. Retrying with the same prompt + image will reproduce it,
+          // so mark non-retryable to avoid burning ~$0.12 and ~270s per blocked call.
+          throw new CapabilityInvokeError('PROVIDER_FAILURE', 'No image data returned from OpenAI edit (likely content-policy block)', false);
         }
 
         const buffer = Buffer.from(imageData.b64_json, 'base64');
