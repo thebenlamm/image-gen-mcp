@@ -7,6 +7,7 @@ import {
 } from '../capabilities/types.js';
 import { validateCapabilityParams } from '../capabilities/validation.js';
 import { nodeArtifactPath } from '../runs/dir.js';
+import type { ErrorDetail } from '../runs/manifest.js';
 import { buildTraceNode, type Trace, type TraceNode } from '../runs/trace.js';
 import { writeFileAtomic } from '../runs/write.js';
 import { selectBestPartial, type NodeOutcome } from './best-partial.js';
@@ -122,12 +123,13 @@ function sanitizedMetadata(metadata: Record<string, unknown> | undefined): Recor
   );
 }
 
-function errorDetailFrom(error: unknown): { code: string; retryable: boolean; suggestion?: string } | undefined {
+function errorDetailFrom(error: unknown): ErrorDetail | undefined {
   if (!(error instanceof CapabilityInvokeError)) return undefined;
   return {
     code: error.code,
     retryable: error.retryable,
     suggestion: error.suggestion,
+    errorClass: 'CapabilityInvokeError',
   };
 }
 

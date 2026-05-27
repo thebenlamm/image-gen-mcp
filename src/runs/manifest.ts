@@ -2,23 +2,38 @@ import { manifestPath } from './dir.js';
 import { writeFileAtomic } from './write.js';
 
 /**
- * Structured error detail persisted with a manifest node when the invocation
- * failed. The string `error` field above keeps a human-readable rendering
- * (currently formatted as `"[CODE] message"` by `generate_batch` for
- * backwards-compatible log scraping). New consumers should prefer
- * `errorDetail` and route on `code` / `retryable` directly — that's stable
- * structured data, the `[CODE]` prefix in `error` is a rendering choice and
- * may change.
+ * Canonical structured error shape shared across the project. Any place
+ * that persists or surfaces a failure beyond a plain `error: string` uses
+ * this type so the contract has a single source of truth: manifests
+ * (`RunManifestNode.errorDetail`), traces (`TraceNode.errorDetail`),
+ * `generate_batch` API responses (`BatchItemResult.error`), and the
+ * `handleImageOp` failure path.
+ *
+ * All fields are optional because different writers populate different
+ * subsets — e.g. trace nodes have a separate `error: string` field so they
+ * leave `message` undefined; `generate_batch` always sets `message`. The
+ * type is permissive on purpose; writers should populate everything they
+ * have, and readers should optional-chain.
  */
-export interface RunManifestNodeErrorDetail {
-  message: string;
-  /** CapabilityInvokeErrorCode when the underlying failure was a CapabilityInvokeError. */
+export interface ErrorDetail {
+  /** Human-readable rendering of the failure. Populated wherever there's
+   *  no companion `error: string` field. */
+  message?: string;
+  /** From `CapabilityInvokeError.code`. */
   code?: string;
-  /** Whether the failure would be safe for a caller to retry. */
+  /** From `CapabilityInvokeError.retryable`. */
   retryable?: boolean;
   /** Original error class name (e.g. 'CapabilityInvokeError', 'TypeError'). */
   errorClass?: string;
+  /** From `CapabilityInvokeError.suggestion` (a hint to the caller). */
+  suggestion?: string;
 }
+
+/**
+ * @deprecated Use {@link ErrorDetail}. Retained as an alias so external
+ * imports keep compiling; will be removed in the next major version.
+ */
+export type RunManifestNodeErrorDetail = ErrorDetail;
 
 export interface RunManifestNode {
   id: string;
@@ -36,7 +51,7 @@ export interface RunManifestNode {
    */
   error?: string;
   /** Structured failure detail. Populated when the originating error carries it. */
-  errorDetail?: RunManifestNodeErrorDetail;
+  errorDetail?: ErrorDetail;
 }
 
 export interface RunManifest {

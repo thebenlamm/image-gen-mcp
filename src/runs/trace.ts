@@ -1,4 +1,5 @@
 import type { CapabilityOp } from '../capabilities/types.js';
+import type { ErrorDetail } from './manifest.js';
 
 export interface TraceNode {
   id: string;
@@ -17,7 +18,10 @@ export interface TraceNode {
   cost_usd?: number;
   metadata?: Record<string, unknown>;
   inputRefs?: Array<{ field: string; ref: string; resolvedTo: string }>;
-  errorDetail?: { code: string; retryable: boolean; suggestion?: string };
+  /** See {@link ErrorDetail}. Trace nodes also have `error: string` for the
+   *  human-readable message, so writers typically leave `message` undefined
+   *  and populate `code` / `retryable` / `suggestion`. */
+  errorDetail?: ErrorDetail;
   attempts?: number;
   skipReason?: string;
 }
@@ -43,7 +47,7 @@ export interface BuildTraceNodeInput {
   cost_usd?: number;
   metadata?: Record<string, unknown>;
   inputRefs?: Array<{ field: string; ref: string; resolvedTo: string }>;
-  errorDetail?: { code: string; retryable: boolean; suggestion?: string };
+  errorDetail?: ErrorDetail;
   attempts?: number;
   skipReason?: string;
 }

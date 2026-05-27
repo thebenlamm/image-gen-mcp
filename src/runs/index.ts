@@ -14,7 +14,13 @@ export {
   type TraceNode,
   type BuildTraceNodeInput,
 } from './trace.js';
-export { writeManifest, type RunManifest, type RunManifestNode } from './manifest.js';
+export {
+  writeManifest,
+  type RunManifest,
+  type RunManifestNode,
+  type ErrorDetail,
+  type RunManifestNodeErrorDetail,
+} from './manifest.js';
 export {
   parseRetentionHours,
   sweepRunArtifacts,

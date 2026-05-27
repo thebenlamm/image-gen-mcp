@@ -686,6 +686,7 @@ export async function handleImageOp(args: ImageOpArgs): Promise<{
   if (!capability) {
     const endedAt = Date.now();
     const error = `Capability not registered for op '${op}' and provider '${provider}'`;
+    const notRegisteredDetail = { message: error, errorClass: 'CapabilityNotRegistered' };
     const errorNode = buildTraceNode({
       id: 'n1',
       op,
@@ -694,6 +695,7 @@ export async function handleImageOp(args: ImageOpArgs): Promise<{
       endedAtMs: endedAt,
       outcome: 'error',
       error,
+      errorDetail: notRegisteredDetail,
     });
 
     try {
@@ -710,6 +712,7 @@ export async function handleImageOp(args: ImageOpArgs): Promise<{
           provider,
           outcome: 'error',
           error,
+          errorDetail: notRegisteredDetail,
           durationMs: errorNode.durationMs,
         }],
         totalDurationMs: errorNode.durationMs,
@@ -867,6 +870,21 @@ export async function handleImageOp(args: ImageOpArgs): Promise<{
             suggestion: error.suggestion,
           }
         : { message };
+    // Same shape as the API errorPayload, persisted to disk so manifest
+    // readers can route on code/retryable without re-parsing the message.
+    const errorDetail =
+      error instanceof CapabilityInvokeError
+        ? {
+            message,
+            code: error.code,
+            retryable: error.retryable,
+            errorClass: 'CapabilityInvokeError',
+            ...(error.suggestion !== undefined ? { suggestion: error.suggestion } : {}),
+          }
+        : {
+            message,
+            errorClass: error instanceof Error ? error.name || 'Error' : 'Unknown',
+          };
     const errorNode = buildTraceNode({
       id: `n${nodeId}`,
       op,
@@ -875,6 +893,7 @@ export async function handleImageOp(args: ImageOpArgs): Promise<{
       endedAtMs: endedAt,
       outcome: 'error',
       error: message,
+      errorDetail,
     });
 
     try {
@@ -891,6 +910,7 @@ export async function handleImageOp(args: ImageOpArgs): Promise<{
           provider,
           outcome: 'error',
           error: message,
+          errorDetail,
           durationMs: errorNode.durationMs,
         }],
         totalDurationMs: errorNode.durationMs,

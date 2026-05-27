@@ -1,4 +1,4 @@
-import { createRunId, resolveRunDir, writeManifest, type RunManifestNode } from './runs/index.js';
+import { createRunId, resolveRunDir, writeManifest, type ErrorDetail, type RunManifestNode } from './runs/index.js';
 import { resolveOutputPath, saveImage } from './utils/image.js';
 import { resolveProvider, buildEffectivePrompt, resolveDefaultProvider } from './provider-utils.js';
 import type { ProviderName } from './providers/index.js';
@@ -20,11 +20,13 @@ export interface GenerateBatchArgs {
   timeout_ms?: number;  // per-item HTTP timeout for edit_prompt route (1000-300000)
 }
 
-export interface BatchItemError {
+/**
+ * Public batch API contract — same shape as the shared {@link ErrorDetail}
+ * but `message` is always populated by `buildBatchItemError`, so callers
+ * can rely on it being present without optional-chaining.
+ */
+export interface BatchItemError extends ErrorDetail {
   message: string;
-  code?: string;
-  retryable?: boolean;
-  errorClass?: string;
 }
 
 export interface BatchItemResult {
@@ -62,6 +64,7 @@ function buildBatchItemError(err: unknown): BatchItemError {
       code: err.code,
       retryable: err.retryable,
       errorClass: 'CapabilityInvokeError',
+      ...(err.suggestion !== undefined ? { suggestion: err.suggestion } : {}),
     };
   }
   if (err instanceof Error) {

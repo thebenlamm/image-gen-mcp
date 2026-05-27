@@ -383,7 +383,7 @@ Submit an array of generation requests as a single tool call. One permission app
 
 `status` is `"success"` when all items succeed, `"partial"` when some fail, or `"error"` when all fail. Failed items include `"success": false` and a structured `error` object — `{ message: string, code?: string, retryable?: boolean, errorClass?: string }`. When the underlying failure is a `CapabilityInvokeError`, `code` is one of `TIMEOUT | PROVIDER_FAILURE | CONSTRAINT_VIOLATION | UNSUPPORTED | INPUT_TOO_LARGE` and `retryable` indicates whether the request would be safe to retry. Network errors include the underlying class and `code` (e.g. `ECONNRESET`, `UND_ERR_SOCKET`) in `message`. Remaining items always continue regardless.
 
-The per-batch manifest at `.runs/<batchRunId>/manifest.json` mirrors this contract on disk: each failed node has both a human-readable `error: "[CODE] message"` string and a structured `errorDetail: { message, code?, retryable?, errorClass? }`. Prefer `errorDetail` for programmatic access — the `[CODE]` prefix in `error` is a rendering choice and may change.
+The per-batch manifest at `.runs/<batchRunId>/manifest.json` mirrors this contract on disk: each failed node has both a human-readable `error: "[CODE] message"` string and a structured `errorDetail: { message, code?, retryable?, errorClass?, suggestion? }`. Prefer `errorDetail` for programmatic access — the `[CODE]` prefix in `error` is a rendering choice and may change. The same `errorDetail` shape is populated on `image_op` and `image_task` manifest/trace nodes for failures, and on the live `image_op` `error` response — one shared structure across the project.
 
 ---
 

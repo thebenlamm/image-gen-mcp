@@ -7,6 +7,7 @@ import type { Capability, CapabilityOp } from '../../src/capabilities/types.js';
 import { handleImageOp } from '../../src/index.js';
 import { sweepRunArtifacts } from '../../src/runs/retention.js';
 import { RUN_ID_REGEX } from '../../src/runs/id.js';
+import { CapabilityInvokeError } from '../../src/capabilities/types.js';
 
 const FAKE_PNG = Buffer.from(
   '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000a49444154789c63000100000500010d0a2db40000000049454e44ae426082',
@@ -144,6 +145,70 @@ describe('image_op runs integration', () => {
     expect(manifest.status).toBe('error');
     const n1Exists = await fs.stat(path.join(runDir, 'n1.png')).then(() => true).catch(() => false);
     expect(n1Exists).toBe(false);
+  });
+
+  it('missing capability: manifest node carries structured errorDetail', async () => {
+    const res = await callImageOp({
+      op: 'extract_subject',
+      provider: 'definitely-not-registered',
+      params: { input: '/tmp/x.png' },
+    });
+
+    const runDir = path.join(tmp.dir, '.runs', res.runId!);
+    const manifest = JSON.parse(await fs.readFile(path.join(runDir, 'manifest.json'), 'utf8'));
+    expect(manifest.nodes[0].errorDetail).toEqual({
+      message: expect.stringContaining('Capability not registered'),
+      errorClass: 'CapabilityNotRegistered',
+    });
+  });
+
+  it('capability throws CapabilityInvokeError: manifest node + trace node both carry full errorDetail', async () => {
+    const capErr = new CapabilityInvokeError(
+      'PROVIDER_FAILURE',
+      'fake upstream timeout',
+      true,
+      'try again later',
+    );
+    fakes.push(registerFakeCapability('extract_subject', 'fake/test-cie', { throws: capErr }));
+    const res = await callImageOp({
+      op: 'extract_subject',
+      provider: 'fake/test-cie',
+      params: { input: '/tmp/x.png' },
+    });
+
+    const expectedDetail = {
+      message: 'fake upstream timeout',
+      code: 'PROVIDER_FAILURE',
+      retryable: true,
+      errorClass: 'CapabilityInvokeError',
+      suggestion: 'try again later',
+    };
+
+    expect(res.trace.nodes[0].errorDetail).toEqual(expectedDetail);
+
+    const runDir = path.join(tmp.dir, '.runs', res.runId!);
+    const manifest = JSON.parse(await fs.readFile(path.join(runDir, 'manifest.json'), 'utf8'));
+    expect(manifest.nodes[0].errorDetail).toEqual(expectedDetail);
+  });
+
+  it('capability throws plain Error: errorDetail captures message + errorClass (no code/retryable)', async () => {
+    fakes.push(registerFakeCapability('extract_subject', 'fake/test-plain', {
+      throws: new TypeError('not a function'),
+    }));
+    const res = await callImageOp({
+      op: 'extract_subject',
+      provider: 'fake/test-plain',
+      params: { input: '/tmp/x.png' },
+    });
+
+    const runDir = path.join(tmp.dir, '.runs', res.runId!);
+    const manifest = JSON.parse(await fs.readFile(path.join(runDir, 'manifest.json'), 'utf8'));
+    expect(manifest.nodes[0].errorDetail).toEqual({
+      message: 'not a function',
+      errorClass: 'TypeError',
+    });
+    expect(manifest.nodes[0].errorDetail.code).toBeUndefined();
+    expect(manifest.nodes[0].errorDetail.retryable).toBeUndefined();
   });
 
   it('sweepRunArtifacts(0) deletes the run dir created by image_op', async () => {
