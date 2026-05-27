@@ -251,6 +251,45 @@ describe('edit_prompt capability — retries (fix #2)', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
+  it('wraps mid-body terminate (response.text() throw) as PROVIDER_FAILURE retryable', async () => {
+    const input = await writeJpeg();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      text: async () => { throw new TypeError('terminated'); },
+    } as unknown as Response);
+    vi.stubGlobal('fetch', fetchMock);
+    const capability = createEditPromptCapability();
+    if (!capability) throw new Error('expected capability');
+
+    await expect(
+      capability.invoke({ params: { input, prompt: 'p', max_retries: 0 } }),
+    ).rejects.toMatchObject({
+      code: 'PROVIDER_FAILURE',
+      retryable: true,
+      message: expect.stringContaining('terminated'),
+    });
+  });
+
+  it('retries on mid-body terminate (response.text() throw)', async () => {
+    const input = await writeJpeg();
+    const png = await smallPng();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        text: async () => { throw new TypeError('terminated'); },
+      } as unknown as Response)
+      .mockResolvedValueOnce(okJsonResponse(png));
+    vi.stubGlobal('fetch', fetchMock);
+    const capability = createEditPromptCapability();
+    if (!capability) throw new Error('expected capability');
+
+    const result = await capability.invoke({
+      params: { input, prompt: 'p', retry_initial_delay_ms: 1 },
+    });
+    expect(result.kind).toBe('image');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it('does NOT retry empty data[] from OpenAI (likely content-policy block)', async () => {
     const input = await writeJpeg();
     const fetchMock = vi.fn().mockResolvedValue({

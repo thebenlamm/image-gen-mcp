@@ -245,7 +245,16 @@ export function createEditPromptCapability(): Capability | null {
           clearTimeout(timer);
         }
 
-        const responseBody = await parseJsonResponse(response);
+        // `response.text()` (inside parseJsonResponse) can throw mid-body when
+        // the socket dies during the read — surfaces as a raw TypeError with no
+        // .code. Route it through wrapFetchError so callers see a structured
+        // PROVIDER_FAILURE + retryable like any other network failure.
+        let responseBody: Awaited<ReturnType<typeof parseJsonResponse>>;
+        try {
+          responseBody = await parseJsonResponse(response);
+        } catch (error) {
+          throw wrapFetchError(error);
+        }
         if (!response.ok) {
           const isRetryable = response.status >= 500 || response.status === 429;
           throw new CapabilityInvokeError(
