@@ -1357,7 +1357,7 @@ async function main() {
     process.on('SIGINT', shutdown);
     process.on('SIGTERM', shutdown);
 
-    httpServer.listen(ssePort, () => {
+    httpServer.listen(ssePort, '127.0.0.1', () => {
       console.error(`SSE transport listening on http://localhost:${ssePort}`);
       console.error(`  SSE endpoint:     GET  http://localhost:${ssePort}/sse`);
       console.error(`  Message endpoint: POST http://localhost:${ssePort}/messages`);
