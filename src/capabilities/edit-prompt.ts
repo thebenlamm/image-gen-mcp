@@ -109,13 +109,20 @@ function resolveTimeoutMs(params: Record<string, unknown>): number {
   return raw;
 }
 
+// Soft cap on max_retries to prevent obvious foot-guns (e.g. caller typos a
+// 4-digit number). The real bound on wall-clock blast radius is
+// timeout_ms × (max_retries + 1) — a caller who lowers timeout_ms can
+// reasonably want more retries against a flaky upstream, so 10 leaves room
+// without enabling pathological loops.
+const MAX_RETRIES_UPPER_BOUND = 10;
+
 function resolveMaxRetries(params: Record<string, unknown>): number {
   const raw = params.max_retries;
   if (raw === undefined) return DEFAULT_MAX_RETRIES;
-  if (typeof raw !== 'number' || !Number.isInteger(raw) || raw < 0 || raw > 5) {
+  if (typeof raw !== 'number' || !Number.isInteger(raw) || raw < 0 || raw > MAX_RETRIES_UPPER_BOUND) {
     throw new CapabilityInvokeError(
       'CONSTRAINT_VIOLATION',
-      `edit_prompt max_retries must be an integer in [0, 5] (got ${String(raw)})`,
+      `edit_prompt max_retries must be an integer in [0, ${MAX_RETRIES_UPPER_BOUND}] (got ${String(raw)})`,
       false,
     );
   }

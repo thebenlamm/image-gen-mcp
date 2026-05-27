@@ -397,6 +397,31 @@ describe('edit_prompt capability — configurable timeout (fix #3)', () => {
     spy.mockRestore();
   });
 
+  it('accepts max_retries up to the upper bound (10)', async () => {
+    const input = await writeJpeg();
+    const png = await smallPng();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(okJsonResponse(png)));
+    const capability = createEditPromptCapability();
+    if (!capability) throw new Error('expected capability');
+
+    const result = await capability.invoke({ params: { input, prompt: 'p', max_retries: 10 } });
+    expect(result.kind).toBe('image');
+  });
+
+  it('rejects max_retries above the upper bound', async () => {
+    const input = await writeJpeg();
+    vi.stubGlobal('fetch', vi.fn());
+    const capability = createEditPromptCapability();
+    if (!capability) throw new Error('expected capability');
+
+    await expect(
+      capability.invoke({ params: { input, prompt: 'p', max_retries: 11 } }),
+    ).rejects.toMatchObject({
+      code: 'CONSTRAINT_VIOLATION',
+      message: expect.stringContaining('[0, 10]'),
+    });
+  });
+
   it('rejects invalid timeout_ms with CONSTRAINT_VIOLATION', async () => {
     const input = await writeJpeg();
     vi.stubGlobal('fetch', vi.fn());
