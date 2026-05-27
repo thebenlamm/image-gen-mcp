@@ -1,6 +1,25 @@
 import { manifestPath } from './dir.js';
 import { writeFileAtomic } from './write.js';
 
+/**
+ * Structured error detail persisted with a manifest node when the invocation
+ * failed. The string `error` field above keeps a human-readable rendering
+ * (currently formatted as `"[CODE] message"` by `generate_batch` for
+ * backwards-compatible log scraping). New consumers should prefer
+ * `errorDetail` and route on `code` / `retryable` directly — that's stable
+ * structured data, the `[CODE]` prefix in `error` is a rendering choice and
+ * may change.
+ */
+export interface RunManifestNodeErrorDetail {
+  message: string;
+  /** CapabilityInvokeErrorCode when the underlying failure was a CapabilityInvokeError. */
+  code?: string;
+  /** Whether the failure would be safe for a caller to retry. */
+  retryable?: boolean;
+  /** Original error class name (e.g. 'CapabilityInvokeError', 'TypeError'). */
+  errorClass?: string;
+}
+
 export interface RunManifestNode {
   id: string;
   op: string;
@@ -9,7 +28,15 @@ export interface RunManifestNode {
   artifactPath?: string;
   durationMs?: number;
   outcome?: 'success' | 'error' | 'skipped';
+  /**
+   * Human-readable error rendering. For `generate_batch` failures this is
+   * formatted as `"[CODE] message"` when a CapabilityInvokeError code is
+   * available, otherwise the plain message. Prefer `errorDetail` for
+   * structured access.
+   */
   error?: string;
+  /** Structured failure detail. Populated when the originating error carries it. */
+  errorDetail?: RunManifestNodeErrorDetail;
 }
 
 export interface RunManifest {

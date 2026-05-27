@@ -205,7 +205,9 @@ export async function handleGenerateBatch(
     failed === 0 ? 'success' : succeeded === 0 ? 'error' : 'partial';
   const endedAt = Date.now();
 
-  // Build manifest nodes (manifest expects a string error; render the structured shape)
+  // Build manifest nodes. `error` is a human-readable rendering for log
+  // scraping; `errorDetail` carries the structured shape so downstream
+  // tooling can route on code/retryable without parsing the [CODE] prefix.
   const nodes: RunManifestNode[] = itemResults.map((r) => ({
     id: `item-${r.index}`,
     op: 'generate',
@@ -215,7 +217,10 @@ export async function handleGenerateBatch(
     outcome: r.success ? 'success' : 'error',
     ...(r.success || !r.error
       ? {}
-      : { error: r.error.code ? `[${r.error.code}] ${r.error.message}` : r.error.message }),
+      : {
+          error: r.error.code ? `[${r.error.code}] ${r.error.message}` : r.error.message,
+          errorDetail: r.error,
+        }),
   }));
 
   // Write terminal manifest (failure is non-fatal — items already done)

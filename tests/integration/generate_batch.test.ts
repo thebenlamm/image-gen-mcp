@@ -251,6 +251,43 @@ describe('generate_batch', () => {
     expect(manifest.invocation.tool).toBe('generate_batch');
   });
 
+  it('manifest persists structured errorDetail for failed items', async () => {
+    mockGenerate
+      .mockResolvedValueOnce({ buffer: FAKE_PNG, model: 'test-model' })
+      .mockRejectedValueOnce(new MockCapabilityInvokeError(
+        'PROVIDER_FAILURE',
+        'OpenAI edit network error: fetch failed code=ECONNRESET class=TypeError',
+        true,
+      ))
+      .mockResolvedValueOnce({ buffer: FAKE_PNG, model: 'test-model' });
+
+    const result = await handleGenerateBatch({
+      items: [{ prompt: 'a cat' }, { prompt: 'a dog' }, { prompt: 'a bird' }],
+      outputDir: tmp.dir,
+    });
+
+    const parsed = parseResponse(result);
+    const runsRoot = path.join(tmp.dir, '.runs');
+    const manifestFilePath = path.join(runsRoot, parsed.batchRunId, 'manifest.json');
+    const manifest = JSON.parse(await fs.readFile(manifestFilePath, 'utf-8'));
+    expect(manifest.status).toBe('partial');
+    const failedNode = manifest.nodes.find((n: { outcome: string }) => n.outcome === 'error');
+    expect(failedNode).toBeDefined();
+    expect(failedNode.error).toMatch(/^\[PROVIDER_FAILURE\] /);
+    expect(failedNode.errorDetail).toEqual({
+      message: expect.stringContaining('ECONNRESET'),
+      code: 'PROVIDER_FAILURE',
+      retryable: true,
+      errorClass: 'CapabilityInvokeError',
+    });
+    const successNodes = manifest.nodes.filter((n: { outcome: string }) => n.outcome === 'success');
+    expect(successNodes).toHaveLength(2);
+    for (const n of successNodes) {
+      expect(n.error).toBeUndefined();
+      expect(n.errorDetail).toBeUndefined();
+    }
+  });
+
   it('empty items array → early error, success: false', async () => {
     const result = await handleGenerateBatch({
       items: [],
