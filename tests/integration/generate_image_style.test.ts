@@ -219,6 +219,45 @@ describe('generate_image style anchoring (reference_image)', () => {
     expect(invokeCall.params.size).toBe('landscape');
   });
 
+  it('timeout_ms threaded through to capability invoke params', async () => {
+    mockGet.mockReturnValue({ invoke: mockInvoke });
+    mockInvoke.mockResolvedValue({
+      kind: 'image',
+      buffer: FAKE_PNG,
+      model: 'gpt-image-1.5',
+      metadata: { input: '/tmp/ref.png' },
+    });
+
+    await handleGenerateImage({
+      prompt: 'a dog',
+      reference_image: '/tmp/ref.png',
+      timeout_ms: 45000,
+      outputDir: tmp.dir,
+    });
+
+    const invokeCall = mockInvoke.mock.calls[0][0];
+    expect(invokeCall.params.timeout_ms).toBe(45000);
+  });
+
+  it('omitted timeout_ms is NOT added to capability invoke params (capability default applies)', async () => {
+    mockGet.mockReturnValue({ invoke: mockInvoke });
+    mockInvoke.mockResolvedValue({
+      kind: 'image',
+      buffer: FAKE_PNG,
+      model: 'gpt-image-1.5',
+      metadata: { input: '/tmp/ref.png' },
+    });
+
+    await handleGenerateImage({
+      prompt: 'a dog',
+      reference_image: '/tmp/ref.png',
+      outputDir: tmp.dir,
+    });
+
+    const invokeCall = mockInvoke.mock.calls[0][0];
+    expect('timeout_ms' in invokeCall.params).toBe(false);
+  });
+
   it('no reference_image — uses v1 provider path, capabilityRegistry.get not called', async () => {
     mockGenerate.mockResolvedValue({ buffer: FAKE_PNG, model: 'test-model' });
 

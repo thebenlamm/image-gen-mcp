@@ -49,10 +49,10 @@ src/
 
 **Tool Surface:**
 
-- `generate_image`: raw text-to-image generation through OpenAI, Gemini, Replicate, Together, or Grok. Pass `reference_image` (absolute path to a PNG/JPEG/WebP) to anchor scene geometry and lighting from the reference while varying content via prompt — routes through `edit_prompt:openai` (gpt-image-1.5) when set.
+- `generate_image`: raw text-to-image generation through OpenAI, Gemini, Replicate, Together, or Grok. Pass `reference_image` (absolute path to a PNG/JPEG/WebP) to anchor scene geometry and lighting from the reference while varying content via prompt — routes through `edit_prompt:openai` (gpt-image-1.5) when set. Optional `timeout_ms` (1000–300000, default 90000) overrides the per-request HTTP timeout for that route.
 - `process_image`: local sharp post-processing.
 - `generate_asset`: text-to-image plus preset processing.
-- `generate_batch`: bulk text-to-image for an array of items under one MCP approval, with per-item failure isolation. Pass `reference_image` to apply the same style anchor to every item in the batch — all items route through `edit_prompt:openai` (gpt-image-1.5).
+- `generate_batch`: bulk text-to-image for an array of items under one MCP approval, with per-item failure isolation. Pass `reference_image` to apply the same style anchor to every item in the batch — all items route through `edit_prompt:openai` (gpt-image-1.5). Each item retries up to 2× on transient errors (5xx, 429, network). Failed items return a structured `error: { message, code?, retryable?, errorClass? }` so callers can route on `code === 'TIMEOUT'` vs `'PROVIDER_FAILURE'`. Optional `timeout_ms` is threaded to every item (default 90000 ms).
 - `image_op`: direct registered capability invocation.
 - `image_task`: natural-language goal -> template or Haiku plan -> validated DAG -> execution.
 - `list_capabilities`: available `(op, provider)` pairs with constraints, cost, latency, and quality.

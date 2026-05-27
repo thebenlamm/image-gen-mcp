@@ -10,18 +10,31 @@ const FAKE_PNG = Buffer.from(
 );
 
 // Use vi.hoisted so mocks are available when vi.mock factories are hoisted
-const { mockGenerate, mockEditInvoke, mockCapGet } = vi.hoisted(() => ({
-  mockGenerate: vi.fn(async () => ({
-    buffer: Buffer.from(
-      '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000a49444154789c63000100000500010d0a2db40000000049454e44ae426082',
-      'hex',
-    ),
-    model: 'test-model',
-    revisedPrompt: undefined,
-  })),
-  mockEditInvoke: vi.fn(),
-  mockCapGet: vi.fn(),
-}));
+const { mockGenerate, mockEditInvoke, mockCapGet, MockCapabilityInvokeError } = vi.hoisted(() => {
+  class MockCapabilityInvokeError extends Error {
+    code: string;
+    retryable: boolean;
+    constructor(code: string, message: string, retryable: boolean) {
+      super(message);
+      this.name = 'CapabilityInvokeError';
+      this.code = code;
+      this.retryable = retryable;
+    }
+  }
+  return {
+    mockGenerate: vi.fn(async () => ({
+      buffer: Buffer.from(
+        '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000a49444154789c63000100000500010d0a2db40000000049454e44ae426082',
+        'hex',
+      ),
+      model: 'test-model',
+      revisedPrompt: undefined,
+    })),
+    mockEditInvoke: vi.fn(),
+    mockCapGet: vi.fn(),
+    MockCapabilityInvokeError,
+  };
+});
 
 // Capabilities mock for style-anchor tests
 vi.mock('../../src/capabilities/index.js', () => ({
@@ -34,16 +47,7 @@ vi.mock('../../src/capabilities/index.js', () => ({
     listByProvider: vi.fn(() => []),
     unregister: vi.fn(),
   },
-  CapabilityInvokeError: class CapabilityInvokeError extends Error {
-    code: string;
-    retryable: boolean;
-    constructor(code: string, message: string, retryable: boolean) {
-      super(message);
-      this.name = 'CapabilityInvokeError';
-      this.code = code;
-      this.retryable = retryable;
-    }
-  },
+  CapabilityInvokeError: MockCapabilityInvokeError,
   registerBuiltInCapabilities: vi.fn(),
 }));
 
@@ -137,8 +141,7 @@ describe('generate_batch', () => {
     expect(parsed.summary.failed).toBe(1);
     expect(parsed.items[0].success).toBe(true);
     expect(parsed.items[1].success).toBe(false);
-    expect(typeof parsed.items[1].error).toBe('string');
-    expect(parsed.items[1].error).toContain('upstream error');
+    expect(parsed.items[1].error.message).toContain('upstream error');
     expect(parsed.items[2].success).toBe(true);
   });
 
@@ -156,7 +159,7 @@ describe('generate_batch', () => {
     expect(parsed.summary.failed).toBe(2);
     for (const item of parsed.items) {
       expect(item.success).toBe(false);
-      expect(typeof item.error).toBe('string');
+      expect(typeof item.error.message).toBe('string');
     }
   });
 
@@ -345,7 +348,7 @@ describe('generate_batch with reference_image (style anchoring)', () => {
     expect(parsed.status).toBe('partial');
     expect(parsed.items[0].success).toBe(true);
     expect(parsed.items[1].success).toBe(false);
-    expect(parsed.items[1].error).toContain('API timeout');
+    expect(parsed.items[1].error.message).toContain('API timeout');
     expect(parsed.items[2].success).toBe(true);
   });
 
@@ -364,7 +367,7 @@ describe('generate_batch with reference_image (style anchoring)', () => {
     expect(parsed.summary.failed).toBe(2);
     for (const item of parsed.items) {
       expect(item.success).toBe(false);
-      expect(item.error).toContain('OPENAI_API_KEY');
+      expect(item.error.message).toContain('OPENAI_API_KEY');
     }
   });
 
@@ -382,5 +385,51 @@ describe('generate_batch with reference_image (style anchoring)', () => {
     expect(parsed.referenceImage).toBeUndefined();
     expect(mockCapGet).not.toHaveBeenCalled();
     expect(mockGenerate).toHaveBeenCalledTimes(2);
+  });
+
+  it('item.error surfaces structured {message, code, retryable} when underlying error is CapabilityInvokeError', async () => {
+    mockCapGet.mockReturnValue({ invoke: mockEditInvoke });
+    const capErr = new MockCapabilityInvokeError(
+      'PROVIDER_FAILURE',
+      'OpenAI edit network error: fetch failed code=ECONNRESET class=TypeError',
+      true,
+    );
+    mockEditInvoke.mockRejectedValue(capErr);
+
+    const result = await handleGenerateBatch({
+      items: [{ prompt: 'a cat' }],
+      reference_image: '/tmp/ref.png',
+      outputDir: tmp.dir,
+    });
+
+    const parsed = parseResponse(result);
+    expect(parsed.status).toBe('error');
+    const errField = parsed.items[0].error;
+    expect(typeof errField).toBe('object');
+    expect(errField.message).toContain('fetch failed');
+    expect(errField.message).toContain('ECONNRESET');
+    expect(errField.code).toBe('PROVIDER_FAILURE');
+    expect(errField.retryable).toBe(true);
+  });
+
+  it('timeout_ms is threaded through to the edit capability params', async () => {
+    mockCapGet.mockReturnValue({ invoke: mockEditInvoke });
+    mockEditInvoke.mockResolvedValue({
+      kind: 'image',
+      buffer: FAKE_PNG,
+      model: 'gpt-image-1.5',
+      metadata: {},
+    });
+
+    await handleGenerateBatch({
+      items: [{ prompt: 'a cat' }],
+      reference_image: '/tmp/ref.png',
+      outputDir: tmp.dir,
+      timeout_ms: 60000,
+    });
+
+    expect(mockEditInvoke).toHaveBeenCalledTimes(1);
+    const callArgs = mockEditInvoke.mock.calls[0][0];
+    expect(callArgs.params.timeout_ms).toBe(60000);
   });
 });

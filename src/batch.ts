@@ -17,13 +17,21 @@ export interface GenerateBatchArgs {
   outputDir?: string;
   max_concurrent?: number;
   reference_image?: string;  // batch-level; applied to every item
+  timeout_ms?: number;  // per-item HTTP timeout for edit_prompt route (1000-300000)
+}
+
+export interface BatchItemError {
+  message: string;
+  code?: string;
+  retryable?: boolean;
+  errorClass?: string;
 }
 
 export interface BatchItemResult {
   index: number;
   success: boolean;
   path?: string;
-  error?: string;
+  error?: BatchItemError;
   provider: string;
   model?: string;
   revisedPrompt?: string;
@@ -47,10 +55,28 @@ export async function runWithConcurrency<T>(
   return results;
 }
 
+function buildBatchItemError(err: unknown): BatchItemError {
+  if (err instanceof CapabilityInvokeError) {
+    return {
+      message: err.message,
+      code: err.code,
+      retryable: err.retryable,
+      errorClass: 'CapabilityInvokeError',
+    };
+  }
+  if (err instanceof Error) {
+    return {
+      message: err.message,
+      errorClass: err.name || 'Error',
+    };
+  }
+  return { message: String(err) };
+}
+
 export async function handleGenerateBatch(
   args: GenerateBatchArgs,
 ): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
-  const { items, provider, style, size, outputDir, max_concurrent = 3, reference_image } = args;
+  const { items, provider, style, size, outputDir, max_concurrent = 3, reference_image, timeout_ms } = args;
   const startedAt = Date.now();
 
   // Validate items
@@ -104,8 +130,14 @@ export async function handleGenerateBatch(
         if (!editCap) {
           throw new Error('Style anchoring requires edit_prompt:openai capability (OPENAI_API_KEY not configured)');
         }
+        const capParams: Record<string, unknown> = {
+          input: reference_image,
+          prompt: effectivePrompt,
+          size: effectiveSize,
+        };
+        if (timeout_ms !== undefined) capParams.timeout_ms = timeout_ms;
         const capResult = await editCap.invoke({
-          params: { input: reference_image, prompt: effectivePrompt, size: effectiveSize },
+          params: capParams,
           outputPath: item.outputPath,
           outputDir,
         });
@@ -150,7 +182,7 @@ export async function handleGenerateBatch(
       return {
         index,
         success: false,
-        error: err instanceof Error ? err.message : String(err),
+        error: buildBatchItemError(err),
         provider: reference_image ? 'openai' : providerName,
         durationMs: Date.now() - itemStartedAt,
       };
@@ -164,7 +196,7 @@ export async function handleGenerateBatch(
   const itemResults: BatchItemResultInternal[] = settled.map((s, i) =>
     s.status === 'fulfilled'
       ? s.value
-      : { index: i, success: false as const, error: 'Unexpected task rejection', provider: providerName, durationMs: 0 },
+      : { index: i, success: false as const, error: { message: 'Unexpected task rejection' }, provider: providerName, durationMs: 0 },
   );
 
   const succeeded = itemResults.filter((r) => r.success).length;
@@ -173,7 +205,7 @@ export async function handleGenerateBatch(
     failed === 0 ? 'success' : succeeded === 0 ? 'error' : 'partial';
   const endedAt = Date.now();
 
-  // Build manifest nodes
+  // Build manifest nodes (manifest expects a string error; render the structured shape)
   const nodes: RunManifestNode[] = itemResults.map((r) => ({
     id: `item-${r.index}`,
     op: 'generate',
@@ -181,7 +213,9 @@ export async function handleGenerateBatch(
     model: r.model,
     durationMs: r.durationMs,
     outcome: r.success ? 'success' : 'error',
-    ...(r.success ? {} : { error: r.error }),
+    ...(r.success || !r.error
+      ? {}
+      : { error: r.error.code ? `[${r.error.code}] ${r.error.message}` : r.error.message }),
   }));
 
   // Write terminal manifest (failure is non-fatal — items already done)

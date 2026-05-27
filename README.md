@@ -300,6 +300,7 @@ Generate an image from a text prompt.
 | `size` | string | No | `square` (default), `landscape`, `portrait` |
 | `style` | string | No | Style modifier prepended to prompt (e.g., `"watercolor painting"`, `"pixel art"`) |
 | `reference_image` | string | No | Path to a reference image. When set, routes through `edit_prompt:openai` (gpt-image-1.5) to anchor scene geometry and lighting. Requires `OPENAI_API_KEY`. |
+| `timeout_ms` | integer | No | Per-request HTTP timeout for the `edit_prompt` route (1000–300000 ms, default 90000). Only consulted when `reference_image` is set. |
 | `outputPath` | string | No | Exact output file path (must end in `.png`) |
 | `outputDir` | string | No | Output directory (filename auto-generated) |
 
@@ -360,6 +361,7 @@ Submit an array of generation requests as a single tool call. One permission app
 | `style` | string | No | Style modifier prepended to every item's prompt |
 | `size` | string | No | `square` (default), `landscape`, `portrait` |
 | `reference_image` | string | No | Path to a reference image applied to every item. Routes each item through `edit_prompt:openai` (gpt-image-1.5). Requires `OPENAI_API_KEY`. |
+| `timeout_ms` | integer | No | Per-request HTTP timeout for each item when `reference_image` is set (1000–300000 ms, default 90000). Each item also retries up to 2× on transient errors (5xx, 429, network) with exponential backoff (1s, 2s). Worst-case wall-clock per item at defaults: ~3 × `timeout_ms` + ~3s backoff (≈273s). Lower `timeout_ms` if your MCP client has a tighter request timeout or you'd rather surface failures faster. |
 | `outputDir` | string | No | Default output directory for items without an explicit `outputPath` |
 | `max_concurrent` | integer | No | Parallel request cap, 1–8 (default 3) |
 
@@ -379,7 +381,7 @@ Submit an array of generation requests as a single tool call. One permission app
 }
 ```
 
-`status` is `"success"` when all items succeed, `"partial"` when some fail, or `"error"` when all fail. Failed items include `"success": false` and `"error": "<message>"` — remaining items always continue regardless.
+`status` is `"success"` when all items succeed, `"partial"` when some fail, or `"error"` when all fail. Failed items include `"success": false` and a structured `error` object — `{ message: string, code?: string, retryable?: boolean, errorClass?: string }`. When the underlying failure is a `CapabilityInvokeError`, `code` is one of `TIMEOUT | PROVIDER_FAILURE | CONSTRAINT_VIOLATION | UNSUPPORTED | INPUT_TOO_LARGE` and `retryable` indicates whether the request would be safe to retry. Network errors include the underlying class and `code` (e.g. `ECONNRESET`, `UND_ERR_SOCKET`) in `message`. Remaining items always continue regardless.
 
 ---
 

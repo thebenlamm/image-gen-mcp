@@ -92,12 +92,13 @@ export interface GenerateImageArgs {
   outputDir?: string;
   style?: string;
   reference_image?: string;
+  timeout_ms?: number;
 }
 
 export async function handleGenerateImage(
   args: GenerateImageArgs,
 ): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
-  const { prompt, provider, model, size, outputPath, outputDir, style, reference_image } = args;
+  const { prompt, provider, model, size, outputPath, outputDir, style, reference_image, timeout_ms } = args;
 
   const effectivePrompt = buildEffectivePrompt(prompt, style);
 
@@ -113,8 +114,10 @@ export async function handleGenerateImage(
       };
     }
     try {
+      const capParams: Record<string, unknown> = { input: reference_image, prompt: effectivePrompt, size };
+      if (timeout_ms !== undefined) capParams.timeout_ms = timeout_ms;
       const result = await editCap.invoke({
-        params: { input: reference_image, prompt: effectivePrompt, size },
+        params: capParams,
         outputPath,
         outputDir,
       });
@@ -240,6 +243,15 @@ server.tool(
     reference_image: z.string().optional().describe(
       'Absolute path to a reference image (PNG/JPEG/WebP) that anchors scene geometry and lighting. When set, routes through edit_prompt (gpt-image-1.5). Provider and model params are ignored.'
     ),
+    timeout_ms: z
+      .number()
+      .int()
+      .min(1000)
+      .max(300000)
+      .optional()
+      .describe(
+        'Override the per-request HTTP timeout (1000-300000 ms) for the edit_prompt route. Default 90000 ms. Only consulted when reference_image is set.',
+      ),
   },
   (args) => handleGenerateImage(args),
 );
@@ -507,6 +519,15 @@ server.tool(
     reference_image: z.string().optional().describe(
       'Absolute path to a reference image (PNG/JPEG/WebP) that anchors scene geometry and lighting for all items. When set, every item routes through edit_prompt:openai (gpt-image-1.5).'
     ),
+    timeout_ms: z
+      .number()
+      .int()
+      .min(1000)
+      .max(300000)
+      .optional()
+      .describe(
+        'Override the per-request HTTP timeout (1000-300000 ms) for each item when reference_image is set. Default 90000 ms. Each item also retries up to 2x on transient errors (5xx/429/network).',
+      ),
   },
   handleGenerateBatch,
 );
