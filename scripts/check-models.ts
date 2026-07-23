@@ -17,12 +17,12 @@
 
 // ---------------------------------------------------------------------------
 // KNOWN_DEFAULTS — manually mirror src/providers/*.ts defaultModel values.
-// Last synced: 2026-04-24
+// Last synced: 2026-07-23
 // ---------------------------------------------------------------------------
 
 const KNOWN_DEFAULTS: Record<ProviderName, string> = {
   openai: 'gpt-image-2',
-  gemini: 'gemini-2.5-flash-image',
+  gemini: 'gemini-3.1-flash-image',
   grok: 'grok-imagine-image',
   together: 'black-forest-labs/FLUX.1-schnell',
   replicate: 'black-forest-labs/flux-1.1-pro',
