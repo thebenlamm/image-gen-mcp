@@ -169,8 +169,8 @@ const brandMockup: TemplateBuilder = (input) => {
 
   const canvasBySize = {
     square: { width: 1024, height: 1024 },
-    landscape: { width: 1792, height: 1024 },
-    portrait: { width: 1024, height: 1792 },
+    landscape: { width: 1536, height: 1024 },
+    portrait: { width: 1024, height: 1536 },
   } as const;
   const canvas = canvasBySize[input.constraints?.output_size ?? 'square'];
 

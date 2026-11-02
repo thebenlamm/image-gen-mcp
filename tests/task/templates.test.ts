@@ -292,7 +292,7 @@ describe('brand-mockup template', () => {
     expect(result).toBeNull();
   });
 
-  it('maps output_size landscape to 1792x1024 canvas and passes size param to generate', () => {
+  it('maps output_size landscape to 1536x1024 (gpt-image landscape) canvas and passes size param to generate', () => {
     const match = matchTemplate(
       {
         goal: 'brand-mockup',
@@ -305,7 +305,7 @@ describe('brand-mockup template', () => {
     const compositeNode = match!.plan.nodes[1]!;
 
     expect(sceneNode.params.size).toBe('landscape');
-    expect(compositeNode.params.canvas).toMatchObject({ width: 1792, height: 1024 });
+    expect(compositeNode.params.canvas).toMatchObject({ width: 1536, height: 1024 });
   });
 
   it('emits a plan that passes PlanSchema.parse', () => {
