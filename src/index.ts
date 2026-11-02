@@ -51,6 +51,7 @@ import {
 } from './task/index.js';
 import { ResponseGuardError, serializeImageTaskResponse } from './task/serialize-response.js';
 import { matchTemplate } from './task/templates.js';
+import { createLoopbackGuard, loopbackHosts, loopbackOrigins } from './sse-guard.js';
 
 // Register available providers
 const providers = [
@@ -1339,6 +1340,7 @@ async function main() {
   if (ssePort) {
     // ── SSE mode ────────────────────────────────────────────────
     const app = express();
+    app.use(createLoopbackGuard(ssePort));
     app.use(express.json());
 
     // Map sessionId → transport for routing POST messages
@@ -1351,7 +1353,11 @@ async function main() {
     app.get('/sse', async (req, res) => {
       // Each SSE client gets its own McpServer + transport
       const server = createServer();
-      const transport = new SSEServerTransport('/messages', res);
+      const transport = new SSEServerTransport('/messages', res, {
+        enableDnsRebindingProtection: true,
+        allowedHosts: loopbackHosts(ssePort),
+        allowedOrigins: loopbackOrigins(ssePort),
+      });
       transports.set(transport.sessionId, transport);
 
       transport.onclose = () => {
