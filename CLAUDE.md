@@ -178,7 +178,7 @@ For v2 capability-only providers, add a capability instead.
 - `IMAGE_GEN_RUN_RETENTION_HOURS` - Run artifact retention, default 24
 - `IMAGE_GEN_INPUT_ROOT` - Optional containment root for input image paths
 - `OPENAI_API_KEY`
-- `OPENAI_DEFAULT_MODEL` - Default `gpt-image-2.5-sunburst`
+- `OPENAI_DEFAULT_MODEL` - Default `gpt-image-1`; `gpt-image-2` and `gpt-image-2.5-*` likely require org verification (unverified orgs 403)
 - `OPENAI_EDIT_MODEL` - Default `gpt-image-1.5`
 - `ANTHROPIC_API_KEY` - Required for non-template `image_task` planning
 - `GEMINI_API_KEY`

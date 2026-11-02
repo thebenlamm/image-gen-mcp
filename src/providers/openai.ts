@@ -18,7 +18,7 @@ export class OpenAIProvider implements ImageProvider {
     if (!apiKey) {
       throw new Error('OPENAI_API_KEY environment variable is required');
     }
-    this.defaultModel = process.env.OPENAI_DEFAULT_MODEL?.trim() || 'gpt-image-2.5-sunburst';
+    this.defaultModel = process.env.OPENAI_DEFAULT_MODEL?.trim() || 'gpt-image-1';
     this.client = new OpenAI({ apiKey });
   }
 

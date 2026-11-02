@@ -49,7 +49,7 @@ The plugin automatically registers the MCP server. Set API keys for the remote p
 
 ```bash
 export OPENAI_API_KEY=sk-...
-export OPENAI_DEFAULT_MODEL=gpt-image-2.5-sunburst
+export OPENAI_DEFAULT_MODEL=gpt-image-1
 export OPENAI_EDIT_MODEL=gpt-image-1.5
 export ANTHROPIC_API_KEY=sk-ant-...
 export GEMINI_API_KEY=...
@@ -93,7 +93,7 @@ Add to `~/.claude/settings.json`:
         "IMAGE_GEN_OUTPUT_DIR": "~/Downloads/generated-images",
         "IMAGE_GEN_INPUT_ROOT": "/absolute/path/to/allowed-inputs",
         "OPENAI_API_KEY": "sk-...",
-        "OPENAI_DEFAULT_MODEL": "gpt-image-2.5-sunburst",
+        "OPENAI_DEFAULT_MODEL": "gpt-image-1",
         "OPENAI_EDIT_MODEL": "gpt-image-1.5",
         "ANTHROPIC_API_KEY": "sk-ant-...",
         "GEMINI_API_KEY": "...",
@@ -124,7 +124,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
         "IMAGE_GEN_OUTPUT_DIR": "~/Downloads/generated-images",
         "IMAGE_GEN_INPUT_ROOT": "/absolute/path/to/allowed-inputs",
         "OPENAI_API_KEY": "sk-...",
-        "OPENAI_DEFAULT_MODEL": "gpt-image-2.5-sunburst",
+        "OPENAI_DEFAULT_MODEL": "gpt-image-1",
         "OPENAI_EDIT_MODEL": "gpt-image-1.5",
         "ANTHROPIC_API_KEY": "sk-ant-...",
         "GEMINI_API_KEY": "...",
@@ -147,7 +147,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 | `IMAGE_GEN_DEFAULT_PROVIDER` | Provider used when none specified | `openai` |
 | `IMAGE_GEN_OUTPUT_DIR` | Directory for saved images | `~/Downloads/generated-images` |
 | `OPENAI_API_KEY` | OpenAI API key | - |
-| `OPENAI_DEFAULT_MODEL` | OpenAI model used when `model` param is omitted | `gpt-image-2.5-sunburst` |
+| `OPENAI_DEFAULT_MODEL` | OpenAI model used when `model` param is omitted | `gpt-image-1` |
 | `OPENAI_EDIT_MODEL` | OpenAI GPT Image model used by `image_op` `edit_prompt` | `gpt-image-1.5` |
 | `ANTHROPIC_API_KEY` | Required for `image_task`. API key for Anthropic Claude Haiku planning. Get one from https://console.anthropic.com/. Calls fail clearly when unset. | - |
 | `IMAGE_GEN_INPUT_ROOT` | Optional path-validation root for capability input paths. When set, input paths for `extract_subject`, `edit_prompt`, `composite_layers.layers[].input`, `transform`, `enhance_upscale`, and `analyze_*` must resolve under this root; `..` traversal and symlinks outside the root are rejected before invocation. Recommended for `image_task` because the planner can emit paths the user did not type. | unset |
@@ -308,7 +308,7 @@ Generate an image from a text prompt.
 
 | Provider | Available Models |
 |----------|-----------------|
-| OpenAI | `gpt-image-2.5-sunburst` (default), `gpt-image-2.5-flare`, `gpt-image-2`, `gpt-image-1`, `dall-e-3`, `dall-e-2` |
+| OpenAI | `gpt-image-1` (default), `gpt-image-2.5-sunburst`, `gpt-image-2.5-flare`, `gpt-image-2`, `dall-e-3`, `dall-e-2` |
 | Gemini | `gemini-3.1-flash-image`, `gemini-3-pro-image` |
 | Replicate | Any model on Replicate (e.g., `stability-ai/sdxl`) |
 | Together | `black-forest-labs/FLUX.1-schnell`, `black-forest-labs/FLUX.1-pro` |
@@ -512,7 +512,7 @@ Invoke a registered image capability directly by operation and provider. This is
 | `composite_layers` | `sharp` | `params.canvas`, `params.layers[]` | Deterministic local PNG composition using sharp. |
 | `composite_layers` | `photoroom` | `PHOTOROOM_API_KEY`, `params.canvas`, `params.layers[]` | Single-subject product composition through Photoroom Image Editing API. Accepts `params.canvas`, exactly ONE entry in `params.layers`, optional `params.shadow.enabled` for shadow/relighting, optional `params.canvas.background` RGB color, and optional `params.background.color`/`params.background.prompt`. Rejects per-layer placement fields (`x`, `y`, `scale`, `opacity`, `anchor`) because Photoroom's API does not consume them; use `composite_layers:sharp` for placement. Delivers PROV-01's `(with shadow)` qualifier through Image Editing shadow. |
 | `generate` | `ideogram` | `IDEOGRAM_API_KEY`, `params.prompt` | Generates a PNG through Ideogram 3.0 and downloads the ephemeral image URL. |
-| `generate` | `openai` | `OPENAI_API_KEY`, `params.prompt` | Generates a PNG through the OpenAI default model (`OPENAI_DEFAULT_MODEL`, default gpt-image-2.5-sunburst). |
+| `generate` | `openai` | `OPENAI_API_KEY`, `params.prompt` | Generates a PNG through the OpenAI default model (`OPENAI_DEFAULT_MODEL`, default gpt-image-1). |
 | `generate` | `gemini` | `GEMINI_API_KEY`, `params.prompt` | Generates a PNG through Gemini. |
 | `generate` | `grok` | `XAI_API_KEY`, `params.prompt` | Generates a PNG through xAI Grok. Prompt must be ≤ 1024 characters. |
 | `generate` | `replicate` | `REPLICATE_API_TOKEN`, `params.prompt` | Generates a PNG through Replicate. |

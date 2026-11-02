@@ -21,7 +21,7 @@
 // ---------------------------------------------------------------------------
 
 const KNOWN_DEFAULTS: Record<ProviderName, string> = {
-  openai: 'gpt-image-2.5-sunburst',
+  openai: 'gpt-image-1',
   gemini: 'gemini-3.1-flash-image',
   grok: 'grok-imagine-image-2.0',
   together: 'black-forest-labs/FLUX.1-schnell',
