@@ -52,6 +52,7 @@ import {
 import { ResponseGuardError, serializeImageTaskResponse } from './task/serialize-response.js';
 import { matchTemplate } from './task/templates.js';
 import { createLoopbackGuard, loopbackHosts, loopbackOrigins } from './sse-guard.js';
+import { assertWithinInputRoot } from './utils/path-input-root.js';
 
 // Register available providers
 const providers = [
@@ -291,6 +292,7 @@ server.tool(
   },
   async ({ inputPath, operations, outputPath }) => {
     try {
+      await assertWithinInputRoot(inputPath);
       // Read input file
       const inputBuffer = await fs.promises.readFile(inputPath);
 
