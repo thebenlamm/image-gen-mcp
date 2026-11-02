@@ -8,7 +8,7 @@
         "IMAGE_GEN_OUTPUT_DIR": "${IMAGE_GEN_OUTPUT_DIR:-~/Downloads/generated-images}",
         "IMAGE_GEN_INPUT_ROOT": "${IMAGE_GEN_INPUT_ROOT}",
         "OPENAI_API_KEY": "${OPENAI_API_KEY}",
-        "OPENAI_DEFAULT_MODEL": "${OPENAI_DEFAULT_MODEL:-gpt-image-1}",
+        "OPENAI_DEFAULT_MODEL": "${OPENAI_DEFAULT_MODEL:-gpt-image-2.5-sunburst}",
         "OPENAI_EDIT_MODEL": "${OPENAI_EDIT_MODEL:-gpt-image-1.5}",
         "ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}",
         "GEMINI_API_KEY": "${GEMINI_API_KEY}",
