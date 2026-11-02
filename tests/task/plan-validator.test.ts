@@ -402,6 +402,25 @@ describe('validatePlan', () => {
     }
   });
 
+  it('floors planner-declared cost at the registry perCallUsd for the budget gate', async () => {
+    const pricedCap = { ...capability('extract_subject', '@imgly/local'), cost: { perCallUsd: 0.04 } };
+    const pricedRegistry = mockRegistry([pricedCap]);
+    const result = await validatePlan(makePlan({
+      nodes: [{ ...baseNode, costUsd: 0 }],
+      estimatedTotalCostUsd: 0,
+    }), {
+      inputImages: { product: '/tmp/product.png' },
+      constraints: { budget_cap_usd: 0.01 },
+      registry: pricedRegistry as never,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors[0].code).toBe('BUDGET_CAP_EXCEEDED');
+      expect(result.estimated_cost_usd).toBeCloseTo(0.04, 5);
+    }
+  });
+
   it('returns LATENCY_CAP_EXCEEDED for slow critical paths', async () => {
     const result = await validatePlan(makePlan({
       nodes: [{ ...baseNode, latencyMs: 12_000 }],

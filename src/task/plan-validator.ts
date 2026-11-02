@@ -418,7 +418,12 @@ export async function validatePlan(
     return { ok: false, plan, errors };
   }
 
-  const recomputedCostUsd = plan.nodes.reduce((sum, node) => sum + node.costUsd, 0);
+  // Budget gate: never trust the planner's declared cost below the registry's
+  // known per-call cost — an LLM-declared costUsd of 0 must not pass the cap.
+  const recomputedCostUsd = plan.nodes.reduce(
+    (sum, node) => sum + Math.max(node.costUsd, caps.get(node.id)?.cost.perCallUsd ?? 0),
+    0,
+  );
   const recomputedLatencyMs = plan.nodes.reduce((sum, node) => sum + node.latencyMs, 0);
   if (
     Math.abs(plan.estimatedTotalCostUsd - recomputedCostUsd) /
