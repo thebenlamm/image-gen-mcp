@@ -17,13 +17,13 @@
 
 // ---------------------------------------------------------------------------
 // KNOWN_DEFAULTS — manually mirror src/providers/*.ts defaultModel values.
-// Last synced: 2026-07-23
+// Last synced: 2026-11-02
 // ---------------------------------------------------------------------------
 
 const KNOWN_DEFAULTS: Record<ProviderName, string> = {
-  openai: 'gpt-image-2',
+  openai: 'gpt-image-2.5-sunburst',
   gemini: 'gemini-3.1-flash-image',
-  grok: 'grok-imagine-image',
+  grok: 'grok-imagine-image-2.0',
   together: 'black-forest-labs/FLUX.1-schnell',
   replicate: 'black-forest-labs/flux-1.1-pro',
 };
@@ -305,11 +305,13 @@ function familyPrefix(id: string): string {
   return (m?.[1] ?? tail).toLowerCase();
 }
 
+// Parses the first version token including a dotted minor (e.g. `2.5` in
+// `gpt-image-2.5-flare`), so minor bumps are not missed as "same generation".
 function firstGenerationNumber(id: string): number | null {
   const tail = id.includes('/') ? id.split('/').slice(1).join('/') : id;
-  const m = tail.match(/(\d+)/);
+  const m = tail.match(/(\d+(?:\.\d+)?)/);
   if (!m) return null;
-  const n = parseInt(m[1], 10);
+  const n = parseFloat(m[1]);
   return Number.isFinite(n) ? n : null;
 }
 
