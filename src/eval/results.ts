@@ -4,9 +4,12 @@ import { fileURLToPath } from 'url';
 import { writeFileAtomic } from '../runs/write.js';
 import type { EvalRunResult } from './types.js';
 
-// Resolved from this module (src/eval or dist/eval), not process.cwd(), so the
-// server finds results regardless of where it was launched from.
-export const EVAL_RESULTS_DIR = fileURLToPath(new URL('../../eval/results', import.meta.url));
+// Default resolved from this module (src/eval or dist/eval), not process.cwd(),
+// so the server finds results regardless of where it was launched from.
+export const DEFAULT_EVAL_RESULTS_DIR = fileURLToPath(new URL('../../eval/results', import.meta.url));
+// IMAGE_GEN_EVAL_RESULTS_DIR overrides it; the test suite points it at a temp
+// dir so tests never delete the real results the server loads.
+export const EVAL_RESULTS_DIR = process.env.IMAGE_GEN_EVAL_RESULTS_DIR?.trim() || DEFAULT_EVAL_RESULTS_DIR;
 
 export function makeEvalResultFilename(date = new Date()): string {
   return `${date.toISOString().replace(/[:.]/g, '-')}.json`;

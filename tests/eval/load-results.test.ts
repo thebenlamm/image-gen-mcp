@@ -2,7 +2,7 @@ import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { EVAL_RESULTS_DIR, loadLatestEvalResults } from '../../src/eval/results.js';
+import { DEFAULT_EVAL_RESULTS_DIR, EVAL_RESULTS_DIR, loadLatestEvalResults } from '../../src/eval/results.js';
 
 let dir: string;
 beforeEach(async () => { dir = await fs.mkdtemp(path.join(os.tmpdir(), 'eval-results-')); });
@@ -13,9 +13,13 @@ function run(status: 'scored' | 'error', generatedAt: string) {
 }
 
 describe('loadLatestEvalResults', () => {
-  it('resolves the results dir from the module, not cwd', () => {
-    expect(EVAL_RESULTS_DIR.endsWith(path.join('eval', 'results'))).toBe(true);
-    expect(path.isAbsolute(EVAL_RESULTS_DIR)).toBe(true);
+  it('resolves the default results dir from the module, not cwd', () => {
+    expect(DEFAULT_EVAL_RESULTS_DIR).toBe(path.resolve(__dirname, '../../eval/results'));
+  });
+
+  it('tests run against a temp results dir, never the real one the server loads', () => {
+    expect(EVAL_RESULTS_DIR).not.toBe(DEFAULT_EVAL_RESULTS_DIR);
+    expect(EVAL_RESULTS_DIR.startsWith(os.tmpdir())).toBe(true);
   });
 
   it('returns null when the directory does not exist', async () => {
