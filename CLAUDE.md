@@ -60,7 +60,7 @@ src/
 
 **Output Contract:** MCP responses return paths and compact metadata only. `image_op` and `image_task` create run artifacts under `.runs/<runId>/` and never return base64 image data.
 
-**Eval-Gated Routing:** Second providers for an op need measured eval scores or an explicit unscored-production justification. `image_task` should route using `quality.scores` when available.
+**Eval-Gated Routing:** Second providers for an op need measured eval scores or an explicit unscored-production justification. `image_task` should route using `quality.scores` when available. The server applies the newest `eval/results/*.json` with no errored cases at startup (scores attach only where `modelVersion` matches); restart after `npm run eval`.
 
 ## Available Capabilities
 

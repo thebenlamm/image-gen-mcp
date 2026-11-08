@@ -53,6 +53,8 @@ import { ResponseGuardError, serializeImageTaskResponse } from './task/serialize
 import { matchTemplate } from './task/templates.js';
 import { createLoopbackGuard, loopbackHosts, loopbackOrigins } from './sse-guard.js';
 import { assertWithinInputRoot } from './utils/path-input-root.js';
+import { applyEvalResultsToRegistry } from './eval/apply-results.js';
+import { loadLatestEvalResults } from './eval/results.js';
 
 // Register available providers
 const providers = [
@@ -68,6 +70,18 @@ for (const provider of providers) {
 }
 
 registerBuiltInCapabilities();
+
+// Eval-gated routing: apply the latest successful `npm run eval` scores so
+// image_task sees quality.scores. Scores only attach where modelVersion
+// matches (CAP-05), so results for an older model are ignored.
+const latestEval = await loadLatestEvalResults();
+if (latestEval) {
+  applyEvalResultsToRegistry(capabilityRegistry, latestEval.result, latestEval.path);
+  const scored = capabilityRegistry.list().filter((cap) => cap.quality?.evalResultPath === latestEval.path);
+  console.error(`Eval scores loaded from ${latestEval.path}: ${scored.map((cap) => `${cap.op}:${cap.provider}`).join(', ') || 'no matching capabilities'}`);
+} else {
+  console.error('Eval scores: none loaded (no successful run in eval/results; run `npm run eval`)');
+}
 
 const DEFAULT_PROVIDER = resolveDefaultProvider();
 
