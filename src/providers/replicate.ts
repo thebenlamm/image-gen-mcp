@@ -18,7 +18,9 @@ export class ReplicateProvider implements ImageProvider {
     if (!apiToken) {
       throw new Error('REPLICATE_API_TOKEN environment variable is required');
     }
-    this.client = new Replicate({ auth: apiToken });
+    // useFileOutput:false — replicate>=1.0 otherwise returns FileOutput streams,
+    // not URL strings, and generate() below rejects every successful run.
+    this.client = new Replicate({ auth: apiToken, useFileOutput: false });
   }
 
   async generate(params: GenerateParams): Promise<GenerateResult> {
