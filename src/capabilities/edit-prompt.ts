@@ -168,6 +168,7 @@ export function createEditPromptCapability(): Capability | null {
   return {
     op: 'edit_prompt',
     provider: 'openai',
+    retriesInternally: true,
     modelVersion: model,
     constraints: {
       requiresInputImage: true,

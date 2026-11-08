@@ -32,6 +32,8 @@ export class ReplicateProvider implements ImageProvider {
         prompt: params.prompt,
         aspect_ratio: aspectRatio,
       },
+      // Aborting cancels the prediction server-side (replicate SDK run()).
+      signal: AbortSignal.timeout(300_000),
     });
 
     // Replicate returns a URL or array of URLs
@@ -42,7 +44,7 @@ export class ReplicateProvider implements ImageProvider {
     }
 
     // Fetch the image
-    const response = await fetch(imageUrl);
+    const response = await fetch(imageUrl, { signal: AbortSignal.timeout(60_000) });
     if (!response.ok) {
       throw new Error(`Failed to fetch image from Replicate: ${response.statusText}`);
     }

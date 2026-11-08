@@ -7,6 +7,11 @@ const SIZE_MAP: Record<ImageSize, string> = {
   portrait: '1024x1536',
 };
 
+// 300s matches edit_prompt's timeout_ms ceiling; slow gpt-image renders
+// must not be cut off and re-billed by the SDK's retry-after-timeout.
+const OPENAI_TIMEOUT_MS = 300_000;
+const OPENAI_MAX_RETRIES = 2;
+
 export class OpenAIProvider implements ImageProvider {
   name = 'openai' as const;
   defaultModel: string;
@@ -19,7 +24,8 @@ export class OpenAIProvider implements ImageProvider {
       throw new Error('OPENAI_API_KEY environment variable is required');
     }
     this.defaultModel = process.env.OPENAI_DEFAULT_MODEL?.trim() || 'gpt-image-1';
-    this.client = new OpenAI({ apiKey });
+    // Explicit bounds: the SDK default timeout is 10 minutes per attempt.
+    this.client = new OpenAI({ apiKey, timeout: OPENAI_TIMEOUT_MS, maxRetries: OPENAI_MAX_RETRIES });
   }
 
   async generate(params: GenerateParams): Promise<GenerateResult> {

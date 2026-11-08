@@ -11,6 +11,7 @@ export function createOpenAIGenerateCapability(): Capability | null {
   return {
     op: 'generate',
     provider: 'openai',
+    retriesInternally: true, // OpenAI SDK retries (maxRetries in providers/openai.ts)
     modelVersion: provider.defaultModel,
     constraints: {
       requiresInputImage: false,

@@ -11,6 +11,7 @@ const MAX_INPUT_PIXELS = 4_000_000;
 const MAX_OUTPUT_PIXELS = 16_000_000;
 const FETCH_TIMEOUT_MS = 30_000;
 const FETCH_RETRIES = 1;
+const PREDICTION_TIMEOUT_MS = 300_000;
 const UNSCORED_JUSTIFICATION =
   'No deterministic scorer exists for upscaling -- would require LPIPS or human eval, neither in Phase 7 scope.';
 const COST_PER_MEGAPIXEL_USD = 0.0023;
@@ -142,7 +143,37 @@ export function createEnhanceUpscaleCapability(): Capability | null {
           face_enhance: faceEnhance,
         },
       });
-      const finalPrediction = await client.wait(prediction);
+      const deadline = Date.now() + PREDICTION_TIMEOUT_MS;
+      let finalPrediction = await client.wait(prediction, undefined, async () => Date.now() > deadline);
+      if (finalPrediction.status === 'failed' || finalPrediction.status === 'canceled') {
+        throw new CapabilityInvokeError(
+          'PROVIDER_FAILURE',
+          `Replicate prediction ${finalPrediction.id} ${finalPrediction.status}: ${String(finalPrediction.error ?? 'no error detail')}`,
+          true,
+        );
+      }
+      if (finalPrediction.status !== 'succeeded') {
+        // Deadline hit while still running: cancel so it stops billing. If it
+        // finished in the race window, keep the paid result.
+        try {
+          const cancelled = await client.predictions.cancel(finalPrediction.id);
+          if (cancelled?.status === 'succeeded') finalPrediction = cancelled;
+        } catch (cancelError) {
+          console.error(
+            `enhance_upscale: failed to cancel prediction ${finalPrediction.id} after timeout:`,
+            cancelError,
+          );
+        }
+      }
+      if (finalPrediction.status !== 'succeeded') {
+        // Not retryable: a retry would start a second billed prediction that
+        // is likely to hit the same deadline.
+        throw new CapabilityInvokeError(
+          'TIMEOUT',
+          `Replicate prediction ${finalPrediction.id} did not finish within ${PREDICTION_TIMEOUT_MS}ms (status: ${finalPrediction.status})`,
+          false,
+        );
+      }
       const fetchedBuffer = await fetchWithTimeoutRetry(
         getOutputUrl(finalPrediction.output),
         FETCH_TIMEOUT_MS,

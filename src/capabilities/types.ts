@@ -121,6 +121,12 @@ export interface Capability {
   cost: CapabilityCost;
   latencyMsP50?: number;
   quality?: CapabilityQuality;
+  /**
+   * True when invoke() already retries transient failures itself (own loop or
+   * SDK retries). The DAG executor then makes a single attempt so retries do
+   * not stack multiplicatively into extra billed calls.
+   */
+  retriesInternally?: boolean;
   invoke: CapabilityInvoke;
 }
 

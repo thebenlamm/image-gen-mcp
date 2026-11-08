@@ -199,6 +199,23 @@ describe('executeDag', () => {
     });
   });
 
+  it('makes a single attempt for capabilities that retry internally', async () => {
+    const cap = {
+      ...makeMockCap('extract_subject', [
+        new CapabilityInvokeError('TIMEOUT', 'timeout after internal retries', true),
+        imageResult(),
+      ]),
+      retriesInternally: true,
+    };
+    const result = await executeDag(
+      plan([{ id: 'A', op: 'extract_subject', provider: 'mock', params: {}, dependsOn: [], outputKind: 'image' }], 'A'),
+      {},
+      { runId, runDir, registry: makeRegistry({ 'extract_subject:mock': cap }) },
+    );
+    expect(cap.invoke).toHaveBeenCalledTimes(1);
+    expect(result.trace.nodes[0]).toMatchObject({ outcome: 'error', attempts: 1 });
+  });
+
   it('does not retry more than once for repeated retryable errors', async () => {
     const cap = makeMockCap('extract_subject', [
       new CapabilityInvokeError('TIMEOUT', 'timeout 1', true),

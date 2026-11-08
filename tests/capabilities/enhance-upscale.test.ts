@@ -9,10 +9,11 @@ import { CapabilityInvokeError } from '../../src/capabilities/types.js';
 
 const createMock = vi.fn();
 const waitMock = vi.fn();
+const cancelMock = vi.fn();
 
 vi.mock('replicate', () => ({
   default: vi.fn().mockImplementation(() => ({
-    predictions: { create: createMock },
+    predictions: { create: createMock, cancel: cancelMock },
     wait: waitMock,
   })),
 }));
@@ -46,6 +47,7 @@ beforeEach(async () => {
   tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'image-gen-upscale-'));
   vi.clearAllMocks();
   createMock.mockReset();
+  cancelMock.mockReset();
   waitMock.mockReset();
 });
 
@@ -126,7 +128,7 @@ describe('enhance_upscale capability', () => {
       create: { width: 512, height: 512, channels: 4, background: 'white' },
     }).png().toBuffer();
     createMock.mockResolvedValue({ id: 'pred-abc' });
-    waitMock.mockResolvedValue({ id: 'pred-abc', output: 'https://r.io/x.png' });
+    waitMock.mockResolvedValue({ id: 'pred-abc', status: 'succeeded', output: 'https://r.io/x.png' });
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       arrayBuffer: async () => outputBuffer.buffer.slice(
@@ -162,7 +164,7 @@ describe('enhance_upscale capability', () => {
       create: { width: 512, height: 512, channels: 4, background: 'white' },
     }).png().toBuffer();
     createMock.mockResolvedValue({ id: 'pred-abc' });
-    waitMock.mockResolvedValue({ id: 'pred-abc', output: 'https://r.io/x.png' });
+    waitMock.mockResolvedValue({ id: 'pred-abc', status: 'succeeded', output: 'https://r.io/x.png' });
 
     const fetchMock = vi.fn()
       .mockRejectedValueOnce(new Error('network'))
@@ -183,6 +185,56 @@ describe('enhance_upscale capability', () => {
       code: 'TIMEOUT',
       retryable: true,
     });
+  });
+
+  it('cancels the prediction and throws TIMEOUT when wait() stops before success', async () => {
+    setToken('test-token');
+    const capability = createEnhanceUpscaleCapability();
+    if (!capability) throw new Error('expected capability');
+    const input = await writePng('input.png', 256, 256);
+    createMock.mockResolvedValue({ id: 'pred-slow' });
+    waitMock.mockResolvedValue({ id: 'pred-slow', status: 'processing' });
+    cancelMock.mockResolvedValue({ id: 'pred-slow', status: 'canceled' });
+
+    await expect(capability.invoke({ params: { input } })).rejects.toMatchObject({
+      code: 'TIMEOUT',
+      retryable: false,
+    });
+    expect(cancelMock).toHaveBeenCalledWith('pred-slow');
+    // wait() must receive a stop callback so polling is bounded
+    expect(typeof waitMock.mock.calls[0][2]).toBe('function');
+  });
+
+  it('keeps a result that succeeded in the cancel race window', async () => {
+    setToken('test-token');
+    const capability = createEnhanceUpscaleCapability();
+    if (!capability) throw new Error('expected capability');
+    const input = await writePng('input.png', 256, 256);
+    const outputBuffer = await sharp({
+      create: { width: 512, height: 512, channels: 4, background: 'white' },
+    }).png().toBuffer();
+    createMock.mockResolvedValue({ id: 'pred-race' });
+    waitMock.mockResolvedValue({ id: 'pred-race', status: 'processing' });
+    cancelMock.mockResolvedValue({ id: 'pred-race', status: 'succeeded', output: 'https://r.io/x.png' });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      arrayBuffer: async () => outputBuffer.buffer.slice(
+        outputBuffer.byteOffset,
+        outputBuffer.byteOffset + outputBuffer.byteLength,
+      ),
+    }));
+    await expect(capability.invoke({ params: { input } })).resolves.toMatchObject({ kind: 'image' });
+  });
+
+  it('labels a failed prediction PROVIDER_FAILURE, not TIMEOUT, and does not cancel', async () => {
+    setToken('test-token');
+    const capability = createEnhanceUpscaleCapability();
+    if (!capability) throw new Error('expected capability');
+    const input = await writePng('input.png', 256, 256);
+    createMock.mockResolvedValue({ id: 'pred-bad' });
+    waitMock.mockResolvedValue({ id: 'pred-bad', status: 'failed', error: 'boom' });
+    await expect(capability.invoke({ params: { input } })).rejects.toMatchObject({ code: 'PROVIDER_FAILURE' });
+    expect(cancelMock).not.toHaveBeenCalled();
   });
 
   it('uses cost per megapixel and defaults face enhancement off', () => {

@@ -193,7 +193,8 @@ async function runNodeWithRetry(
   let lastError: unknown;
   let attempts = 0;
 
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
+  const maxAttempts = cap.retriesInternally ? 1 : 2;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     attempts = attempt;
     try {
       const result = await cap.invoke({
@@ -217,7 +218,7 @@ async function runNodeWithRetry(
       return { status: 'success', result, traceNode, attempts };
     } catch (err) {
       lastError = err;
-      if (attempt === 1 && err instanceof CapabilityInvokeError && err.retryable === true) {
+      if (attempt < maxAttempts && err instanceof CapabilityInvokeError && err.retryable === true) {
         continue;
       }
       break;

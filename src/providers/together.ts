@@ -26,6 +26,7 @@ export class TogetherProvider implements ImageProvider {
 
     const response = await fetch('https://api.together.xyz/v1/images/generations', {
       method: 'POST',
+      signal: AbortSignal.timeout(120_000),
       headers: {
         'Authorization': `Bearer ${this.apiKey}`,
         'Content-Type': 'application/json',

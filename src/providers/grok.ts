@@ -20,6 +20,7 @@ export class GrokProvider implements ImageProvider {
     // xAI uses OpenAI-compatible API format
     const response = await fetch('https://api.x.ai/v1/images/generations', {
       method: 'POST',
+      signal: AbortSignal.timeout(120_000),
       headers: {
         'Authorization': `Bearer ${this.apiKey}`,
         'Content-Type': 'application/json',
